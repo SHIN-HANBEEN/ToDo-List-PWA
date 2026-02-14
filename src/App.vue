@@ -106,8 +106,6 @@ const messages = {
     all: '전체',
     active: '진행중',
     done: '완료',
-    clearDone: '완료 항목 삭제',
-    dragHint: '전체, 진행중, 완료 탭에서 드래그 정렬을 사용할 수 있습니다. 모바일에서는 핸들을 길게 눌러 이동하세요.',
     loading: '불러오는 중...',
     detail: '상세보기',
     edit: '수정',
@@ -170,8 +168,6 @@ const messages = {
     all: 'All',
     active: 'Active',
     done: 'Done',
-    clearDone: 'Clear done',
-    dragHint: 'Drag reorder is available in All, Active, and Done tabs. On mobile, long-press the handle to move.',
     loading: 'Loading...',
     detail: 'Detail',
     edit: 'Edit',
@@ -234,8 +230,6 @@ const messages = {
     all: '全部',
     active: '进行中',
     done: '已完成',
-    clearDone: '清除已完成',
-    dragHint: '可在全部、进行中、已完成标签中拖拽排序。移动端请长按拖拽手柄。',
     loading: '加载中...',
     detail: '详情',
     edit: '编辑',
@@ -298,8 +292,6 @@ const messages = {
     all: 'すべて',
     active: '進行中',
     done: '完了',
-    clearDone: '完了を削除',
-    dragHint: 'すべて、進行中、完了タブでドラッグ並び替えができます。モバイルではハンドルを長押しして移動してください。',
     loading: '読み込み中...',
     detail: '詳細',
     edit: '編集',
@@ -992,23 +984,6 @@ async function deleteTodo(id) {
   }
 }
 
-async function clearDone() {
-  if (busy.value) return
-  busy.value = true
-  errorMessage.value = ''
-  const previous = [...todos.value]
-  todos.value = todos.value.filter((todo) => !todo.done)
-  if (detailTodo.value?.done) detailTodoId.value = null
-  try {
-    await apiRequest('/api/todos?done=true', { method: 'DELETE' })
-  } catch (error) {
-    todos.value = previous
-    errorMessage.value = translateError(error.message)
-  } finally {
-    busy.value = false
-  }
-}
-
 async function addComment(todoId) {
   if (busy.value) return
   const draft = (commentDrafts.value[todoId] || '').trim()
@@ -1455,11 +1430,11 @@ function formatTime(value) {
           <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
 
           <template v-if="viewMode === 'list'">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
+            <div>
+              <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:w-[460px] lg:w-[560px]">
                 <Button
                   size="sm"
-                  class="w-full"
+                  class="w-full sm:h-10 sm:text-sm"
                   :variant="filter === 'all' ? 'default' : 'ghost'"
                   @click="filter = 'all'"
                   :disabled="busy"
@@ -1468,7 +1443,7 @@ function formatTime(value) {
                 </Button>
                 <Button
                   size="sm"
-                  class="w-full"
+                  class="w-full sm:h-10 sm:text-sm"
                   :variant="filter === 'active' ? 'default' : 'ghost'"
                   @click="filter = 'active'"
                   :disabled="busy"
@@ -1477,7 +1452,7 @@ function formatTime(value) {
                 </Button>
                 <Button
                   size="sm"
-                  class="w-full"
+                  class="w-full sm:h-10 sm:text-sm"
                   :variant="filter === 'done' ? 'default' : 'ghost'"
                   @click="filter = 'done'"
                   :disabled="busy"
@@ -1485,17 +1460,7 @@ function formatTime(value) {
                   {{ t('done') }}
                 </Button>
               </div>
-              <Button
-                class="w-full sm:w-auto"
-                variant="outline"
-                type="button"
-                @click="clearDone"
-                :disabled="doneCount === 0 || busy"
-              >
-                {{ t('clearDone') }}
-              </Button>
             </div>
-            <p class="text-xs text-muted-foreground">{{ t('dragHint') }}</p>
 
             <draggable
               v-model="draggableTodos"
