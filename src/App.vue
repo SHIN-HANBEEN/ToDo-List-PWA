@@ -571,25 +571,33 @@ function positionRolloverTooltip() {
   if (!trigger || !tooltip) return
 
   const viewportPadding = 12
-  const preferredWidth = Math.min(320, window.innerWidth - viewportPadding * 2)
+  const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
+  const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+  const hardMaxWidth = Math.min(360, viewportWidth - viewportPadding * 2)
   const triggerRect = trigger.getBoundingClientRect()
   const tooltipRect = tooltip.getBoundingClientRect()
-  const width = Math.min(preferredWidth, tooltipRect.width || preferredWidth)
-  const height = tooltipRect.height || 0
+  const naturalWidth = Math.max(tooltip.scrollWidth || 0, tooltipRect.width || 0)
+  let width = Math.min(Math.max(180, naturalWidth), hardMaxWidth)
 
   let left = triggerRect.left + triggerRect.width / 2 - width / 2
-  left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding))
+  left = Math.max(viewportPadding, Math.min(left, viewportWidth - width - viewportPadding))
+  const rightSpace = viewportWidth - left - viewportPadding
+  width = Math.min(width, rightSpace)
+  if (width < 140) width = Math.max(140, hardMaxWidth)
+
+  const estimatedHeight = Math.max(tooltip.scrollHeight || 0, tooltipRect.height || 0)
 
   let top = triggerRect.bottom + 8
-  if (top + height > window.innerHeight - viewportPadding) {
-    top = triggerRect.top - height - 8
+  if (top + estimatedHeight > viewportHeight - viewportPadding) {
+    top = triggerRect.top - estimatedHeight - 8
   }
   if (top < viewportPadding) top = viewportPadding
 
   rolloverTooltipStyle.value = {
     left: `${Math.round(left)}px`,
     top: `${Math.round(top)}px`,
-    maxWidth: `${Math.round(preferredWidth)}px`,
+    width: `${Math.round(width)}px`,
+    maxWidth: `${Math.round(width)}px`,
   }
 }
 
@@ -726,6 +734,12 @@ onBeforeUnmount(() => {
 
 watch([rolloverTooltipOpen, rolloverTooltipContext], async ([isOpen]) => {
   if (!isOpen) return
+  await nextTick()
+  positionRolloverTooltip()
+})
+
+watch(rolloverTooltipText, async () => {
+  if (!rolloverTooltipOpen.value) return
   await nextTick()
   positionRolloverTooltip()
 })
