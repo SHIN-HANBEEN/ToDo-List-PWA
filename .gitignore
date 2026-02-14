@@ -26,3 +26,17 @@ dev-dist
 
 .vercel
 .env*.local
+
+# Sensitive/local secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
