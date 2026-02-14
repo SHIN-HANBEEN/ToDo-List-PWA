@@ -24,6 +24,38 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.75rem;
+    --app-surface:
+      radial-gradient(circle at 15% 15%, #ffd8f5 0%, #ffd8f500 34%),
+      radial-gradient(circle at 78% 8%, #ffe4b8 0%, #ffe4b800 30%),
+      linear-gradient(135deg, #fcfcfd 0%, #eef2ff 60%, #f6f7fb 100%);
+    --overlay: #0f172a80;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 6.2%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 6.2%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 19%;
+    --input: 217.2 32.6% 19%;
+    --ring: 212.7 26.8% 83.9%;
+    --app-surface:
+      radial-gradient(circle at 15% 15%, #0b1224 0%, #0b122400 38%),
+      radial-gradient(circle at 80% 8%, #1d1235 0%, #1d123500 36%),
+      linear-gradient(135deg, #090c12 0%, #0b1220 56%, #151225 100%);
+    --overlay: #020617c2;
   }
 
   * {
@@ -36,10 +68,7 @@
     margin: 0;
     min-width: 320px;
     font-family: 'Sora', 'Noto Sans KR', sans-serif;
-    background:
-      radial-gradient(circle at 15% 15%, #ffd8f5 0%, #ffd8f500 34%),
-      radial-gradient(circle at 78% 8%, #ffe4b8 0%, #ffe4b800 30%),
-      linear-gradient(135deg, #fcfcfd 0%, #eef2ff 60%, #f6f7fb 100%);
+    background: var(--app-surface);
   }
 }
 
@@ -96,18 +125,18 @@
 
 .drag-ghost {
   opacity: 0.45;
-  background: #f8fafc;
+  background: hsl(var(--muted));
   border-style: dashed;
 }
 
 .drag-chosen {
-  box-shadow: 0 0 0 2px #c7d2fe inset;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.45) inset;
 }
 
 .modal-wrap {
   position: fixed;
   inset: 0;
-  background: #0f172a80;
+  background: var(--overlay);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -115,8 +144,9 @@
 
 .modal {
   width: min(620px, 100%);
-  background: #fff;
-  border: 1px solid #cbd5e1;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--card-foreground));
   border-radius: 16px;
   padding: 16px;
   display: grid;
@@ -140,7 +170,7 @@
 .created-at {
   margin: 0;
   font-size: 0.82rem;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .comment-form {
@@ -158,29 +188,38 @@
 }
 
 .comment-list li {
-  border: 1px solid #e2e8f0;
+  border: 1px solid hsl(var(--border));
   border-radius: 10px;
   padding: 8px 10px;
   display: flex;
   justify-content: space-between;
   gap: 8px;
   align-items: center;
-  background: #f8fafc;
+  background: hsl(var(--muted));
 }
 
 .comment-list p {
   margin: 0 0 3px;
   font-size: 0.9rem;
-  color: #334155;
+  color: hsl(var(--foreground));
 }
 
 .comment-list small {
   font-size: 0.75rem;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .empty {
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .drag-handle {
+  color: #94a3b8;
+}
+
+.dark .drag-handle:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 @media (max-width: 640px) {

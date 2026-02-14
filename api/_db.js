@@ -42,6 +42,7 @@ export async function ensureSchema() {
         CREATE TABLE IF NOT EXISTS users (
           id BIGSERIAL PRIMARY KEY,
           email TEXT NOT NULL UNIQUE,
+          username TEXT NOT NULL,
           password_hash TEXT NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
@@ -79,6 +80,13 @@ export async function ensureSchema() {
 
       // 기존 배포본 호환을 위한 안전한 마이그레이션.
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
+      await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;')
+      await client.query(`
+        UPDATE users
+        SET username = COALESCE(NULLIF(split_part(email, '@', 1), ''), 'user' || id::text)
+        WHERE username IS NULL OR btrim(username) = '';
+      `)
+      await client.query('ALTER TABLE users ALTER COLUMN username SET NOT NULL;')
 
       // 자주 사용하는 조회/정렬 패턴 기준 인덱스.
       await client.query(

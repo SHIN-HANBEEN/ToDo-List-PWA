@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
+import { Moon, Sun } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +14,9 @@ import {
 } from '@/components/ui/select'
 
 const LANGUAGE_KEY = 'todo-language'
+const THEME_KEY = 'todo-theme'
 const locale = ref('ko')
+const theme = ref('light')
 const newTask = ref('')
 const filter = ref('all')
 const todos = ref([])
@@ -25,6 +28,7 @@ const errorMessage = ref('')
 const user = ref(null)
 const authMode = ref('login')
 const authEmail = ref('')
+const authUsername = ref('')
 const authPassword = ref('')
 const authBusy = ref(false)
 
@@ -38,7 +42,11 @@ const messages = {
     logout: '로그아웃',
     createAccount: '계정 만들기',
     emailPlaceholder: '이메일 주소',
+    usernamePlaceholder: '사용자 이름 (2~24자)',
     passwordPlaceholder: '비밀번호 (최소 8자)',
+    theme: '테마',
+    lightMode: '라이트',
+    darkMode: '다크',
     authSigninHelp: '로그인해서 계속 진행하세요',
     authSignupHelp: '새 계정을 만들어 시작하세요',
     addTask: '추가',
@@ -70,7 +78,11 @@ const messages = {
     logout: 'Logout',
     createAccount: 'Create account',
     emailPlaceholder: 'Email address',
+    usernamePlaceholder: 'Username (2-24 chars)',
     passwordPlaceholder: 'Password (min 8 chars)',
+    theme: 'Theme',
+    lightMode: 'Light',
+    darkMode: 'Dark',
     authSigninHelp: 'Sign in to continue',
     authSignupHelp: 'Create your account to get started',
     addTask: 'Add',
@@ -102,7 +114,11 @@ const messages = {
     logout: '退出登录',
     createAccount: '创建账号',
     emailPlaceholder: '邮箱地址',
+    usernamePlaceholder: '用户名（2-24个字符）',
     passwordPlaceholder: '密码（至少 8 位）',
+    theme: '主题',
+    lightMode: '浅色',
+    darkMode: '深色',
     authSigninHelp: '登录后继续使用',
     authSignupHelp: '创建新账号开始使用',
     addTask: '添加',
@@ -134,7 +150,11 @@ const messages = {
     logout: 'ログアウト',
     createAccount: 'アカウント作成',
     emailPlaceholder: 'メールアドレス',
+    usernamePlaceholder: 'ユーザー名（2〜24文字）',
     passwordPlaceholder: 'パスワード（8文字以上）',
+    theme: 'テーマ',
+    lightMode: 'ライト',
+    darkMode: 'ダーク',
     authSigninHelp: 'ログインして続行',
     authSignupHelp: '新しいアカウントを作成',
     addTask: '追加',
@@ -179,6 +199,18 @@ const errorMessages = {
     zh: '该邮箱已注册。',
     ja: 'このメールアドレスは既に登録されています。',
   },
+  'username is required': {
+    ko: '사용자 이름을 입력하세요.',
+    en: 'Username is required.',
+    zh: '请输入用户名。',
+    ja: 'ユーザー名を入力してください。',
+  },
+  'username must be between 2 and 24 characters': {
+    ko: '사용자 이름은 2자 이상 24자 이하여야 합니다.',
+    en: 'Username must be between 2 and 24 characters.',
+    zh: '用户名长度必须在 2 到 24 个字符之间。',
+    ja: 'ユーザー名は2文字以上24文字以下で入力してください。',
+  },
   'invalid credentials': {
     ko: '이메일 또는 비밀번호가 올바르지 않습니다.',
     en: 'Invalid credentials.',
@@ -220,6 +252,7 @@ const languageOptions = [
 ]
 
 const isAuthenticated = computed(() => Boolean(user.value))
+const isDark = computed(() => theme.value === 'dark')
 const filteredTodos = computed(() => {
   if (filter.value === 'active') return todos.value.filter((todo) => !todo.done)
   if (filter.value === 'done') return todos.value.filter((todo) => todo.done)
@@ -251,9 +284,16 @@ const draggableTodos = computed({
 const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
 const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
-const currentUserLabel = computed(() => user.value?.email || t('guest'))
+const currentUserLabel = computed(() => user.value?.username || user.value?.email || t('guest'))
 
 onMounted(async () => {
+  const savedTheme = localStorage.getItem(THEME_KEY)
+  if (savedTheme === 'dark' || savedTheme === 'light') {
+    setTheme(savedTheme)
+  } else {
+    setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  }
+
   const saved = localStorage.getItem(LANGUAGE_KEY)
   if (saved && messages[saved]) {
     locale.value = saved
@@ -265,6 +305,17 @@ onMounted(async () => {
   await loadSessionUser()
   if (user.value) await loadTodos()
 })
+
+function setTheme(nextTheme) {
+  if (nextTheme !== 'light' && nextTheme !== 'dark') return
+  theme.value = nextTheme
+  document.documentElement.classList.toggle('dark', nextTheme === 'dark')
+  localStorage.setItem(THEME_KEY, nextTheme)
+}
+
+function toggleTheme() {
+  setTheme(isDark.value ? 'light' : 'dark')
+}
 
 function t(key, vars = {}) {
   const current = messages[locale.value] || messages.en
@@ -326,10 +377,12 @@ async function submitAuth() {
       body: JSON.stringify({
         action: authMode.value === 'signup' ? 'signup' : 'login',
         email: authEmail.value.trim(),
+        username: authMode.value === 'signup' ? authUsername.value.trim() : undefined,
         password: authPassword.value,
       }),
     })
     user.value = payload.user
+    authUsername.value = ''
     authPassword.value = ''
     await loadTodos()
   } catch (error) {
@@ -528,18 +581,27 @@ function formatDateTime(value) {
 
 <template>
   <main class="page">
-    <Card class="mx-1 w-full max-w-3xl border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl sm:mx-0">
+    <Card class="mx-1 w-full max-w-3xl border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl sm:mx-0">
       <CardHeader class="space-y-4">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
           <div class="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground sm:w-auto sm:justify-end">
             <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
+            <Button variant="outline" size="sm" @click="toggleTheme">
+              <Sun v-if="isDark" class="mr-1 h-4 w-4" />
+              <Moon v-else class="mr-1 h-4 w-4" />
+              {{ isDark ? t('lightMode') : t('darkMode') }}
+            </Button>
             <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logout" :disabled="authBusy">
               {{ t('logout') }}
             </Button>
           </div>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+            <span class="text-sm text-muted-foreground">{{ t('theme') }}</span>
+            <span class="text-sm font-medium">{{ isDark ? t('darkMode') : t('lightMode') }}</span>
+          </div>
           <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
             <span class="text-sm text-muted-foreground">{{ t('language') }}</span>
             <Select :model-value="locale" @update:model-value="setLocale">
@@ -603,6 +665,13 @@ function formatDateTime(value) {
           </div>
           <form class="space-y-3" @submit.prevent="submitAuth">
             <Input v-model="authEmail" type="email" :placeholder="t('emailPlaceholder')" autocomplete="email" />
+            <Input
+              v-if="authMode === 'signup'"
+              v-model="authUsername"
+              type="text"
+              :placeholder="t('usernamePlaceholder')"
+              autocomplete="nickname"
+            />
             <Input
               v-model="authPassword"
               type="password"

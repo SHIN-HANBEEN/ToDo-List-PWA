@@ -28,23 +28,30 @@ export default async function handler(req, res) {
       const action = String(body.action || '')
       const email = String(body.email || '').trim().toLowerCase()
       const password = String(body.password || '')
+      const username = String(body.username || '').trim()
 
       if (!email || !password) return res.status(400).json({ error: 'email and password are required' })
       if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 characters' })
 
       if (action === 'signup') {
+        if (!username) return res.status(400).json({ error: 'username is required' })
+        if (username.length < 2 || username.length > 24) {
+          return res.status(400).json({ error: 'username must be between 2 and 24 characters' })
+        }
+
         // DB 유니크 제약이 있어도 UX를 위해 선검증.
         const exists = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1;', [email])
         if (exists.rows.length > 0) return res.status(409).json({ error: 'email already registered' })
 
         const created = await pool.query(
-          'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email;',
-          [email, hashPassword(password)]
+          'INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, email, username;',
+          [email, username, hashPassword(password)]
         )
 
         const user = {
           id: Number(created.rows[0].id),
           email: created.rows[0].email,
+          username: created.rows[0].username,
         }
         await createSession(req, res, pool, user.id)
         return res.status(201).json({ user })
@@ -53,7 +60,7 @@ export default async function handler(req, res) {
       if (action === 'login') {
         // 자격 증명 검증 후 세션 발급.
         const found = await pool.query(
-          'SELECT id, email, password_hash FROM users WHERE email = $1 LIMIT 1;',
+          'SELECT id, email, username, password_hash FROM users WHERE email = $1 LIMIT 1;',
           [email]
         )
         if (found.rows.length === 0) return res.status(401).json({ error: 'invalid credentials' })
@@ -66,6 +73,7 @@ export default async function handler(req, res) {
         const user = {
           id: Number(row.id),
           email: row.email,
+          username: row.username,
         }
         await createSession(req, res, pool, user.id)
         return res.status(200).json({ user })
