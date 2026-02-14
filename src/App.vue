@@ -16,6 +16,7 @@ import {
 
 const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
+const ROLLOVER_DEFAULT_KEY = 'todo-default-rollover'
 const locale = ref('ko')
 const theme = ref('light')
 const viewMode = ref('list')
@@ -32,7 +33,8 @@ const newLabelDraftColor = ref('#64748b')
 const editingLabelId = ref(null)
 const editLabelName = ref('')
 const editLabelColor = ref('#64748b')
-const newRolloverEnabled = ref(false)
+const defaultRolloverEnabled = ref(true)
+const newRolloverEnabled = ref(true)
 const filter = ref('all')
 const todos = ref([])
 const commentDrafts = ref({})
@@ -611,6 +613,15 @@ onMounted(async () => {
     if (messages[browser]) locale.value = browser
   }
 
+  const savedRolloverDefault = localStorage.getItem(ROLLOVER_DEFAULT_KEY)
+  if (savedRolloverDefault === 'true' || savedRolloverDefault === 'false') {
+    defaultRolloverEnabled.value = savedRolloverDefault === 'true'
+  } else {
+    defaultRolloverEnabled.value = true
+    localStorage.setItem(ROLLOVER_DEFAULT_KEY, 'true')
+  }
+  newRolloverEnabled.value = defaultRolloverEnabled.value
+
   await loadSessionUser()
   if (user.value) {
     await Promise.all([loadTodos(), loadLabels()])
@@ -634,6 +645,14 @@ function setLocale(nextLocale) {
   if (!messages[nextLocale]) return
   locale.value = nextLocale
   localStorage.setItem(LANGUAGE_KEY, nextLocale)
+}
+
+function setDefaultRollover(nextValue) {
+  defaultRolloverEnabled.value = Boolean(nextValue)
+  localStorage.setItem(ROLLOVER_DEFAULT_KEY, defaultRolloverEnabled.value ? 'true' : 'false')
+  if (!addTodoOpen.value) {
+    newRolloverEnabled.value = defaultRolloverEnabled.value
+  }
 }
 
 function translateError(message) {
@@ -717,7 +736,7 @@ async function logout() {
     addLabelOpen.value = false
     newLabelName.value = ''
     newLabelDraftColor.value = '#64748b'
-    newRolloverEnabled.value = false
+    newRolloverEnabled.value = defaultRolloverEnabled.value
     addTodoOpen.value = false
     settingsOpen.value = false
   } catch (error) {
@@ -811,7 +830,7 @@ async function addTodo() {
     newDueAt.value = ''
     newLocation.value = ''
     newTodoLabelId.value = LABEL_NONE_VALUE
-    newRolloverEnabled.value = false
+    newRolloverEnabled.value = defaultRolloverEnabled.value
     addTodoOpen.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
@@ -1154,6 +1173,7 @@ async function saveLabelEdit(labelId) {
 function openAddTodo() {
   if (!isAuthenticated.value) return
   errorMessage.value = ''
+  newRolloverEnabled.value = defaultRolloverEnabled.value
   if (labels.value.length === 0) {
     void loadLabels()
   }
@@ -1471,6 +1491,18 @@ function formatTime(value) {
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm text-muted-foreground">새 일정 자동 이월 기본값</p>
+          <div class="inline-flex w-full rounded-lg border bg-background p-1">
+            <Button class="flex-1" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
+              true
+            </Button>
+            <Button class="flex-1" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
+              false
+            </Button>
+          </div>
         </div>
       </article>
     </section>
