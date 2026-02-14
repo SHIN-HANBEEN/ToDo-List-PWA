@@ -5,14 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Local dev can proxy /api to deployed backend unless overridden by env var.
+  // 로컬 개발 시 /api를 배포 백엔드로 프록시(환경변수로 오버라이드 가능).
   const proxyTarget = env.VITE_API_PROXY_TARGET || 'https://todo-list-pwa-xi.vercel.app'
 
   return {
     server: {
       proxy: {
         '/api': {
-          // Keep frontend code using relative /api path in every environment.
+          // 모든 환경에서 프런트는 상대 경로 /api만 사용하도록 유지.
           target: proxyTarget,
           changeOrigin: true,
           secure: true,
@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       VitePWA({
-        // Automatically update SW in the background when a new build is available.
+        // 새 빌드가 배포되면 서비스워커를 백그라운드에서 자동 갱신.
         registerType: 'autoUpdate',
         manifest: {
           name: 'TODO List PWA',

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 
-// UI state
+// UI 상태
 const newTask = ref('')
 const filter = ref('all')
 const todos = ref([])
@@ -12,7 +12,7 @@ const loading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
 
-// Auth state
+// 인증 상태
 const user = ref(null)
 const authMode = ref('login')
 const authEmail = ref('')
@@ -32,13 +32,13 @@ const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailT
 const isAuthenticated = computed(() => Boolean(user.value))
 
 onMounted(async () => {
-  // App bootstrap: try session restore, then load user data.
+  // 앱 초기 진입: 세션 복원 시도 후 사용자 데이터 로드.
   await loadSessionUser()
   if (user.value) await loadTodos()
 })
 
 async function apiRequest(url, options = {}) {
-  // Small fetch wrapper with shared JSON parsing + unified error message.
+  // 공통 fetch 래퍼: JSON 파싱/에러 메시지 처리를 일원화.
   const baseHeaders = {}
   if (options.body) baseHeaders['Content-Type'] = 'application/json'
 
@@ -62,7 +62,7 @@ async function apiRequest(url, options = {}) {
 }
 
 async function loadSessionUser() {
-  // Equivalent to "current user" endpoint in many Spring-based apps.
+  // Spring의 "현재 사용자 조회" 엔드포인트와 같은 역할.
   try {
     const payload = await apiRequest('/api/auth')
     user.value = payload.user
@@ -72,7 +72,7 @@ async function loadSessionUser() {
 }
 
 async function submitAuth() {
-  // Handles both signup and login flows.
+  // 회원가입/로그인 두 흐름을 공통 처리.
   if (authBusy.value) return
   authBusy.value = true
   errorMessage.value = ''
@@ -113,7 +113,7 @@ async function logout() {
 }
 
 async function loadTodos() {
-  // User-specific todo load after auth is established.
+  // 인증 완료 후 사용자 전용 TODO 목록 로드.
   if (!isAuthenticated.value) return
   loading.value = true
   errorMessage.value = ''
@@ -151,7 +151,7 @@ async function addTodo() {
 }
 
 async function setTodoDone(todo, done) {
-  // Optimistic UI update with rollback on server error.
+  // 낙관적 업데이트 후 서버 실패 시 롤백.
   const previous = todo.done
   todo.done = done
   errorMessage.value = ''
@@ -245,7 +245,7 @@ function onDragStart(todoId) {
 }
 
 async function onDrop(targetId) {
-  // Client reorders immediately, then persists order via PATCH /api/todos.
+  // 클라이언트에서 즉시 정렬 반영 후 PATCH로 순서 저장.
   if (
     !isDragEnabled.value ||
     busy.value ||
@@ -293,7 +293,7 @@ function closeDetail() {
 }
 
 function formatDateTime(value) {
-  // Shared date formatter used by todos and comments.
+  // TODO/댓글 공통 날짜 포맷터.
   if (!value) return '-'
   return new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',

@@ -1,11 +1,11 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
-// Cookie-based session auth (similar to Spring Session concept, but lightweight).
+// 쿠키 기반 세션 인증(개념은 Spring Session과 유사, 구현은 경량).
 const SESSION_COOKIE = 'todo_session'
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
 function hashSha256(value) {
-  // Store only hash in DB so raw tokens are never persisted.
+  // 원본 토큰은 저장하지 않고 해시만 DB에 보관.
   return createHash('sha256').update(value).digest('hex')
 }
 
@@ -21,7 +21,7 @@ function parseCookies(req) {
 }
 
 export function parseBody(req) {
-  // Vercel functions may receive string or object body depending on runtime path.
+  // Vercel 런타임 경로에 따라 body가 문자열/객체로 올 수 있어 모두 처리.
   if (!req.body) return {}
   if (typeof req.body === 'string') {
     try {
@@ -34,14 +34,14 @@ export function parseBody(req) {
 }
 
 export function hashPassword(password) {
-  // Salted scrypt hash; output format: salt:hash
+  // scrypt + salt 해시. 저장 포맷: salt:hash
   const salt = randomBytes(16).toString('hex')
   const derived = scryptSync(password, salt, 64).toString('hex')
   return `${salt}:${derived}`
 }
 
 export function verifyPassword(password, storedHash) {
-  // Constant-time compare to reduce timing side-channel risk.
+  // 타이밍 공격 완화를 위해 상수 시간 비교 사용.
   if (!storedHash || !storedHash.includes(':')) return false
   const [salt, original] = storedHash.split(':')
   const derived = scryptSync(password, salt, 64).toString('hex')
@@ -52,7 +52,7 @@ export function verifyPassword(password, storedHash) {
 }
 
 function isSecureCookie(req) {
-  // Keep local dev usable on http while enforcing Secure in production/https.
+  // 로컬(http)은 개발 편의 유지, 운영/https는 Secure 쿠키 강제.
   return req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production'
 }
 
@@ -65,7 +65,7 @@ export function clearSessionCookie(req, res) {
 }
 
 export async function createSession(req, res, pool, userId) {
-  // Generate opaque session token and store only its hash server-side.
+  // 불투명 세션 토큰을 발급하고 서버에는 해시만 저장.
   const token = randomBytes(32).toString('base64url')
   const tokenHash = hashSha256(token)
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
@@ -92,7 +92,7 @@ export async function deleteSession(req, pool) {
 }
 
 export async function getUserFromRequest(req, pool) {
-  // Read cookie -> hash lookup -> join user. Expired sessions are ignored.
+  // 쿠키 읽기 -> 토큰 해시 조회 -> 사용자 조인. 만료 세션은 제외.
   const cookies = parseCookies(req)
   const token = cookies[SESSION_COOKIE]
   if (!token) return null
@@ -118,7 +118,7 @@ export async function getUserFromRequest(req, pool) {
 }
 
 export async function requireUser(req, res, pool) {
-  // Guard helper for protected API routes.
+  // 보호된 API 라우트에서 공통으로 쓰는 인증 가드.
   const user = await getUserFromRequest(req, pool)
   if (!user) {
     res.status(401).json({ error: 'Unauthorized' })

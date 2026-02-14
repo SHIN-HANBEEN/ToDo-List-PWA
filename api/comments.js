@@ -9,12 +9,12 @@ export default async function handler(req, res) {
   try {
     await ensureSchema()
     const pool = getPool()
-    // Comments are protected resources and tied to current user via todo ownership.
+    // 댓글도 보호 리소스이며, TODO 소유권을 통해 사용자 범위를 보장.
     const user = await requireUser(req, res, pool)
     if (!user) return
 
     if (req.method === 'POST') {
-      // Insert only when todo belongs to current user.
+      // 현재 사용자 소유 TODO일 때만 댓글 생성.
       const body = parseBody(req)
       const todoId = Number(body.todoId)
       const text = String(body.text || '').trim()
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      // Delete only when comment belongs to a todo owned by current user.
+      // 현재 사용자 소유 TODO의 댓글일 때만 삭제 허용.
       const id = Number(getSingleQueryValue(req.query.id))
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'id query is required' })
 

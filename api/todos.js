@@ -2,7 +2,7 @@ import { ensureSchema, getPool, normalizeTodoRow, normalizeCommentRow } from './
 import { parseBody, requireUser } from './_auth.js'
 
 function getSingleQueryValue(value) {
-  // Vercel can pass query values as string or string[].
+  // Vercel에서 쿼리 값이 string 또는 string[]로 올 수 있어 단일 값으로 정규화.
   return Array.isArray(value) ? value[0] : value
 }
 
@@ -10,12 +10,12 @@ export default async function handler(req, res) {
   try {
     await ensureSchema()
     const pool = getPool()
-    // All todo operations are user-scoped.
+    // 모든 TODO 작업은 로그인 사용자 기준으로 제한.
     const user = await requireUser(req, res, pool)
     if (!user) return
 
     if (req.method === 'GET') {
-      // Read todos + comments in two queries, then compose nested payload in memory.
+      // todo/comment를 분리 조회 후 메모리에서 중첩 구조로 조합.
       const todosResult = await pool.query(
         'SELECT id, text, done, position, created_at FROM todos WHERE user_id = $1 ORDER BY position ASC, created_at DESC;',
         [user.id]
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      // New todo gets smallest position so it appears at the top.
+      // 새 TODO는 최소 position으로 넣어 목록 상단에 보이게 처리.
       const body = parseBody(req)
       const text = String(body.text || '').trim()
       if (!text) return res.status(400).json({ error: 'text is required' })
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       const body = parseBody(req)
 
       if (Array.isArray(body.order)) {
-        // Reorder request: persist drag-and-drop sequence.
+        // 드래그 정렬 순서를 position으로 영속화.
         const order = body.order.map((item) => Number(item)).filter((item) => Number.isFinite(item))
         const client = await pool.connect()
         try {
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
       const id = Number(body.id)
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'id is required' })
 
-      // Partial update style similar to PATCH semantics in REST controllers.
+      // PATCH 의미에 맞춘 부분 업데이트 처리.
       const updates = []
       const values = []
       let valueIndex = 1
@@ -131,7 +131,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      // Supports single delete and bulk done delete.
+      // 단건 삭제와 완료 항목 일괄 삭제를 모두 지원.
       const doneOnly = getSingleQueryValue(req.query.done) === 'true'
 
       if (doneOnly) {

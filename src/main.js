@@ -5,5 +5,5 @@ import { registerSW } from 'virtual:pwa-register'
 
 createApp(App).mount('#app')
 
-// Register service worker early so updates can be picked up automatically.
+// 서비스워커를 초기에 등록해 업데이트를 자동으로 수신.
 registerSW({ immediate: true })
