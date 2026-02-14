@@ -1,6 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { onClickOutside } from '@vueuse/core'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,7 +36,9 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const rootEl = ref(null)
+const popoverEl = ref(null)
 const open = ref(false)
+const popoverStyle = ref({})
 
 const selectedDate = ref(parseDate(props.modelValue))
 const selectedHour = ref(selectedDate.value ? selectedDate.value.getHours() : new Date().getHours())
@@ -46,8 +47,22 @@ const selectedMinute = ref(
 )
 const viewMonth = ref(startOfMonth(selectedDate.value || new Date()))
 
-onClickOutside(rootEl, () => {
-  open.value = false
+watch(open, async (isOpen) => {
+  if (isOpen) {
+    await nextTick()
+    updatePopoverPosition()
+    window.addEventListener('resize', updatePopoverPosition)
+    window.addEventListener('scroll', updatePopoverPosition, true)
+    return
+  }
+
+  window.removeEventListener('resize', updatePopoverPosition)
+  window.removeEventListener('scroll', updatePopoverPosition, true)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updatePopoverPosition)
+  window.removeEventListener('scroll', updatePopoverPosition, true)
 })
 
 watch(
@@ -146,6 +161,43 @@ function moveMonth(offset) {
   viewMonth.value = startOfMonth(next)
 }
 
+function toggleOpen() {
+  open.value = !open.value
+}
+
+function updatePopoverPosition() {
+  const anchor = rootEl.value
+  if (!anchor) return
+
+  const rect = anchor.getBoundingClientRect()
+  const viewportPadding = 12
+  const width = Math.min(360, Math.max(260, window.innerWidth - viewportPadding * 2))
+  const popoverHeight = popoverEl.value?.offsetHeight || 420
+  const preferredTop = rect.bottom + 8
+  const fallbackTop = rect.top - popoverHeight - 8
+
+  let left = rect.left
+  if (left + width > window.innerWidth - viewportPadding) {
+    left = window.innerWidth - width - viewportPadding
+  }
+  if (left < viewportPadding) {
+    left = viewportPadding
+  }
+
+  let top = preferredTop
+  if (preferredTop + popoverHeight > window.innerHeight - viewportPadding && fallbackTop >= viewportPadding) {
+    top = fallbackTop
+  } else if (preferredTop + popoverHeight > window.innerHeight - viewportPadding) {
+    top = Math.max(viewportPadding, window.innerHeight - popoverHeight - viewportPadding)
+  }
+
+  popoverStyle.value = {
+    top: `${Math.round(top)}px`,
+    left: `${Math.round(left)}px`,
+    width: `${Math.round(width)}px`,
+  }
+}
+
 function selectDay(date) {
   selectedDate.value = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   emitMergedValue()
@@ -188,14 +240,16 @@ function clearValue() {
 </script>
 
 <template>
-  <div ref="rootEl" class="relative">
-    <Button type="button" variant="outline" class="w-full justify-start text-left font-normal" @click="open = !open">
+  <div ref="rootEl">
+    <Button type="button" variant="outline" class="w-full justify-start text-left font-normal" @click="toggleOpen">
       <CalendarDays class="mr-2 h-4 w-4" />
       <span v-if="displayValue">{{ displayValue }}</span>
       <span v-else class="text-muted-foreground">{{ placeholder }}</span>
     </Button>
+  </div>
 
-    <div v-if="open" class="picker-popover">
+  <Teleport to="body">
+    <div v-if="open" ref="popoverEl" class="picker-popover" :style="popoverStyle">
       <div class="picker-month-nav">
         <Button type="button" variant="ghost" size="sm" @click="moveMonth(-1)">
           <ChevronLeft class="h-4 w-4" />
@@ -256,15 +310,13 @@ function clearValue() {
         <Button type="button" size="sm" @click="open = false">{{ doneLabel }}</Button>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .picker-popover {
-  position: absolute;
-  z-index: 70;
-  margin-top: 8px;
-  width: min(360px, calc(100vw - 48px));
+  position: fixed;
+  z-index: 120;
   border: 1px solid hsl(var(--border));
   border-radius: 12px;
   background: hsl(var(--card));
