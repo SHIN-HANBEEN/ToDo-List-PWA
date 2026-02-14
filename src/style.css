@@ -372,6 +372,10 @@
   overflow-y: auto;
 }
 
+.modal--allow-overflow {
+  overflow: visible;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -393,6 +397,21 @@
   width: 32px;
   height: 32px;
   padding: 0;
+}
+
+.settings-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: min(20rem, calc(100vw - 32px));
+}
+
+@media (min-width: 641px) {
+  .settings-tooltip--align-end {
+    left: auto;
+    right: 0;
+  }
 }
 
 .created-at {

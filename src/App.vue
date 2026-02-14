@@ -1545,7 +1545,7 @@ function formatTime(value) {
     </Card>
 
     <section v-if="mobileHeaderOpen" class="modal-wrap sm:hidden" @click.self="closeMobileHeader">
-      <article class="modal settings-modal mobile-menu-modal">
+      <article class="modal modal--allow-overflow settings-modal mobile-menu-modal">
         <Button
           variant="ghost"
           size="sm"
@@ -1606,7 +1606,7 @@ function formatTime(value) {
                 </Button>
                 <div
                   v-if="rolloverTooltipOpen"
-                  class="absolute left-0 top-full z-30 mt-2 w-64 rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
+                  class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
                 >
                   {{ rolloverTooltipText }}
                 </div>
@@ -1629,7 +1629,7 @@ function formatTime(value) {
       </article>
     </section>
     <section v-if="settingsOpen" class="modal-wrap" @click.self="closeSettings">
-      <article class="modal settings-modal">
+      <article class="modal modal--allow-overflow settings-modal">
         <Button
           variant="ghost"
           size="sm"
@@ -1688,7 +1688,7 @@ function formatTime(value) {
                 </Button>
                 <div
                   v-if="rolloverTooltipOpen"
-                  class="absolute left-0 top-full z-30 mt-2 w-64 rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg sm:left-auto sm:right-0"
+                  class="settings-tooltip settings-tooltip--align-end rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
                 >
                   {{ rolloverTooltipText }}
                 </div>
