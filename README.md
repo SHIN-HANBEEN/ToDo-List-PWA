@@ -1,4 +1,4 @@
-# TODO List PWA (Vue 3 + Vercel + Postgres)
+# Todogram (Vue 3 + Vercel + Postgres)
 
 Features:
 

@@ -30,7 +30,7 @@ const authBusy = ref(false)
 
 const messages = {
   ko: {
-    appTitle: 'TODO List',
+    appTitle: 'Todogram',
     language: '언어',
     guest: '비로그인',
     login: '로그인',
@@ -62,7 +62,7 @@ const messages = {
     noComments: '댓글이 없습니다.',
   },
   en: {
-    appTitle: 'TODO List',
+    appTitle: 'Todogram',
     language: 'Language',
     guest: 'Guest',
     login: 'Login',
@@ -94,7 +94,7 @@ const messages = {
     noComments: 'No comments yet.',
   },
   zh: {
-    appTitle: '待办清单',
+    appTitle: 'Todogram',
     language: '语言',
     guest: '未登录',
     login: '登录',
@@ -126,7 +126,7 @@ const messages = {
     noComments: '暂无评论。',
   },
   ja: {
-    appTitle: 'TODO リスト',
+    appTitle: 'Todogram',
     language: '言語',
     guest: '未ログイン',
     login: 'ログイン',

@@ -31,9 +31,9 @@ export default defineConfig(({ mode }) => {
         // 새 빌드가 배포되면 서비스워커를 백그라운드에서 자동 갱신.
         registerType: 'autoUpdate',
         manifest: {
-          name: 'TODO List PWA',
-          short_name: 'TODO',
-          description: 'Vue 3 TODO app that works offline and can be installed.',
+          name: 'Todogram',
+          short_name: 'Todogram',
+          description: 'Todogram: installable todo app that works offline.',
           theme_color: '#1f2937',
           background_color: '#f4f6fb',
           display: 'standalone',
