@@ -31,23 +31,24 @@ export default defineConfig(({ mode }) => {
         // 새 빌드가 배포되면 서비스워커를 백그라운드에서 자동 갱신.
         registerType: 'autoUpdate',
         manifest: {
+          id: '/?v=20260214',
           name: 'Todogram',
           short_name: 'Todogram',
           description: 'Todogram: installable todo app that works offline.',
-          theme_color: '#1f2937',
-          background_color: '#f4f6fb',
+          theme_color: '#0f172a',
+          background_color: '#f3f4f6',
           display: 'standalone',
           start_url: '/',
           scope: '/',
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: '/todogram-icon-20260214-192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: '/todogram-icon-20260214-512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable',

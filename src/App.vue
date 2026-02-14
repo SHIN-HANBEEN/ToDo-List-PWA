@@ -117,6 +117,7 @@ const messages = {
     noItems: '표시할 항목이 없습니다.',
     remaining: '남은 작업 {count}',
     doneCount: '완료 {count}',
+    todayTasksBadge: '오늘 할 일 {count}',
     close: '닫기',
     commentPlaceholder: '댓글 작성',
     commentEditPlaceholder: '댓글 수정',
@@ -179,6 +180,7 @@ const messages = {
     noItems: 'No items to display.',
     remaining: 'Remaining {count}',
     doneCount: 'Done {count}',
+    todayTasksBadge: "Today's tasks {count}",
     close: 'Close',
     commentPlaceholder: 'Add comment',
     commentEditPlaceholder: 'Edit comment',
@@ -241,6 +243,7 @@ const messages = {
     noItems: '没有可显示的项目。',
     remaining: '剩余 {count}',
     doneCount: '完成 {count}',
+    todayTasksBadge: '今日待办 {count}',
     close: '关闭',
     commentPlaceholder: '添加评论',
     commentEditPlaceholder: '编辑评论',
@@ -303,6 +306,7 @@ const messages = {
     noItems: '表示する項目がありません。',
     remaining: '残り {count}',
     doneCount: '完了 {count}',
+    todayTasksBadge: '今日の予定 {count}',
     close: '閉じる',
     commentPlaceholder: 'コメントを追加',
     commentEditPlaceholder: 'コメントを編集',
@@ -486,6 +490,10 @@ const draggableTodos = computed({
 })
 const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
 const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
+const todayTodoCount = computed(() => {
+  const todayKey = toDateKey(new Date())
+  return todos.value.filter((todo) => !todo.done && todo.dueAt && toDateKey(todo.dueAt) === todayKey).length
+})
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
 const todosWithoutDueCount = computed(() => todos.value.filter((todo) => !todo.dueAt).length)
 const calendarMonthLabel = computed(() => {
@@ -543,6 +551,30 @@ const selectedLabelForNewTodo = computed(() => {
 })
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
 const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
+
+async function syncAppBadge() {
+  if (typeof navigator === 'undefined') return
+  const canSet = typeof navigator.setAppBadge === 'function'
+  const canClear = typeof navigator.clearAppBadge === 'function'
+  if (!canSet && !canClear) return
+
+  const nextCount = isAuthenticated.value ? todayTodoCount.value : 0
+  try {
+    if (nextCount > 0 && canSet) {
+      await navigator.setAppBadge(nextCount)
+      return
+    }
+    if (canClear) {
+      await navigator.clearAppBadge()
+      return
+    }
+    if (canSet) {
+      await navigator.setAppBadge(0)
+    }
+  } catch {
+    // Ignore unsupported badge environments and transient platform failures.
+  }
+}
 
 function closeRolloverTooltip() {
   rolloverTooltipOpen.value = false
@@ -732,6 +764,10 @@ watch([rolloverTooltipOpen, rolloverTooltipContext], async ([isOpen]) => {
   await nextTick()
   positionRolloverTooltip()
 })
+
+watch([isAuthenticated, todayTodoCount], () => {
+  void syncAppBadge()
+}, { immediate: true })
 
 watch(rolloverTooltipText, async () => {
   if (!rolloverTooltipOpen.value) return
@@ -1334,7 +1370,18 @@ function formatTime(value) {
       <CardContent class="space-y-4 px-3 pb-3 pt-3">
         <section class="space-y-2">
           <div class="flex items-center justify-between gap-2">
-            <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
+            <div class="flex min-w-0 items-center gap-2">
+              <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
+              <span
+                v-if="isAuthenticated"
+                class="today-task-badge"
+                :class="{ 'today-task-badge--zero': todayTodoCount === 0 }"
+                :title="t('todayTasksBadge', { count: todayTodoCount })"
+                :aria-label="t('todayTasksBadge', { count: todayTodoCount })"
+              >
+                {{ todayTodoCount }}
+              </span>
+            </div>
             <div class="flex shrink-0 items-center gap-2">
               <div class="flex items-center gap-1 rounded-full bg-muted/40 p-1">
                 <Button
