@@ -286,7 +286,7 @@ function clearValue() {
           <SelectTrigger class="w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent class="z-[160]">
             <SelectItem v-for="hour in hourOptions" :key="hour" :value="hour">
               {{ hour.padStart(2, '0') }}
             </SelectItem>
@@ -297,7 +297,7 @@ function clearValue() {
           <SelectTrigger class="w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent class="z-[160]">
             <SelectItem v-for="minute in minuteOptions" :key="minute" :value="minute">
               {{ minute.padStart(2, '0') }}
             </SelectItem>
