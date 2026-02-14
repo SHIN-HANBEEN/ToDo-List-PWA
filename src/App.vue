@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
-import { Moon, Settings, Sun } from 'lucide-vue-next'
+import { Menu, Moon, Settings, Sun } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,6 +40,7 @@ const todos = ref([])
 const commentDrafts = ref({})
 const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
+const mobileHeaderOpen = ref(false)
 const detailTodoId = ref(null)
 const detailEditMode = ref(false)
 const detailDueAtDraft = ref('')
@@ -739,6 +740,7 @@ async function logout() {
     newRolloverEnabled.value = defaultRolloverEnabled.value
     addTodoOpen.value = false
     settingsOpen.value = false
+    mobileHeaderOpen.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -1062,6 +1064,29 @@ function closeSettings() {
   settingsOpen.value = false
 }
 
+function openMobileHeader() {
+  mobileHeaderOpen.value = true
+}
+
+function closeMobileHeader() {
+  mobileHeaderOpen.value = false
+}
+
+function openSettingsFromMobile() {
+  closeMobileHeader()
+  openSettings()
+}
+
+function openAddTodoFromMobile() {
+  closeMobileHeader()
+  openAddTodo()
+}
+
+async function logoutFromMobile() {
+  closeMobileHeader()
+  await logout()
+}
+
 function openAddLabel() {
   if (!isAuthenticated.value) return
   errorMessage.value = ''
@@ -1219,7 +1244,7 @@ function formatTime(value) {
     <Card
       class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none sm:mx-0 sm:max-w-3xl sm:rounded-xl sm:border-border/80 sm:bg-card/90 sm:shadow-2xl sm:backdrop-blur-xl"
     >
-      <CardHeader class="space-y-3 p-3 sm:p-6">
+      <CardHeader class="hidden space-y-3 p-3 sm:block sm:p-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
           <div class="flex w-full flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground sm:w-auto">
@@ -1261,6 +1286,14 @@ function formatTime(value) {
       </CardHeader>
 
       <CardContent class="space-y-4 px-3 pb-3 pt-0 sm:p-6 sm:pt-0">
+        <section class="flex items-center justify-between gap-2 sm:hidden">
+          <p class="text-xl font-semibold tracking-tight">{{ t('appTitle') }}</p>
+          <Button variant="outline" size="sm" @click="openMobileHeader">
+            <Menu class="mr-1 h-4 w-4" />
+            Menu
+          </Button>
+        </section>
+
         <section
           v-if="!isAuthenticated"
           class="mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0 sm:rounded-xl sm:border sm:bg-card sm:p-5"
@@ -1462,6 +1495,51 @@ function formatTime(value) {
         <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
       </CardContent>
     </Card>
+
+    <section v-if="mobileHeaderOpen" class="modal-wrap sm:hidden" @click.self="closeMobileHeader">
+      <article class="modal settings-modal">
+        <header class="modal-header">
+          <h2>{{ t('appTitle') }}</h2>
+          <Button variant="outline" size="sm" @click="closeMobileHeader">{{ t('close') }}</Button>
+        </header>
+
+        <div class="grid gap-2 text-xs text-muted-foreground">
+          <span class="truncate font-medium">{{ currentUserLabel }}</span>
+
+          <div class="grid h-8 grid-cols-2 overflow-hidden rounded-md border bg-background">
+            <Button
+              size="sm"
+              class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
+              :variant="viewMode === 'list' ? 'default' : 'ghost'"
+              @click="viewMode = 'list'; closeMobileHeader()"
+              :disabled="!isAuthenticated"
+            >
+              {{ t('listView') }}
+            </Button>
+            <Button
+              size="sm"
+              class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
+              :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
+              @click="viewMode = 'calendar'; closeMobileHeader()"
+              :disabled="!isAuthenticated"
+            >
+              {{ t('calendarView') }}
+            </Button>
+          </div>
+
+          <Button v-if="isAuthenticated" variant="outline" size="sm" @click="openAddTodoFromMobile">
+            {{ t('addSchedule') }}
+          </Button>
+          <Button variant="outline" size="sm" @click="openSettingsFromMobile">
+            <Settings class="mr-1 h-4 w-4" />
+            {{ t('settings') }}
+          </Button>
+          <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logoutFromMobile" :disabled="authBusy">
+            {{ t('logout') }}
+          </Button>
+        </div>
+      </article>
+    </section>
 
     <section v-if="settingsOpen" class="modal-wrap" @click.self="closeSettings">
       <article class="modal settings-modal">
