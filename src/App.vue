@@ -30,6 +30,12 @@ const commentDrafts = ref({})
 const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
 const detailTodoId = ref(null)
+const detailEditMode = ref(false)
+const detailDueAtDraft = ref('')
+const detailLocationDraft = ref('')
+const detailRolloverDraft = ref(false)
+const editingCommentId = ref(null)
+const commentEditDraft = ref('')
 const loading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
@@ -80,6 +86,10 @@ const messages = {
     dragHint: '전체/진행중/완료 탭 모두에서 드래그 정렬이 가능합니다. 모바일에서는 핸들을 길게 눌러 이동하세요.',
     loading: '불러오는 중...',
     detail: '상세보기',
+    edit: '수정',
+    save: '저장',
+    cancel: '취소',
+    editTodoMeta: '일정 정보 수정',
     delete: '삭제',
     created: '생성',
     noItems: '표시할 항목이 없습니다.',
@@ -87,6 +97,7 @@ const messages = {
     doneCount: '완료 {count}',
     close: '닫기',
     commentPlaceholder: '댓글 작성',
+    commentEditPlaceholder: '댓글 수정',
     comment: '댓글',
     remove: '삭제',
     noComments: '댓글이 없습니다.',
@@ -136,6 +147,10 @@ const messages = {
     dragHint: 'Drag reorder is available in All, Active, and Done tabs. On mobile, long-press the handle to move.',
     loading: 'Loading...',
     detail: 'Detail',
+    edit: 'Edit',
+    save: 'Save',
+    cancel: 'Cancel',
+    editTodoMeta: 'Edit schedule details',
     delete: 'Delete',
     created: 'Created',
     noItems: 'No items to display.',
@@ -143,6 +158,7 @@ const messages = {
     doneCount: 'Done {count}',
     close: 'Close',
     commentPlaceholder: 'Add comment',
+    commentEditPlaceholder: 'Edit comment',
     comment: 'Comment',
     remove: 'Remove',
     noComments: 'No comments yet.',
@@ -192,6 +208,10 @@ const messages = {
     dragHint: '全部/进行中/已完成标签都支持拖拽排序。移动端请长按拖拽手柄后移动。',
     loading: '加载中...',
     detail: '详情',
+    edit: '编辑',
+    save: '保存',
+    cancel: '取消',
+    editTodoMeta: '修改日程信息',
     delete: '删除',
     created: '创建时间',
     noItems: '没有可显示的项目。',
@@ -199,6 +219,7 @@ const messages = {
     doneCount: '已完成 {count}',
     close: '关闭',
     commentPlaceholder: '添加评论',
+    commentEditPlaceholder: '编辑评论',
     comment: '评论',
     remove: '移除',
     noComments: '暂无评论。',
@@ -248,6 +269,10 @@ const messages = {
     dragHint: 'すべて/進行中/完了タブでドラッグ並び替えが可能です。モバイルではハンドルを長押しして移動してください。',
     loading: '読み込み中...',
     detail: '詳細',
+    edit: '編集',
+    save: '保存',
+    cancel: 'キャンセル',
+    editTodoMeta: '予定情報を編集',
     delete: '削除',
     created: '作成日時',
     noItems: '表示する項目がありません。',
@@ -255,6 +280,7 @@ const messages = {
     doneCount: '完了 {count}',
     close: '閉じる',
     commentPlaceholder: 'コメントを追加',
+    commentEditPlaceholder: 'コメントを編集',
     comment: 'コメント',
     remove: '削除',
     noComments: 'コメントはありません。',
@@ -316,6 +342,24 @@ const errorMessages = {
     en: 'Please provide a valid due date/time.',
     zh: '请输入有效的截止日期时间。',
     ja: '有効な締切日時を入力してください。',
+  },
+  'id is required': {
+    ko: 'ID 값이 필요합니다.',
+    en: 'ID is required.',
+    zh: '需要 ID。',
+    ja: 'ID が必要です。',
+  },
+  'text must not be empty': {
+    ko: '빈 내용은 저장할 수 없습니다.',
+    en: 'Text must not be empty.',
+    zh: '内容不能为空。',
+    ja: '空の内容は保存できません。',
+  },
+  'no valid fields to update': {
+    ko: '수정할 항목이 없습니다.',
+    en: 'No valid fields to update.',
+    zh: '没有可更新的字段。',
+    ja: '更新できる項目がありません。',
   },
   'todo not found': {
     ko: '할 일을 찾을 수 없습니다.',
@@ -736,6 +780,10 @@ async function deleteComment(todoId, commentId) {
   if (target) target.comments = target.comments.filter((comment) => comment.id !== commentId)
   try {
     await apiRequest(`/api/comments?id=${commentId}`, { method: 'DELETE' })
+    if (editingCommentId.value === commentId) {
+      editingCommentId.value = null
+      commentEditDraft.value = ''
+    }
   } catch (error) {
     if (target) target.comments = originalComments
     errorMessage.value = translateError(error.message)
@@ -744,9 +792,109 @@ async function deleteComment(todoId, commentId) {
   }
 }
 
+function startDetailEdit() {
+  const target = detailTodo.value
+  if (!target) return
+  detailEditMode.value = true
+  detailDueAtDraft.value = target.dueAt || ''
+  detailLocationDraft.value = target.location || ''
+  detailRolloverDraft.value = Boolean(target.rolloverEnabled)
+}
+
+function cancelDetailEdit() {
+  detailEditMode.value = false
+  const target = detailTodo.value
+  detailDueAtDraft.value = target?.dueAt || ''
+  detailLocationDraft.value = target?.location || ''
+  detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
+}
+
+async function saveDetailEdit() {
+  const target = detailTodo.value
+  if (!target || busy.value) return
+  busy.value = true
+  errorMessage.value = ''
+  const previous = {
+    dueAt: target.dueAt || '',
+    location: target.location || '',
+    rolloverEnabled: Boolean(target.rolloverEnabled),
+  }
+
+  target.dueAt = detailDueAtDraft.value || null
+  target.location = detailLocationDraft.value.trim()
+  target.rolloverEnabled = detailRolloverDraft.value
+
+  try {
+    await apiRequest('/api/todos', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        id: target.id,
+        dueAt: detailDueAtDraft.value || null,
+        location: detailLocationDraft.value,
+        rolloverEnabled: detailRolloverDraft.value,
+      }),
+    })
+    detailEditMode.value = false
+  } catch (error) {
+    target.dueAt = previous.dueAt || null
+    target.location = previous.location
+    target.rolloverEnabled = previous.rolloverEnabled
+    errorMessage.value = translateError(error.message)
+  } finally {
+    busy.value = false
+  }
+}
+
+function startCommentEdit(comment) {
+  editingCommentId.value = comment.id
+  commentEditDraft.value = comment.text
+}
+
+function cancelCommentEdit() {
+  editingCommentId.value = null
+  commentEditDraft.value = ''
+}
+
+async function saveCommentEdit(todoId, commentId) {
+  const text = commentEditDraft.value.trim()
+  if (!text || busy.value) {
+    if (!text) errorMessage.value = translateError('text must not be empty')
+    return
+  }
+
+  busy.value = true
+  errorMessage.value = ''
+  const targetTodo = todos.value.find((todo) => todo.id === todoId)
+  const targetComment = targetTodo?.comments.find((comment) => comment.id === commentId)
+  const previous = targetComment?.text || ''
+  if (targetComment) targetComment.text = text
+
+  try {
+    const payload = await apiRequest('/api/comments', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: commentId, text }),
+    })
+    if (targetComment) targetComment.text = payload.comment.text
+    editingCommentId.value = null
+    commentEditDraft.value = ''
+  } catch (error) {
+    if (targetComment) targetComment.text = previous
+    errorMessage.value = translateError(error.message)
+  } finally {
+    busy.value = false
+  }
+}
+
 function openDetail(todoId) {
+  const target = todos.value.find((todo) => todo.id === todoId)
   detailTodoId.value = todoId
   if (typeof commentDrafts.value[todoId] !== 'string') commentDrafts.value[todoId] = ''
+  detailEditMode.value = false
+  detailDueAtDraft.value = target?.dueAt || ''
+  detailLocationDraft.value = target?.location || ''
+  detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
+  editingCommentId.value = null
+  commentEditDraft.value = ''
 }
 
 function openSettings() {
@@ -769,6 +917,9 @@ function closeAddTodo() {
 
 function closeDetail() {
   detailTodoId.value = null
+  detailEditMode.value = false
+  editingCommentId.value = null
+  commentEditDraft.value = ''
 }
 
 function formatDateTime(value) {
@@ -1114,12 +1265,46 @@ function formatTime(value) {
       <article class="modal">
         <header class="modal-header">
           <h2>{{ detailTodo.text }}</h2>
-          <Button variant="outline" size="sm" @click="closeDetail">{{ t('close') }}</Button>
+          <div class="flex flex-wrap gap-2">
+            <template v-if="detailEditMode">
+              <Button size="sm" @click="saveDetailEdit" :disabled="busy">{{ t('save') }}</Button>
+              <Button variant="outline" size="sm" @click="cancelDetailEdit">{{ t('cancel') }}</Button>
+            </template>
+            <Button v-else variant="outline" size="sm" @click="startDetailEdit">{{ t('edit') }}</Button>
+            <Button variant="outline" size="sm" @click="closeDetail">{{ t('close') }}</Button>
+          </div>
         </header>
         <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
-        <p class="created-at">{{ t('due') }}: {{ formatDateTime(detailTodo.dueAt) }}</p>
-        <p class="created-at">{{ t('place') }}: {{ detailTodo.location || '-' }}</p>
-        <p v-if="detailTodo.rolloverEnabled" class="created-at">{{ t('rolloverEnabled') }}</p>
+
+        <template v-if="detailEditMode">
+          <p class="text-sm font-medium">{{ t('editTodoMeta') }}</p>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
+            <DateTimePicker
+              v-model="detailDueAtDraft"
+              :locale="localeCodeByLanguage[locale] || 'en-US'"
+              :placeholder="t('dueAtPlaceholder')"
+              :clear-label="t('pickerClear')"
+              :done-label="t('pickerDone')"
+            />
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
+            <Input v-model="detailLocationDraft" type="text" :placeholder="t('locationPlaceholder')" />
+          </div>
+          <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
+            <input v-model="detailRolloverDraft" type="checkbox" class="mt-1" />
+            <span class="space-y-0.5">
+              <span class="block font-medium">{{ t('rolloverOption') }}</span>
+              <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
+            </span>
+          </label>
+        </template>
+        <template v-else>
+          <p class="created-at">{{ t('due') }}: {{ formatDateTime(detailTodo.dueAt) }}</p>
+          <p class="created-at">{{ t('place') }}: {{ detailTodo.location || '-' }}</p>
+          <p v-if="detailTodo.rolloverEnabled" class="created-at">{{ t('rolloverEnabled') }}</p>
+        </template>
 
         <form class="comment-form" @submit.prevent="addComment(detailTodo.id)">
           <Input v-model="commentDrafts[detailTodo.id]" type="text" :placeholder="t('commentPlaceholder')" />
@@ -1128,13 +1313,30 @@ function formatTime(value) {
 
         <ul class="comment-list" v-if="detailTodo.comments.length > 0">
           <li v-for="comment in detailTodo.comments" :key="comment.id">
-            <div>
-              <p>{{ comment.text }}</p>
+            <div class="min-w-0 flex-1">
+              <p v-if="editingCommentId !== comment.id">{{ comment.text }}</p>
+              <Input
+                v-else
+                v-model="commentEditDraft"
+                type="text"
+                :placeholder="t('commentEditPlaceholder')"
+              />
               <small>{{ formatDateTime(comment.createdAt) }}</small>
             </div>
-            <Button variant="ghost" size="sm" @click="deleteComment(detailTodo.id, comment.id)">
-              {{ t('remove') }}
-            </Button>
+            <div class="comment-actions">
+              <template v-if="editingCommentId === comment.id">
+                <Button size="sm" @click="saveCommentEdit(detailTodo.id, comment.id)" :disabled="busy">
+                  {{ t('save') }}
+                </Button>
+                <Button variant="outline" size="sm" @click="cancelCommentEdit">{{ t('cancel') }}</Button>
+              </template>
+              <template v-else>
+                <Button variant="ghost" size="sm" @click="startCommentEdit(comment)">{{ t('edit') }}</Button>
+                <Button variant="ghost" size="sm" @click="deleteComment(detailTodo.id, comment.id)">
+                  {{ t('remove') }}
+                </Button>
+              </template>
+            </div>
           </li>
         </ul>
         <p v-else class="empty">{{ t('noComments') }}</p>

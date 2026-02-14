@@ -145,6 +145,26 @@ export default async function handler(req, res) {
         valueIndex += 1
       }
 
+      if (Object.prototype.hasOwnProperty.call(body, 'dueAt')) {
+        const dueAt = parseDueAt(body.dueAt)
+        if (body.dueAt && !dueAt) return res.status(400).json({ error: 'dueAt must be a valid datetime' })
+        updates.push(`due_at = $${valueIndex}`)
+        values.push(dueAt)
+        valueIndex += 1
+      }
+
+      if (typeof body.location === 'string') {
+        updates.push(`location = $${valueIndex}`)
+        values.push(body.location.trim().slice(0, 160))
+        valueIndex += 1
+      }
+
+      if (typeof body.rolloverEnabled === 'boolean') {
+        updates.push(`rollover_enabled = $${valueIndex}`)
+        values.push(body.rolloverEnabled)
+        valueIndex += 1
+      }
+
       if (updates.length === 0) return res.status(400).json({ error: 'no valid fields to update' })
 
       values.push(id, user.id)

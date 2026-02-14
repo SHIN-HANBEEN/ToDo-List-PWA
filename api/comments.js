@@ -66,6 +66,40 @@ export default async function handler(req, res) {
       return res.status(200).json({ deletedId: Number(result.rows[0].id) })
     }
 
+    if (req.method === 'PATCH') {
+      // 현재 사용자 소유 TODO의 댓글만 수정 허용.
+      const body = parseBody(req)
+      const id = Number(body.id)
+      const text = String(body.text || '').trim()
+
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'id is required' })
+      if (!text) return res.status(400).json({ error: 'text must not be empty' })
+
+      const result = await pool.query(
+        `
+          UPDATE comments c
+          SET text = $1
+          FROM todos t
+          WHERE c.id = $2
+            AND c.todo_id = t.id
+            AND t.user_id = $3
+          RETURNING c.id, c.todo_id, c.text, c.created_at;
+        `,
+        [text, id, user.id]
+      )
+      if (result.rows.length === 0) return res.status(404).json({ error: 'comment not found' })
+
+      const comment = normalizeCommentRow(result.rows[0])
+      return res.status(200).json({
+        comment: {
+          id: comment.id,
+          todoId: comment.todoId,
+          text: comment.text,
+          createdAt: comment.createdAt,
+        },
+      })
+    }
+
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (error) {
     console.error(error)
