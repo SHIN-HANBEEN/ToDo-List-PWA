@@ -26,6 +26,7 @@ const newRolloverEnabled = ref(false)
 const filter = ref('all')
 const todos = ref([])
 const commentDrafts = ref({})
+const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
 const detailTodoId = ref(null)
 const loading = ref(false)
@@ -44,6 +45,8 @@ const messages = {
     language: '언어',
     settings: '설정',
     settingsTitle: '앱 설정',
+    addSchedule: '일정 추가',
+    addScheduleTitle: '새 일정 추가',
     guest: '비로그인',
     login: '로그인',
     signup: '회원가입',
@@ -96,6 +99,8 @@ const messages = {
     language: 'Language',
     settings: 'Settings',
     settingsTitle: 'App settings',
+    addSchedule: 'Add schedule',
+    addScheduleTitle: 'Add new schedule',
     guest: 'Guest',
     login: 'Login',
     signup: 'Sign up',
@@ -148,6 +153,8 @@ const messages = {
     language: '语言',
     settings: '设置',
     settingsTitle: '应用设置',
+    addSchedule: '添加日程',
+    addScheduleTitle: '添加新日程',
     guest: '未登录',
     login: '登录',
     signup: '注册',
@@ -200,6 +207,8 @@ const messages = {
     language: '言語',
     settings: '設定',
     settingsTitle: 'アプリ設定',
+    addSchedule: '予定追加',
+    addScheduleTitle: '新しい予定を追加',
     guest: '未ログイン',
     login: 'ログイン',
     signup: '新規登録',
@@ -550,6 +559,7 @@ async function logout() {
     newDueAt.value = ''
     newLocation.value = ''
     newRolloverEnabled.value = false
+    addTodoOpen.value = false
     settingsOpen.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
@@ -629,6 +639,7 @@ async function addTodo() {
     newDueAt.value = ''
     newLocation.value = ''
     newRolloverEnabled.value = false
+    addTodoOpen.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -737,6 +748,16 @@ function closeSettings() {
   settingsOpen.value = false
 }
 
+function openAddTodo() {
+  if (!isAuthenticated.value) return
+  errorMessage.value = ''
+  addTodoOpen.value = true
+}
+
+function closeAddTodo() {
+  addTodoOpen.value = false
+}
+
 function closeDetail() {
   detailTodoId.value = null
 }
@@ -766,39 +787,42 @@ function formatTime(value) {
 <template>
   <main class="page">
     <Card class="mx-1 w-full max-w-3xl border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl sm:mx-0">
-      <CardHeader class="space-y-4">
+      <CardHeader class="space-y-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
-          <div class="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground sm:w-auto sm:justify-end">
+          <div class="flex w-full flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground sm:w-auto">
             <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
+
+            <div class="grid grid-cols-2 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
+              <Button
+                size="sm"
+                class="w-full"
+                :variant="viewMode === 'list' ? 'default' : 'ghost'"
+                @click="viewMode = 'list'"
+                :disabled="!isAuthenticated"
+              >
+                {{ t('listView') }}
+              </Button>
+              <Button
+                size="sm"
+                class="w-full"
+                :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
+                @click="viewMode = 'calendar'"
+                :disabled="!isAuthenticated"
+              >
+                {{ t('calendarView') }}
+              </Button>
+            </div>
+
+            <Button v-if="isAuthenticated" variant="outline" size="sm" @click="openAddTodo">
+              {{ t('addSchedule') }}
+            </Button>
             <Button variant="outline" size="sm" @click="openSettings">
               <Settings class="mr-1 h-4 w-4" />
               {{ t('settings') }}
             </Button>
             <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logout" :disabled="authBusy">
               {{ t('logout') }}
-            </Button>
-          </div>
-        </div>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <div class="grid w-full grid-cols-2 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
-            <Button
-              size="sm"
-              class="w-full"
-              :variant="viewMode === 'list' ? 'default' : 'ghost'"
-              @click="viewMode = 'list'"
-              :disabled="!isAuthenticated"
-            >
-              {{ t('listView') }}
-            </Button>
-            <Button
-              size="sm"
-              class="w-full"
-              :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
-              @click="viewMode = 'calendar'"
-              :disabled="!isAuthenticated"
-            >
-              {{ t('calendarView') }}
             </Button>
           </div>
         </div>
@@ -842,87 +866,47 @@ function formatTime(value) {
         </section>
 
         <template v-else>
-          <form class="space-y-2" @submit.prevent="addTodo">
-            <Input
-              v-model="newTask"
-              class="w-full"
-              type="text"
-              :placeholder="t('taskPlaceholder')"
-              autocomplete="off"
-            />
-            <div class="grid gap-2 md:grid-cols-2">
-              <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
-                <Input
-                  v-model="newDueAt"
+          <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
+
+          <template v-if="viewMode === 'list'">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
+                <Button
+                  size="sm"
                   class="w-full"
-                  type="datetime-local"
-                  :placeholder="t('dueAtPlaceholder')"
-                />
-              </div>
-              <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
-                <Input
-                  v-model="newLocation"
+                  :variant="filter === 'all' ? 'default' : 'ghost'"
+                  @click="filter = 'all'"
+                  :disabled="busy"
+                >
+                  {{ t('all') }}
+                </Button>
+                <Button
+                  size="sm"
                   class="w-full"
-                  type="text"
-                  :placeholder="t('locationPlaceholder')"
-                  autocomplete="off"
-                />
+                  :variant="filter === 'active' ? 'default' : 'ghost'"
+                  @click="filter = 'active'"
+                  :disabled="busy"
+                >
+                  {{ t('active') }}
+                </Button>
+                <Button
+                  size="sm"
+                  class="w-full"
+                  :variant="filter === 'done' ? 'default' : 'ghost'"
+                  @click="filter = 'done'"
+                  :disabled="busy"
+                >
+                  {{ t('done') }}
+                </Button>
               </div>
-            </div>
-            <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
-              <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
-              <span class="space-y-0.5">
-                <span class="block font-medium">{{ t('rolloverOption') }}</span>
-                <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
-              </span>
-            </label>
-            <div class="flex flex-col gap-2 md:flex-row">
-              <Button class="w-full md:w-auto" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
               <Button
-                v-if="viewMode === 'list'"
-                class="w-full md:w-auto"
+                class="w-full sm:w-auto"
                 variant="outline"
                 type="button"
                 @click="clearDone"
                 :disabled="doneCount === 0 || busy"
               >
                 {{ t('clearDone') }}
-              </Button>
-            </div>
-          </form>
-
-          <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
-
-          <template v-if="viewMode === 'list'">
-            <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
-              <Button
-                size="sm"
-                class="w-full"
-                :variant="filter === 'all' ? 'default' : 'ghost'"
-                @click="filter = 'all'"
-                :disabled="busy"
-              >
-                {{ t('all') }}
-              </Button>
-              <Button
-                size="sm"
-                class="w-full"
-                :variant="filter === 'active' ? 'default' : 'ghost'"
-                @click="filter = 'active'"
-                :disabled="busy"
-              >
-                {{ t('active') }}
-              </Button>
-              <Button
-                size="sm"
-                class="w-full"
-                :variant="filter === 'done' ? 'default' : 'ghost'"
-                @click="filter = 'done'"
-                :disabled="busy"
-              >
-                {{ t('done') }}
               </Button>
             </div>
             <p class="text-xs text-muted-foreground">{{ t('dragHint') }}</p>
@@ -1065,6 +1049,54 @@ function formatTime(value) {
             </SelectContent>
           </Select>
         </div>
+      </article>
+    </section>
+
+    <section v-if="addTodoOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddTodo">
+      <article class="modal settings-modal">
+        <header class="modal-header">
+          <h2>{{ t('addScheduleTitle') }}</h2>
+          <Button variant="outline" size="sm" @click="closeAddTodo">{{ t('close') }}</Button>
+        </header>
+
+        <form class="space-y-2" @submit.prevent="addTodo">
+          <Input
+            v-model="newTask"
+            class="w-full"
+            type="text"
+            :placeholder="t('taskPlaceholder')"
+            autocomplete="off"
+          />
+          <div class="grid gap-2 md:grid-cols-2">
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
+              <Input
+                v-model="newDueAt"
+                class="w-full"
+                type="datetime-local"
+                :placeholder="t('dueAtPlaceholder')"
+              />
+            </div>
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
+              <Input
+                v-model="newLocation"
+                class="w-full"
+                type="text"
+                :placeholder="t('locationPlaceholder')"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
+            <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
+            <span class="space-y-0.5">
+              <span class="block font-medium">{{ t('rolloverOption') }}</span>
+              <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
+            </span>
+          </label>
+          <Button class="w-full" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
+        </form>
       </article>
     </section>
 
