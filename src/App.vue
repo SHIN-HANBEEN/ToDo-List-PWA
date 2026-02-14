@@ -1,5 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const LANGUAGE_KEY = 'todo-language'
 const locale = ref('ko')
@@ -21,15 +31,15 @@ const authBusy = ref(false)
 const messages = {
   ko: {
     appTitle: 'TODO List',
-    appSubtitle: 'Vue 3 + PWA + Postgres',
     language: '언어',
+    guest: '비로그인',
     login: '로그인',
     signup: '회원가입',
     logout: '로그아웃',
     createAccount: '계정 만들기',
     emailPlaceholder: '이메일 주소',
     passwordPlaceholder: '비밀번호 (최소 8자)',
-    authSigninHelp: '계정으로 계속 진행하세요',
+    authSigninHelp: '로그인해서 계속 진행하세요',
     authSignupHelp: '새 계정을 만들어 시작하세요',
     addTask: '추가',
     taskPlaceholder: '할 일을 입력하세요',
@@ -53,8 +63,8 @@ const messages = {
   },
   en: {
     appTitle: 'TODO List',
-    appSubtitle: 'Vue 3 + PWA + Postgres',
     language: 'Language',
+    guest: 'Guest',
     login: 'Login',
     signup: 'Sign up',
     logout: 'Logout',
@@ -85,8 +95,8 @@ const messages = {
   },
   zh: {
     appTitle: '待办清单',
-    appSubtitle: 'Vue 3 + PWA + Postgres',
     language: '语言',
+    guest: '未登录',
     login: '登录',
     signup: '注册',
     logout: '退出登录',
@@ -117,8 +127,8 @@ const messages = {
   },
   ja: {
     appTitle: 'TODO リスト',
-    appSubtitle: 'Vue 3 + PWA + Postgres',
     language: '言語',
+    guest: '未ログイン',
     login: 'ログイン',
     signup: '新規登録',
     logout: 'ログアウト',
@@ -219,6 +229,7 @@ const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
 const isDragEnabled = computed(() => filter.value === 'all')
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
 const isAuthenticated = computed(() => Boolean(user.value))
+const currentUserLabel = computed(() => user.value?.email || t('guest'))
 
 onMounted(async () => {
   const saved = localStorage.getItem(LANGUAGE_KEY)
@@ -515,144 +526,152 @@ function formatDateTime(value) {
 
 <template>
   <main class="page">
-    <section class="card">
-      <header class="header">
-        <p class="eyebrow">{{ t('appSubtitle') }}</p>
-        <h1>{{ t('appTitle') }}</h1>
-        <div class="language-bar">
-          <label for="language-select">{{ t('language') }}</label>
-          <select id="language-select" :value="locale" @change="setLocale($event.target.value)">
-            <option v-for="option in languageOptions" :key="option.code" :value="option.code">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-      </header>
-
-      <section v-if="!isAuthenticated" class="auth-shell">
-        <article class="auth-card">
-          <p class="auth-script">Todogram</p>
-          <p class="auth-subtitle">
-            {{ authMode === 'signup' ? t('authSignupHelp') : t('authSigninHelp') }}
-          </p>
-
-          <div class="chips auth-chips">
-            <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">
-              {{ t('login') }}
-            </button>
-            <button :class="{ active: authMode === 'signup' }" @click="authMode = 'signup'">
-              {{ t('signup') }}
-            </button>
+    <Card class="w-full max-w-3xl border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl">
+      <CardHeader class="space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <CardTitle class="text-3xl tracking-tight">{{ t('appTitle') }}</CardTitle>
+          <div class="flex items-center gap-2 text-xs text-muted-foreground">
+            <span class="font-medium">{{ currentUserLabel }}</span>
+            <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logout" :disabled="authBusy">
+              {{ t('logout') }}
+            </Button>
           </div>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-muted-foreground">{{ t('language') }}</span>
+            <Select :model-value="locale" @update:model-value="setLocale">
+              <SelectTrigger class="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="inline-flex rounded-lg border bg-background p-1">
+            <Button
+              size="sm"
+              :variant="filter === 'all' ? 'default' : 'ghost'"
+              @click="filter = 'all'"
+              :disabled="busy || !isAuthenticated"
+            >
+              {{ t('all') }}
+            </Button>
+            <Button
+              size="sm"
+              :variant="filter === 'active' ? 'default' : 'ghost'"
+              @click="filter = 'active'"
+              :disabled="busy || !isAuthenticated"
+            >
+              {{ t('active') }}
+            </Button>
+            <Button
+              size="sm"
+              :variant="filter === 'done' ? 'default' : 'ghost'"
+              @click="filter = 'done'"
+              :disabled="busy || !isAuthenticated"
+            >
+              {{ t('done') }}
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
 
-          <form class="auth-form" @submit.prevent="submitAuth">
-            <input
-              v-model="authEmail"
-              type="email"
-              :placeholder="t('emailPlaceholder')"
-              autocomplete="email"
-            />
-            <input
+      <CardContent class="space-y-4">
+        <section v-if="!isAuthenticated" class="mx-auto max-w-md space-y-4 rounded-xl border bg-card p-5">
+          <div class="space-y-1 text-center">
+            <p class="auth-script">Todogram</p>
+            <p class="text-sm text-muted-foreground">
+              {{ authMode === 'signup' ? t('authSignupHelp') : t('authSigninHelp') }}
+            </p>
+          </div>
+          <div class="inline-flex w-full rounded-lg border bg-background p-1">
+            <Button class="flex-1" :variant="authMode === 'login' ? 'default' : 'ghost'" @click="authMode = 'login'">
+              {{ t('login') }}
+            </Button>
+            <Button class="flex-1" :variant="authMode === 'signup' ? 'default' : 'ghost'" @click="authMode = 'signup'">
+              {{ t('signup') }}
+            </Button>
+          </div>
+          <form class="space-y-3" @submit.prevent="submitAuth">
+            <Input v-model="authEmail" type="email" :placeholder="t('emailPlaceholder')" autocomplete="email" />
+            <Input
               v-model="authPassword"
               type="password"
               :placeholder="t('passwordPlaceholder')"
               autocomplete="current-password"
             />
-            <button class="auth-submit" type="submit" :disabled="authBusy">
+            <Button class="w-full" :disabled="authBusy">
               {{ authMode === 'signup' ? t('createAccount') : t('login') }}
-            </button>
+            </Button>
           </form>
-        </article>
-      </section>
+        </section>
 
-      <template v-else>
-        <div class="user-bar">
-          <span>{{ user.email }}</span>
-          <button class="ghost" @click="logout" :disabled="authBusy">{{ t('logout') }}</button>
-        </div>
+        <template v-else>
+          <form class="grid gap-2 sm:grid-cols-[1fr_auto_auto]" @submit.prevent="addTodo">
+            <Input v-model="newTask" type="text" :placeholder="t('taskPlaceholder')" autocomplete="off" />
+            <Button type="submit" :disabled="busy">{{ t('addTask') }}</Button>
+            <Button variant="outline" type="button" @click="clearDone" :disabled="doneCount === 0 || busy">
+              {{ t('clearDone') }}
+            </Button>
+          </form>
 
-        <form class="composer" @submit.prevent="addTodo">
-          <input v-model="newTask" type="text" :placeholder="t('taskPlaceholder')" autocomplete="off" />
-          <button type="submit" :disabled="busy">{{ t('addTask') }}</button>
-        </form>
+          <p class="text-xs text-muted-foreground">{{ t('dragHint') }}</p>
+          <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
 
-        <div class="toolbar">
-          <div class="chips" role="tablist" aria-label="filter">
-            <button :class="{ active: filter === 'all' }" @click="filter = 'all'" :disabled="busy">
-              {{ t('all') }}
-            </button>
-            <button :class="{ active: filter === 'active' }" @click="filter = 'active'" :disabled="busy">
-              {{ t('active') }}
-            </button>
-            <button :class="{ active: filter === 'done' }" @click="filter = 'done'" :disabled="busy">
-              {{ t('done') }}
-            </button>
-          </div>
-          <button class="ghost" @click="clearDone" :disabled="doneCount === 0 || busy">
-            {{ t('clearDone') }}
-          </button>
-        </div>
-
-        <p class="hint">{{ t('dragHint') }}</p>
-        <p v-if="loading" class="hint">{{ t('loading') }}</p>
-
-        <ul class="list">
-          <li
-            v-for="todo in filteredTodos"
-            :key="todo.id"
-            :class="{ done: todo.done, dragging: draggingId === todo.id }"
-            :draggable="isDragEnabled && !busy"
-            @dragstart="onDragStart(todo.id)"
-            @dragover.prevent
-            @drop="onDrop(todo.id)"
-            @dragend="onDragEnd"
-          >
-            <div class="todo-main">
-              <label>
-                <input
-                  :checked="todo.done"
-                  type="checkbox"
-                  @change="setTodoDone(todo, $event.target.checked)"
-                />
-                <span>{{ todo.text }}</span>
-              </label>
-              <div class="todo-actions">
-                <button class="ghost" @click="openDetail(todo.id)">{{ t('detail') }}</button>
-                <button class="danger" @click="deleteTodo(todo.id)" aria-label="delete">
-                  {{ t('delete') }}
-                </button>
+          <ul class="space-y-2">
+            <li
+              v-for="todo in filteredTodos"
+              :key="todo.id"
+              class="rounded-lg border bg-card p-3"
+              :class="{ 'opacity-50': draggingId === todo.id }"
+              :draggable="isDragEnabled && !busy"
+              @dragstart="onDragStart(todo.id)"
+              @dragover.prevent
+              @drop="onDrop(todo.id)"
+              @dragend="onDragEnd"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <label class="flex min-w-0 flex-1 items-center gap-2">
+                  <input :checked="todo.done" type="checkbox" @change="setTodoDone(todo, $event.target.checked)" />
+                  <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
+                </label>
+                <div class="flex gap-2">
+                  <Button variant="ghost" size="sm" @click="openDetail(todo.id)">{{ t('detail') }}</Button>
+                  <Button variant="destructive" size="sm" @click="deleteTodo(todo.id)">{{ t('delete') }}</Button>
+                </div>
               </div>
-            </div>
-            <p class="created-at">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
-          </li>
-          <li v-if="!loading && filteredTodos.length === 0" class="empty">{{ t('noItems') }}</li>
-        </ul>
+              <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
+            </li>
+            <li v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
+              {{ t('noItems') }}
+            </li>
+          </ul>
 
-        <footer class="meta">
-          <span>{{ t('remaining', { count: remainingCount }) }}</span>
-          <span>{{ t('doneCount', { count: doneCount }) }}</span>
-        </footer>
-      </template>
+          <footer class="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+            <span>{{ t('remaining', { count: remainingCount }) }}</span>
+            <span>{{ t('doneCount', { count: doneCount }) }}</span>
+          </footer>
+        </template>
 
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    </section>
+        <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
+      </CardContent>
+    </Card>
 
     <section v-if="detailTodo" class="modal-wrap" @click.self="closeDetail">
       <article class="modal">
         <header class="modal-header">
           <h2>{{ detailTodo.text }}</h2>
-          <button class="ghost" @click="closeDetail">{{ t('close') }}</button>
+          <Button variant="outline" size="sm" @click="closeDetail">{{ t('close') }}</Button>
         </header>
         <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
 
         <form class="comment-form" @submit.prevent="addComment(detailTodo.id)">
-          <input
-            v-model="commentDrafts[detailTodo.id]"
-            type="text"
-            :placeholder="t('commentPlaceholder')"
-            autocomplete="off"
-          />
-          <button type="submit" :disabled="busy">{{ t('comment') }}</button>
+          <Input v-model="commentDrafts[detailTodo.id]" type="text" :placeholder="t('commentPlaceholder')" />
+          <Button type="submit" :disabled="busy">{{ t('comment') }}</Button>
         </form>
 
         <ul class="comment-list" v-if="detailTodo.comments.length > 0">
@@ -661,9 +680,9 @@ function formatDateTime(value) {
               <p>{{ comment.text }}</p>
               <small>{{ formatDateTime(comment.createdAt) }}</small>
             </div>
-            <button class="comment-delete" @click="deleteComment(detailTodo.id, comment.id)">
+            <Button variant="ghost" size="sm" @click="deleteComment(detailTodo.id, comment.id)">
               {{ t('remove') }}
-            </button>
+            </Button>
           </li>
         </ul>
         <p v-else class="empty">{{ t('noComments') }}</p>
