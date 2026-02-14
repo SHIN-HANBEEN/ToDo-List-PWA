@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 
+// UI state
 const newTask = ref('')
 const filter = ref('all')
 const todos = ref([])
@@ -10,6 +11,8 @@ const detailTodoId = ref(null)
 const loading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
+
+// Auth state
 const user = ref(null)
 const authMode = ref('login')
 const authEmail = ref('')
@@ -29,11 +32,13 @@ const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailT
 const isAuthenticated = computed(() => Boolean(user.value))
 
 onMounted(async () => {
+  // App bootstrap: try session restore, then load user data.
   await loadSessionUser()
   if (user.value) await loadTodos()
 })
 
 async function apiRequest(url, options = {}) {
+  // Small fetch wrapper with shared JSON parsing + unified error message.
   const baseHeaders = {}
   if (options.body) baseHeaders['Content-Type'] = 'application/json'
 
@@ -57,6 +62,7 @@ async function apiRequest(url, options = {}) {
 }
 
 async function loadSessionUser() {
+  // Equivalent to "current user" endpoint in many Spring-based apps.
   try {
     const payload = await apiRequest('/api/auth')
     user.value = payload.user
@@ -66,6 +72,7 @@ async function loadSessionUser() {
 }
 
 async function submitAuth() {
+  // Handles both signup and login flows.
   if (authBusy.value) return
   authBusy.value = true
   errorMessage.value = ''
@@ -106,6 +113,7 @@ async function logout() {
 }
 
 async function loadTodos() {
+  // User-specific todo load after auth is established.
   if (!isAuthenticated.value) return
   loading.value = true
   errorMessage.value = ''
@@ -143,6 +151,7 @@ async function addTodo() {
 }
 
 async function setTodoDone(todo, done) {
+  // Optimistic UI update with rollback on server error.
   const previous = todo.done
   todo.done = done
   errorMessage.value = ''
@@ -236,6 +245,7 @@ function onDragStart(todoId) {
 }
 
 async function onDrop(targetId) {
+  // Client reorders immediately, then persists order via PATCH /api/todos.
   if (
     !isDragEnabled.value ||
     busy.value ||
@@ -283,6 +293,7 @@ function closeDetail() {
 }
 
 function formatDateTime(value) {
+  // Shared date formatter used by todos and comments.
   if (!value) return '-'
   return new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',

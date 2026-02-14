@@ -4,6 +4,7 @@ let pool
 let schemaPromise
 
 function getConnectionString() {
+  // Prefer Vercel/Neon standard env names, but keep DATABASE_URL fallback for local/dev.
   return (
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
@@ -13,6 +14,7 @@ function getConnectionString() {
 }
 
 export function getPool() {
+  // Reuse a single pool per serverless runtime instance.
   if (pool) return pool
 
   const connectionString = getConnectionString()
@@ -29,11 +31,13 @@ export function getPool() {
 }
 
 export async function ensureSchema() {
+  // Run DDL only once per warm runtime to avoid repeated CREATE TABLE checks.
   if (schemaPromise) return schemaPromise
 
   schemaPromise = (async () => {
     const client = await getPool().connect()
     try {
+      // Users own todos. Sessions map browser cookie token -> user.
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id BIGSERIAL PRIMARY KEY,
@@ -73,8 +77,10 @@ export async function ensureSchema() {
         );
       `)
 
+      // Backward-compatible migration for existing deployments.
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
 
+      // Indexes aligned with the most frequent access paths.
       await client.query(
         'CREATE INDEX IF NOT EXISTS idx_todos_position_created ON todos(position, created_at DESC);'
       )
@@ -92,6 +98,7 @@ export async function ensureSchema() {
 }
 
 export function normalizeTodoRow(row) {
+  // Keep API payload shape stable for Vue client.
   return {
     id: Number(row.id),
     text: row.text,

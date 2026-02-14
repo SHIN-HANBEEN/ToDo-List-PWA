@@ -1,9 +1,11 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
+// Cookie-based session auth (similar to Spring Session concept, but lightweight).
 const SESSION_COOKIE = 'todo_session'
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
 function hashSha256(value) {
+  // Store only hash in DB so raw tokens are never persisted.
   return createHash('sha256').update(value).digest('hex')
 }
 
@@ -19,6 +21,7 @@ function parseCookies(req) {
 }
 
 export function parseBody(req) {
+  // Vercel functions may receive string or object body depending on runtime path.
   if (!req.body) return {}
   if (typeof req.body === 'string') {
     try {
@@ -31,12 +34,14 @@ export function parseBody(req) {
 }
 
 export function hashPassword(password) {
+  // Salted scrypt hash; output format: salt:hash
   const salt = randomBytes(16).toString('hex')
   const derived = scryptSync(password, salt, 64).toString('hex')
   return `${salt}:${derived}`
 }
 
 export function verifyPassword(password, storedHash) {
+  // Constant-time compare to reduce timing side-channel risk.
   if (!storedHash || !storedHash.includes(':')) return false
   const [salt, original] = storedHash.split(':')
   const derived = scryptSync(password, salt, 64).toString('hex')
@@ -47,6 +52,7 @@ export function verifyPassword(password, storedHash) {
 }
 
 function isSecureCookie(req) {
+  // Keep local dev usable on http while enforcing Secure in production/https.
   return req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production'
 }
 
@@ -59,6 +65,7 @@ export function clearSessionCookie(req, res) {
 }
 
 export async function createSession(req, res, pool, userId) {
+  // Generate opaque session token and store only its hash server-side.
   const token = randomBytes(32).toString('base64url')
   const tokenHash = hashSha256(token)
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
@@ -85,6 +92,7 @@ export async function deleteSession(req, pool) {
 }
 
 export async function getUserFromRequest(req, pool) {
+  // Read cookie -> hash lookup -> join user. Expired sessions are ignored.
   const cookies = parseCookies(req)
   const token = cookies[SESSION_COOKIE]
   if (!token) return null
@@ -110,6 +118,7 @@ export async function getUserFromRequest(req, pool) {
 }
 
 export async function requireUser(req, res, pool) {
+  // Guard helper for protected API routes.
   const user = await getUserFromRequest(req, pool)
   if (!user) {
     res.status(401).json({ error: 'Unauthorized' })

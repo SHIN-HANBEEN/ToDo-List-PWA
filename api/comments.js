@@ -9,10 +9,12 @@ export default async function handler(req, res) {
   try {
     await ensureSchema()
     const pool = getPool()
+    // Comments are protected resources and tied to current user via todo ownership.
     const user = await requireUser(req, res, pool)
     if (!user) return
 
     if (req.method === 'POST') {
+      // Insert only when todo belongs to current user.
       const body = parseBody(req)
       const todoId = Number(body.todoId)
       const text = String(body.text || '').trim()
@@ -44,6 +46,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
+      // Delete only when comment belongs to a todo owned by current user.
       const id = Number(getSingleQueryValue(req.query.id))
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'id query is required' })
 

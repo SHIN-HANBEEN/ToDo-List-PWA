@@ -2,6 +2,7 @@ import { ensureSchema, getPool, normalizeTodoRow, normalizeCommentRow } from './
 import { parseBody, requireUser } from './_auth.js'
 
 function getSingleQueryValue(value) {
+  // Vercel can pass query values as string or string[].
   return Array.isArray(value) ? value[0] : value
 }
 
@@ -9,10 +10,12 @@ export default async function handler(req, res) {
   try {
     await ensureSchema()
     const pool = getPool()
+    // All todo operations are user-scoped.
     const user = await requireUser(req, res, pool)
     if (!user) return
 
     if (req.method === 'GET') {
+      // Read todos + comments in two queries, then compose nested payload in memory.
       const todosResult = await pool.query(
         'SELECT id, text, done, position, created_at FROM todos WHERE user_id = $1 ORDER BY position ASC, created_at DESC;',
         [user.id]
@@ -47,6 +50,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      // New todo gets smallest position so it appears at the top.
       const body = parseBody(req)
       const text = String(body.text || '').trim()
       if (!text) return res.status(400).json({ error: 'text is required' })
@@ -67,6 +71,7 @@ export default async function handler(req, res) {
       const body = parseBody(req)
 
       if (Array.isArray(body.order)) {
+        // Reorder request: persist drag-and-drop sequence.
         const order = body.order.map((item) => Number(item)).filter((item) => Number.isFinite(item))
         const client = await pool.connect()
         try {
@@ -91,6 +96,7 @@ export default async function handler(req, res) {
       const id = Number(body.id)
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'id is required' })
 
+      // Partial update style similar to PATCH semantics in REST controllers.
       const updates = []
       const values = []
       let valueIndex = 1
@@ -125,6 +131,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
+      // Supports single delete and bulk done delete.
       const doneOnly = getSingleQueryValue(req.query.done) === 'true'
 
       if (doneOnly) {

@@ -11,16 +11,19 @@ import {
 
 export default async function handler(req, res) {
   try {
+    // Ensure tables exist before handling auth requests.
     await ensureSchema()
     const pool = getPool()
 
     if (req.method === 'GET') {
+      // Session check endpoint used by client boot sequence.
       const user = await getUserFromRequest(req, pool)
       if (!user) return res.status(401).json({ error: 'Unauthorized' })
       return res.status(200).json({ user })
     }
 
     if (req.method === 'POST') {
+      // Shared endpoint for login and signup to keep frontend simple.
       const body = parseBody(req)
       const action = String(body.action || '')
       const email = String(body.email || '').trim().toLowerCase()
@@ -30,6 +33,7 @@ export default async function handler(req, res) {
       if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 characters' })
 
       if (action === 'signup') {
+        // Unique email constraint is also present in DB, this is fast-path UX validation.
         const exists = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1;', [email])
         if (exists.rows.length > 0) return res.status(409).json({ error: 'email already registered' })
 
@@ -47,6 +51,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'login') {
+        // Credentials verification + session issuance.
         const found = await pool.query(
           'SELECT id, email, password_hash FROM users WHERE email = $1 LIMIT 1;',
           [email]
@@ -70,6 +75,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
+      // Logout: delete DB session and clear browser cookie.
       await deleteSession(req, pool)
       clearSessionCookie(req, res)
       return res.status(200).json({ ok: true })
