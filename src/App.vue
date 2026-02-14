@@ -1377,12 +1377,12 @@ function formatTime(value) {
               v-if="isAuthenticated"
               variant="ghost"
               size="sm"
-              class="h-8 w-8 shrink-0 rounded-full border-0 bg-muted/50 p-0 shadow-none"
+              class="h-9 w-9 shrink-0 rounded-full border-0 bg-rose-500 p-0 text-white shadow-sm hover:bg-rose-600"
               @click="openAddTodo"
               :aria-label="t('addSchedule')"
               :title="t('addSchedule')"
             >
-              <Plus class="h-4 w-4" />
+              <Plus class="h-5 w-5" />
             </Button>
           </div>
         </section>
@@ -1431,10 +1431,10 @@ function formatTime(value) {
 
           <template v-if="viewMode === 'list'">
             <div>
-              <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:w-[460px] lg:w-[560px]">
+              <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1">
                 <Button
                   size="sm"
-                  class="w-full sm:h-10 sm:text-sm"
+                  class="h-10 w-full sm:h-11 sm:text-base"
                   :variant="filter === 'all' ? 'default' : 'ghost'"
                   @click="filter = 'all'"
                   :disabled="busy"
@@ -1443,7 +1443,7 @@ function formatTime(value) {
                 </Button>
                 <Button
                   size="sm"
-                  class="w-full sm:h-10 sm:text-sm"
+                  class="h-10 w-full sm:h-11 sm:text-base"
                   :variant="filter === 'active' ? 'default' : 'ghost'"
                   @click="filter = 'active'"
                   :disabled="busy"
@@ -1452,7 +1452,7 @@ function formatTime(value) {
                 </Button>
                 <Button
                   size="sm"
-                  class="w-full sm:h-10 sm:text-sm"
+                  class="h-10 w-full sm:h-11 sm:text-base"
                   :variant="filter === 'done' ? 'default' : 'ghost'"
                   @click="filter = 'done'"
                   :disabled="busy"
