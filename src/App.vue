@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
-import { Moon, Sun } from 'lucide-vue-next'
+import { Moon, Settings, Sun } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +26,7 @@ const newRolloverEnabled = ref(false)
 const filter = ref('all')
 const todos = ref([])
 const commentDrafts = ref({})
+const settingsOpen = ref(false)
 const detailTodoId = ref(null)
 const loading = ref(false)
 const busy = ref(false)
@@ -41,6 +42,8 @@ const messages = {
   ko: {
     appTitle: 'Todogram',
     language: '언어',
+    settings: '설정',
+    settingsTitle: '앱 설정',
     guest: '비로그인',
     login: '로그인',
     signup: '회원가입',
@@ -91,6 +94,8 @@ const messages = {
   en: {
     appTitle: 'Todogram',
     language: 'Language',
+    settings: 'Settings',
+    settingsTitle: 'App settings',
     guest: 'Guest',
     login: 'Login',
     signup: 'Sign up',
@@ -141,6 +146,8 @@ const messages = {
   zh: {
     appTitle: 'Todogram',
     language: '语言',
+    settings: '设置',
+    settingsTitle: '应用设置',
     guest: '未登录',
     login: '登录',
     signup: '注册',
@@ -191,6 +198,8 @@ const messages = {
   ja: {
     appTitle: 'Todogram',
     language: '言語',
+    settings: '設定',
+    settingsTitle: 'アプリ設定',
     guest: '未ログイン',
     login: 'ログイン',
     signup: '新規登録',
@@ -452,10 +461,6 @@ function setTheme(nextTheme) {
   localStorage.setItem(THEME_KEY, nextTheme)
 }
 
-function toggleTheme() {
-  setTheme(isDark.value ? 'light' : 'dark')
-}
-
 function t(key, vars = {}) {
   const current = messages[locale.value] || messages.en
   const template = current[key] || messages.en[key] || key
@@ -545,6 +550,7 @@ async function logout() {
     newDueAt.value = ''
     newLocation.value = ''
     newRolloverEnabled.value = false
+    settingsOpen.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -723,6 +729,14 @@ function openDetail(todoId) {
   if (typeof commentDrafts.value[todoId] !== 'string') commentDrafts.value[todoId] = ''
 }
 
+function openSettings() {
+  settingsOpen.value = true
+}
+
+function closeSettings() {
+  settingsOpen.value = false
+}
+
 function closeDetail() {
   detailTodoId.value = null
 }
@@ -757,34 +771,16 @@ function formatTime(value) {
           <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
           <div class="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground sm:w-auto sm:justify-end">
             <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
-            <Button variant="outline" size="sm" @click="toggleTheme">
-              <Sun v-if="isDark" class="mr-1 h-4 w-4" />
-              <Moon v-else class="mr-1 h-4 w-4" />
-              {{ isDark ? t('lightMode') : t('darkMode') }}
+            <Button variant="outline" size="sm" @click="openSettings">
+              <Settings class="mr-1 h-4 w-4" />
+              {{ t('settings') }}
             </Button>
             <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logout" :disabled="authBusy">
               {{ t('logout') }}
             </Button>
           </div>
         </div>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-            <span class="text-sm text-muted-foreground">{{ t('theme') }}</span>
-            <span class="text-sm font-medium">{{ isDark ? t('darkMode') : t('lightMode') }}</span>
-          </div>
-          <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-            <span class="text-sm text-muted-foreground">{{ t('language') }}</span>
-            <Select :model-value="locale" @update:model-value="setLocale">
-              <SelectTrigger class="w-full sm:w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
-                  {{ option.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <div class="grid w-full grid-cols-2 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
             <Button
               size="sm"
@@ -1034,6 +1030,43 @@ function formatTime(value) {
         <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
       </CardContent>
     </Card>
+
+    <section v-if="settingsOpen" class="modal-wrap" @click.self="closeSettings">
+      <article class="modal settings-modal">
+        <header class="modal-header">
+          <h2>{{ t('settingsTitle') }}</h2>
+          <Button variant="outline" size="sm" @click="closeSettings">{{ t('close') }}</Button>
+        </header>
+
+        <div class="space-y-2">
+          <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
+          <div class="inline-flex w-full rounded-lg border bg-background p-1">
+            <Button class="flex-1" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
+              <Sun class="mr-1 h-4 w-4" />
+              {{ t('lightMode') }}
+            </Button>
+            <Button class="flex-1" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
+              <Moon class="mr-1 h-4 w-4" />
+              {{ t('darkMode') }}
+            </Button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm text-muted-foreground">{{ t('language') }}</p>
+          <Select :model-value="locale" @update:model-value="setLocale">
+            <SelectTrigger class="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </article>
+    </section>
 
     <section v-if="detailTodo" class="modal-wrap" @click.self="closeDetail">
       <article class="modal">
