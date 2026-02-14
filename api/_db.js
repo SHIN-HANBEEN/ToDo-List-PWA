@@ -54,6 +54,9 @@ export async function ensureSchema() {
           user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
           text TEXT NOT NULL,
           done BOOLEAN NOT NULL DEFAULT FALSE,
+          due_at TIMESTAMPTZ,
+          location TEXT NOT NULL DEFAULT '',
+          rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE,
           position INTEGER NOT NULL DEFAULT 0,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
@@ -80,6 +83,9 @@ export async function ensureSchema() {
 
       // 기존 배포본 호환을 위한 안전한 마이그레이션.
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
+      await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;')
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS location TEXT NOT NULL DEFAULT '';")
+      await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE;')
       await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;')
       await client.query(`
         UPDATE users
@@ -93,6 +99,7 @@ export async function ensureSchema() {
         'CREATE INDEX IF NOT EXISTS idx_todos_position_created ON todos(position, created_at DESC);'
       )
       await client.query('CREATE INDEX IF NOT EXISTS idx_todos_user_position ON todos(user_id, position, created_at DESC);')
+      await client.query('CREATE INDEX IF NOT EXISTS idx_todos_user_due_at ON todos(user_id, due_at);')
       await client.query(
         'CREATE INDEX IF NOT EXISTS idx_comments_todo_created ON comments(todo_id, created_at DESC);'
       )
@@ -111,6 +118,9 @@ export function normalizeTodoRow(row) {
     id: Number(row.id),
     text: row.text,
     done: row.done,
+    dueAt: row.due_at,
+    location: row.location || '',
+    rolloverEnabled: row.rollover_enabled,
     position: row.position,
     createdAt: row.created_at,
     comments: [],

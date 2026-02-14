@@ -17,7 +17,12 @@ const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
 const locale = ref('ko')
 const theme = ref('light')
+const viewMode = ref('list')
+const calendarMonthAnchor = ref(startOfMonth(new Date()))
 const newTask = ref('')
+const newDueAt = ref('')
+const newLocation = ref('')
+const newRolloverEnabled = ref(false)
 const filter = ref('all')
 const todos = ref([])
 const commentDrafts = ref({})
@@ -49,8 +54,16 @@ const messages = {
     darkMode: '다크',
     authSigninHelp: '로그인해서 계속 진행하세요',
     authSignupHelp: '새 계정을 만들어 시작하세요',
+    listView: '리스트',
+    calendarView: '캘린더',
     addTask: '추가',
     taskPlaceholder: '할 일을 입력하세요',
+    dueAt: '마감일시',
+    dueAtPlaceholder: '마감일시 선택',
+    location: '장소',
+    locationPlaceholder: '장소를 입력하세요',
+    rolloverOption: '미완료 시 다음날로 자동 이월',
+    rolloverHint: '마감일이 지나도 완료하지 않으면 자동으로 다음날 같은 시각으로 이동합니다.',
     all: '전체',
     active: '진행중',
     done: '완료',
@@ -68,6 +81,12 @@ const messages = {
     comment: '댓글',
     remove: '삭제',
     noComments: '댓글이 없습니다.',
+    calendarToday: '오늘',
+    calendarNoItems: '해당 날짜 일정이 없습니다.',
+    calendarNoDue: '마감일 미설정 항목 {count}개',
+    due: '마감',
+    place: '장소',
+    rolloverEnabled: '자동 이월 사용',
   },
   en: {
     appTitle: 'Todogram',
@@ -85,8 +104,16 @@ const messages = {
     darkMode: 'Dark',
     authSigninHelp: 'Sign in to continue',
     authSignupHelp: 'Create your account to get started',
+    listView: 'List',
+    calendarView: 'Calendar',
     addTask: 'Add',
     taskPlaceholder: 'Add a task',
+    dueAt: 'Due date/time',
+    dueAtPlaceholder: 'Choose due date/time',
+    location: 'Location',
+    locationPlaceholder: 'Add location',
+    rolloverOption: 'Auto-move deadline to next day if unfinished',
+    rolloverHint: 'If not completed by due date, it will automatically move to the same time next day.',
     all: 'All',
     active: 'Active',
     done: 'Done',
@@ -104,6 +131,12 @@ const messages = {
     comment: 'Comment',
     remove: 'Remove',
     noComments: 'No comments yet.',
+    calendarToday: 'Today',
+    calendarNoItems: 'No schedule on this date.',
+    calendarNoDue: 'Items without due date: {count}',
+    due: 'Due',
+    place: 'Location',
+    rolloverEnabled: 'Auto rollover enabled',
   },
   zh: {
     appTitle: 'Todogram',
@@ -121,8 +154,16 @@ const messages = {
     darkMode: '深色',
     authSigninHelp: '登录后继续使用',
     authSignupHelp: '创建新账号开始使用',
+    listView: '列表',
+    calendarView: '日历',
     addTask: '添加',
     taskPlaceholder: '输入待办事项',
+    dueAt: '截止日期时间',
+    dueAtPlaceholder: '选择截止日期时间',
+    location: '地点',
+    locationPlaceholder: '输入地点',
+    rolloverOption: '未完成时自动顺延到次日',
+    rolloverHint: '若截止时间到期仍未完成，会自动顺延到次日同一时间。',
     all: '全部',
     active: '进行中',
     done: '已完成',
@@ -140,6 +181,12 @@ const messages = {
     comment: '评论',
     remove: '移除',
     noComments: '暂无评论。',
+    calendarToday: '今天',
+    calendarNoItems: '该日期没有日程。',
+    calendarNoDue: '未设置截止时间的项目 {count} 个',
+    due: '截止',
+    place: '地点',
+    rolloverEnabled: '已启用自动顺延',
   },
   ja: {
     appTitle: 'Todogram',
@@ -157,8 +204,16 @@ const messages = {
     darkMode: 'ダーク',
     authSigninHelp: 'ログインして続行',
     authSignupHelp: '新しいアカウントを作成',
+    listView: 'リスト',
+    calendarView: 'カレンダー',
     addTask: '追加',
     taskPlaceholder: 'タスクを入力',
+    dueAt: '締切日時',
+    dueAtPlaceholder: '締切日時を選択',
+    location: '場所',
+    locationPlaceholder: '場所を入力',
+    rolloverOption: '未完了なら締切を翌日に自動繰り越し',
+    rolloverHint: '締切までに完了しない場合、翌日の同時刻へ自動移動します。',
     all: 'すべて',
     active: '進行中',
     done: '完了',
@@ -176,6 +231,12 @@ const messages = {
     comment: 'コメント',
     remove: '削除',
     noComments: 'コメントはありません。',
+    calendarToday: '今日',
+    calendarNoItems: 'この日付の予定はありません。',
+    calendarNoDue: '締切未設定の項目 {count} 件',
+    due: '締切',
+    place: '場所',
+    rolloverEnabled: '自動繰り越し有効',
   },
 }
 
@@ -222,6 +283,12 @@ const errorMessages = {
     en: 'Text is required.',
     zh: '请输入内容。',
     ja: '内容を入力してください。',
+  },
+  'dueAt must be a valid datetime': {
+    ko: '올바른 마감일시를 입력하세요.',
+    en: 'Please provide a valid due date/time.',
+    zh: '请输入有效的截止日期时间。',
+    ja: '有効な締切日時を入力してください。',
   },
   'todo not found': {
     ko: '할 일을 찾을 수 없습니다.',
@@ -284,7 +351,79 @@ const draggableTodos = computed({
 const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
 const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
+const todosWithoutDueCount = computed(() => todos.value.filter((todo) => !todo.dueAt).length)
+const calendarMonthLabel = computed(() => {
+  const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
+  return new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: 'long' }).format(calendarMonthAnchor.value)
+})
+const calendarWeekdayLabels = computed(() => {
+  const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
+  const base = new Date(2024, 0, 7) // 2024-01-07은 일요일.
+  return Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(addDays(base, index))
+  )
+})
+const todosByDate = computed(() => {
+  const grouped = new Map()
+  for (const todo of todos.value) {
+    if (!todo.dueAt) continue
+    const key = toDateKey(todo.dueAt)
+    if (!key) continue
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key).push(todo)
+  }
+  for (const [, items] of grouped) {
+    items.sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
+  }
+  return grouped
+})
+const calendarCells = computed(() => {
+  const monthStart = startOfMonth(calendarMonthAnchor.value)
+  const gridStart = addDays(monthStart, -monthStart.getDay())
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = addDays(gridStart, index)
+    const key = toDateKey(date)
+    return {
+      key,
+      date,
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === monthStart.getMonth(),
+      isToday: key === toDateKey(new Date()),
+      items: todosByDate.value.get(key) || [],
+    }
+  })
+})
 const currentUserLabel = computed(() => user.value?.username || user.value?.email || t('guest'))
+
+function startOfMonth(value) {
+  const date = new Date(value)
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function addDays(value, amount) {
+  const date = new Date(value)
+  date.setDate(date.getDate() + amount)
+  return date
+}
+
+function toDateKey(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function moveCalendarMonth(offset) {
+  const next = new Date(calendarMonthAnchor.value)
+  next.setMonth(next.getMonth() + offset)
+  calendarMonthAnchor.value = startOfMonth(next)
+}
+
+function goCalendarToday() {
+  calendarMonthAnchor.value = startOfMonth(new Date())
+}
 
 onMounted(async () => {
   const savedTheme = localStorage.getItem(THEME_KEY)
@@ -402,6 +541,10 @@ async function logout() {
     todos.value = []
     commentDrafts.value = {}
     detailTodoId.value = null
+    newTask.value = ''
+    newDueAt.value = ''
+    newLocation.value = ''
+    newRolloverEnabled.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -453,16 +596,33 @@ async function onDragEnd(event) {
 async function addTodo() {
   const text = newTask.value.trim()
   if (!text || busy.value) return
+  let dueAt = null
+  if (newDueAt.value) {
+    const parsedDueAt = new Date(newDueAt.value)
+    if (Number.isNaN(parsedDueAt.getTime())) {
+      errorMessage.value = translateError('dueAt must be a valid datetime')
+      return
+    }
+    dueAt = parsedDueAt.toISOString()
+  }
   busy.value = true
   errorMessage.value = ''
   try {
     const payload = await apiRequest('/api/todos', {
       method: 'POST',
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        dueAt,
+        location: newLocation.value.trim(),
+        rolloverEnabled: newRolloverEnabled.value,
+      }),
     })
     todos.value.unshift(payload.todo)
     commentDrafts.value[payload.todo.id] = ''
     newTask.value = ''
+    newDueAt.value = ''
+    newLocation.value = ''
+    newRolloverEnabled.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -578,6 +738,15 @@ function formatDateTime(value) {
     minute: '2-digit',
   }).format(new Date(value))
 }
+
+function formatTime(value) {
+  if (!value) return ''
+  const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
+  return new Intl.DateTimeFormat(dateLocale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
 </script>
 
 <template>
@@ -616,33 +785,24 @@ function formatDateTime(value) {
               </SelectContent>
             </Select>
           </div>
-          <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
+          <div class="grid w-full grid-cols-2 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
             <Button
               size="sm"
               class="w-full"
-              :variant="filter === 'all' ? 'default' : 'ghost'"
-              @click="filter = 'all'"
-              :disabled="busy || !isAuthenticated"
+              :variant="viewMode === 'list' ? 'default' : 'ghost'"
+              @click="viewMode = 'list'"
+              :disabled="!isAuthenticated"
             >
-              {{ t('all') }}
+              {{ t('listView') }}
             </Button>
             <Button
               size="sm"
               class="w-full"
-              :variant="filter === 'active' ? 'default' : 'ghost'"
-              @click="filter = 'active'"
-              :disabled="busy || !isAuthenticated"
+              :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
+              @click="viewMode = 'calendar'"
+              :disabled="!isAuthenticated"
             >
-              {{ t('active') }}
-            </Button>
-            <Button
-              size="sm"
-              class="w-full"
-              :variant="filter === 'done' ? 'default' : 'ghost'"
-              @click="filter = 'done'"
-              :disabled="busy || !isAuthenticated"
-            >
-              {{ t('done') }}
+              {{ t('calendarView') }}
             </Button>
           </div>
         </div>
@@ -686,81 +846,189 @@ function formatDateTime(value) {
         </section>
 
         <template v-else>
-          <form class="flex flex-col gap-2 md:flex-row" @submit.prevent="addTodo">
+          <form class="space-y-2" @submit.prevent="addTodo">
             <Input
               v-model="newTask"
-              class="md:flex-1"
+              class="w-full"
               type="text"
               :placeholder="t('taskPlaceholder')"
               autocomplete="off"
             />
-            <Button class="w-full md:w-auto" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
-            <Button
-              class="w-full md:w-auto"
-              variant="outline"
-              type="button"
-              @click="clearDone"
-              :disabled="doneCount === 0 || busy"
-            >
-              {{ t('clearDone') }}
-            </Button>
+            <div class="grid gap-2 md:grid-cols-2">
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
+                <Input
+                  v-model="newDueAt"
+                  class="w-full"
+                  type="datetime-local"
+                  :placeholder="t('dueAtPlaceholder')"
+                />
+              </div>
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
+                <Input
+                  v-model="newLocation"
+                  class="w-full"
+                  type="text"
+                  :placeholder="t('locationPlaceholder')"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+            <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
+              <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
+              <span class="space-y-0.5">
+                <span class="block font-medium">{{ t('rolloverOption') }}</span>
+                <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
+              </span>
+            </label>
+            <div class="flex flex-col gap-2 md:flex-row">
+              <Button class="w-full md:w-auto" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
+              <Button
+                v-if="viewMode === 'list'"
+                class="w-full md:w-auto"
+                variant="outline"
+                type="button"
+                @click="clearDone"
+                :disabled="doneCount === 0 || busy"
+              >
+                {{ t('clearDone') }}
+              </Button>
+            </div>
           </form>
 
-          <p class="text-xs text-muted-foreground">{{ t('dragHint') }}</p>
           <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
 
-          <draggable
-            v-model="draggableTodos"
-            tag="ul"
-            class="todo-list"
-            item-key="id"
-            handle=".drag-handle"
-            :animation="180"
-            :delay="140"
-            :delay-on-touch-only="true"
-            :touch-start-threshold="4"
-            :fallback-tolerance="8"
-            :force-fallback="true"
-            :fallback-on-body="true"
-            :disabled="busy"
-            ghost-class="drag-ghost"
-            chosen-class="drag-chosen"
-            @end="onDragEnd"
-          >
-            <template #item="{ element: todo }">
-              <li class="rounded-lg border bg-card p-3">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div class="flex min-w-0 flex-1 items-center gap-2">
-                    <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
-                    <input
-                      :checked="todo.done"
-                      type="checkbox"
-                      @change="setTodoDone(todo, $event.target.checked)"
-                    />
-                    <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
+          <template v-if="viewMode === 'list'">
+            <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
+              <Button
+                size="sm"
+                class="w-full"
+                :variant="filter === 'all' ? 'default' : 'ghost'"
+                @click="filter = 'all'"
+                :disabled="busy"
+              >
+                {{ t('all') }}
+              </Button>
+              <Button
+                size="sm"
+                class="w-full"
+                :variant="filter === 'active' ? 'default' : 'ghost'"
+                @click="filter = 'active'"
+                :disabled="busy"
+              >
+                {{ t('active') }}
+              </Button>
+              <Button
+                size="sm"
+                class="w-full"
+                :variant="filter === 'done' ? 'default' : 'ghost'"
+                @click="filter = 'done'"
+                :disabled="busy"
+              >
+                {{ t('done') }}
+              </Button>
+            </div>
+            <p class="text-xs text-muted-foreground">{{ t('dragHint') }}</p>
+
+            <draggable
+              v-model="draggableTodos"
+              tag="ul"
+              class="todo-list"
+              item-key="id"
+              handle=".drag-handle"
+              :animation="180"
+              :delay="140"
+              :delay-on-touch-only="true"
+              :touch-start-threshold="4"
+              :fallback-tolerance="8"
+              :force-fallback="true"
+              :fallback-on-body="true"
+              :disabled="busy"
+              ghost-class="drag-ghost"
+              chosen-class="drag-chosen"
+              @end="onDragEnd"
+            >
+              <template #item="{ element: todo }">
+                <li class="rounded-lg border bg-card p-3">
+                  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                      <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
+                      <input
+                        :checked="todo.done"
+                        type="checkbox"
+                        @change="setTodoDone(todo, $event.target.checked)"
+                      />
+                      <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
+                    </div>
+                    <div class="flex w-full gap-2 sm:w-auto">
+                      <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
+                        {{ t('detail') }}
+                      </Button>
+                      <Button class="flex-1 sm:flex-none" variant="destructive" size="sm" @click="deleteTodo(todo.id)">
+                        {{ t('delete') }}
+                      </Button>
+                    </div>
                   </div>
-                  <div class="flex w-full gap-2 sm:w-auto">
-                    <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
-                      {{ t('detail') }}
-                    </Button>
-                    <Button class="flex-1 sm:flex-none" variant="destructive" size="sm" @click="deleteTodo(todo.id)">
-                      {{ t('delete') }}
-                    </Button>
-                  </div>
-                </div>
-                <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
+                  <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
+                  <p v-if="todo.dueAt" class="mt-1 text-xs text-muted-foreground">{{ t('due') }}: {{ formatDateTime(todo.dueAt) }}</p>
+                  <p v-if="todo.location" class="mt-1 text-xs text-muted-foreground">{{ t('place') }}: {{ todo.location }}</p>
+                  <p v-if="todo.rolloverEnabled" class="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {{ t('rolloverEnabled') }}
+                  </p>
+                </li>
+              </template>
+            </draggable>
+
+            <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
+              {{ t('noItems') }}
+            </p>
+
+            <footer class="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+              <span>{{ t('remaining', { count: remainingCount }) }}</span>
+              <span>{{ t('doneCount', { count: doneCount }) }}</span>
+            </footer>
+          </template>
+
+          <section v-else class="space-y-3">
+            <div class="calendar-toolbar">
+              <Button variant="outline" size="sm" @click="moveCalendarMonth(-1)">&#10094;</Button>
+              <p class="calendar-month">{{ calendarMonthLabel }}</p>
+              <Button variant="outline" size="sm" @click="moveCalendarMonth(1)">&#10095;</Button>
+              <Button variant="secondary" size="sm" @click="goCalendarToday">{{ t('calendarToday') }}</Button>
+            </div>
+
+            <ul class="calendar-weekdays">
+              <li v-for="label in calendarWeekdayLabels" :key="label">{{ label }}</li>
+            </ul>
+
+            <ul class="calendar-grid">
+              <li
+                v-for="cell in calendarCells"
+                :key="cell.key"
+                class="calendar-cell"
+                :class="{ 'calendar-cell--muted': !cell.isCurrentMonth, 'calendar-cell--today': cell.isToday }"
+              >
+                <p class="calendar-day">{{ cell.day }}</p>
+                <ul class="calendar-items">
+                  <li v-for="todo in cell.items.slice(0, 3)" :key="todo.id">
+                    <button
+                      type="button"
+                      class="calendar-item"
+                      :class="{ 'calendar-item--done': todo.done }"
+                      @click="openDetail(todo.id)"
+                    >
+                      <span class="truncate">{{ todo.text }}</span>
+                      <small>{{ formatTime(todo.dueAt) }}</small>
+                    </button>
+                  </li>
+                  <li v-if="cell.items.length > 3" class="calendar-more">+{{ cell.items.length - 3 }}</li>
+                </ul>
               </li>
-            </template>
-          </draggable>
+            </ul>
 
-          <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
-            {{ t('noItems') }}
-          </p>
-
-          <footer class="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-            <span>{{ t('remaining', { count: remainingCount }) }}</span>
-            <span>{{ t('doneCount', { count: doneCount }) }}</span>
-          </footer>
+            <p class="text-xs text-muted-foreground">{{ t('calendarNoDue', { count: todosWithoutDueCount }) }}</p>
+          </section>
         </template>
 
         <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
@@ -774,6 +1042,9 @@ function formatDateTime(value) {
           <Button variant="outline" size="sm" @click="closeDetail">{{ t('close') }}</Button>
         </header>
         <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
+        <p class="created-at">{{ t('due') }}: {{ formatDateTime(detailTodo.dueAt) }}</p>
+        <p class="created-at">{{ t('place') }}: {{ detailTodo.location || '-' }}</p>
+        <p v-if="detailTodo.rolloverEnabled" class="created-at">{{ t('rolloverEnabled') }}</p>
 
         <form class="comment-form" @submit.prevent="addComment(detailTodo.id)">
           <Input v-model="commentDrafts[detailTodo.id]" type="text" :placeholder="t('commentPlaceholder')" />

@@ -6,6 +6,13 @@ function getSingleQueryValue(value) {
   return Array.isArray(value) ? value[0] : value
 }
 
+function parseDueAt(value) {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed.toISOString()
+}
+
 export default async function handler(req, res) {
   try {
     await ensureSchema()
@@ -15,9 +22,28 @@ export default async function handler(req, res) {
     if (!user) return
 
     if (req.method === 'GET') {
+      // 자동 이월 옵션이 켜진 미완료 TODO는 마감일이 지났으면 다음날(필요 일수만큼)로 이동.
+      await pool.query(
+        `
+          UPDATE todos
+          SET due_at = due_at + (((FLOOR(EXTRACT(EPOCH FROM (NOW() - due_at)) / 86400) + 1)::INT) * INTERVAL '1 day')
+          WHERE user_id = $1
+            AND done = FALSE
+            AND rollover_enabled = TRUE
+            AND due_at IS NOT NULL
+            AND due_at < NOW();
+        `,
+        [user.id]
+      )
+
       // todo/comment를 분리 조회 후 메모리에서 중첩 구조로 조합.
       const todosResult = await pool.query(
-        'SELECT id, text, done, position, created_at FROM todos WHERE user_id = $1 ORDER BY position ASC, created_at DESC;',
+        `
+          SELECT id, text, done, due_at, location, rollover_enabled, position, created_at
+          FROM todos
+          WHERE user_id = $1
+          ORDER BY position ASC, created_at DESC;
+        `,
         [user.id]
       )
       const commentsResult = await pool.query(
@@ -53,15 +79,19 @@ export default async function handler(req, res) {
       // 새 TODO는 최소 position으로 넣어 목록 상단에 보이게 처리.
       const body = parseBody(req)
       const text = String(body.text || '').trim()
+      const dueAt = parseDueAt(body.dueAt)
+      const location = String(body.location || '').trim().slice(0, 160)
+      const rolloverEnabled = Boolean(body.rolloverEnabled)
       if (!text) return res.status(400).json({ error: 'text is required' })
+      if (body.dueAt && !dueAt) return res.status(400).json({ error: 'dueAt must be a valid datetime' })
 
       const insertResult = await pool.query(
         `
-          INSERT INTO todos (user_id, text, position)
-          VALUES ($1, $2, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
-          RETURNING id, text, done, position, created_at;
+          INSERT INTO todos (user_id, text, due_at, location, rollover_enabled, position)
+          VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
+          RETURNING id, text, done, due_at, location, rollover_enabled, position, created_at;
         `,
-        [user.id, text]
+        [user.id, text, dueAt, location, rolloverEnabled]
       )
 
       return res.status(201).json({ todo: normalizeTodoRow(insertResult.rows[0]) })
@@ -121,7 +151,7 @@ export default async function handler(req, res) {
       const result = await pool.query(
         `UPDATE todos SET ${updates.join(', ')} WHERE id = $${valueIndex} AND user_id = $${
           valueIndex + 1
-        } RETURNING id, text, done, position, created_at;`,
+        } RETURNING id, text, done, due_at, location, rollover_enabled, position, created_at;`,
         values
       )
 
