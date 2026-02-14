@@ -51,6 +51,71 @@ export default async function handler(req, res) {
       return res.status(201).json({ label: normalizeLabelRow(result.rows[0]) })
     }
 
+    if (req.method === 'PATCH') {
+      const body = parseBody(req)
+      const id = Number(body.id)
+      const name = String(body.name || '').trim().slice(0, 32)
+      const color = parseLabelColor(body.color || '#64748b')
+
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'id is required' })
+      if (!name) return res.status(400).json({ error: 'label name is required' })
+      if (!color) return res.status(400).json({ error: 'label color must be a valid hex color' })
+
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+
+        const previousResult = await client.query(
+          `
+            SELECT id, name, color
+            FROM labels
+            WHERE id = $1 AND user_id = $2
+            FOR UPDATE;
+          `,
+          [id, user.id]
+        )
+        if (previousResult.rows.length === 0) {
+          await client.query('ROLLBACK')
+          return res.status(404).json({ error: 'label not found' })
+        }
+
+        const previous = previousResult.rows[0]
+        const updateResult = await client.query(
+          `
+            UPDATE labels
+            SET name = $1, color = $2
+            WHERE id = $3 AND user_id = $4
+            RETURNING id, name, color, created_at;
+          `,
+          [name, color, id, user.id]
+        )
+
+        await client.query(
+          `
+            UPDATE todos
+            SET label_text = $1, label_color = $2
+            WHERE user_id = $3
+              AND label_text = $4;
+          `,
+          [name, color, user.id, previous.name]
+        )
+
+        await client.query('COMMIT')
+        return res.status(200).json({
+          label: normalizeLabelRow(updateResult.rows[0]),
+          previousName: previous.name,
+        })
+      } catch (error) {
+        await client.query('ROLLBACK')
+        if (error?.code === '23505') {
+          return res.status(409).json({ error: 'label name already exists' })
+        }
+        throw error
+      } finally {
+        client.release()
+      }
+    }
+
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (error) {
     console.error(error)

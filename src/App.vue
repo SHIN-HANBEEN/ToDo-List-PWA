@@ -29,6 +29,9 @@ const newTodoLabelId = ref(LABEL_NONE_VALUE)
 const addLabelOpen = ref(false)
 const newLabelName = ref('')
 const newLabelDraftColor = ref('#64748b')
+const editingLabelId = ref(null)
+const editLabelName = ref('')
+const editLabelColor = ref('#64748b')
 const newRolloverEnabled = ref(false)
 const filter = ref('all')
 const todos = ref([])
@@ -369,6 +372,18 @@ const errorMessages = {
     en: 'Label color must be a valid hex color (#RRGGBB).',
     zh: '标签颜色必须是有效的十六进制颜色（#RRGGBB）。',
     ja: 'ラベル色は有効な16進カラー（#RRGGBB）で入力してください。',
+  },
+  'label name is required': {
+    en: 'Label name is required.',
+  },
+  'label color must be a valid hex color': {
+    en: 'Label color must be a valid hex color (#RRGGBB).',
+  },
+  'label name already exists': {
+    en: 'A label with the same name already exists.',
+  },
+  'label not found': {
+    en: 'Label not found.',
   },
   'id is required': {
     ko: 'ID 값이 필요합니다.',
@@ -1033,22 +1048,26 @@ function openAddLabel() {
   errorMessage.value = ''
   newLabelName.value = ''
   newLabelDraftColor.value = '#64748b'
+  editingLabelId.value = null
+  editLabelName.value = ''
+  editLabelColor.value = '#64748b'
   addLabelOpen.value = true
 }
 
 function closeAddLabel() {
   addLabelOpen.value = false
+  editingLabelId.value = null
 }
 
 async function createLabel() {
   if (labelBusy.value) return
   const name = newLabelName.value.trim()
   if (!name) {
-    errorMessage.value = 'Label name is required.'
+    errorMessage.value = translateError('label name is required')
     return
   }
   if (!isValidLabelColor(newLabelDraftColor.value)) {
-    errorMessage.value = 'Label color must be a valid hex color (#RRGGBB).'
+    errorMessage.value = translateError('label color must be a valid hex color')
     return
   }
 
@@ -1067,7 +1086,64 @@ async function createLabel() {
     newTodoLabelId.value = String(next.id)
     newLabelName.value = ''
     newLabelDraftColor.value = '#64748b'
-    addLabelOpen.value = false
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
+  } finally {
+    labelBusy.value = false
+  }
+}
+
+function startLabelEdit(label) {
+  editingLabelId.value = label.id
+  editLabelName.value = label.name
+  editLabelColor.value = normalizeLabelColor(label.color)
+}
+
+function cancelLabelEdit() {
+  editingLabelId.value = null
+  editLabelName.value = ''
+  editLabelColor.value = '#64748b'
+}
+
+async function saveLabelEdit(labelId) {
+  if (labelBusy.value) return
+  const target = labels.value.find((item) => item.id === labelId)
+  if (!target) {
+    errorMessage.value = translateError('label not found')
+    return
+  }
+
+  const name = editLabelName.value.trim()
+  const color = normalizeLabelColor(editLabelColor.value)
+  if (!name) {
+    errorMessage.value = translateError('label name is required')
+    return
+  }
+  if (!isValidLabelColor(editLabelColor.value)) {
+    errorMessage.value = translateError('label color must be a valid hex color')
+    return
+  }
+
+  labelBusy.value = true
+  errorMessage.value = ''
+  try {
+    const payload = await apiRequest('/api/labels', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: labelId, name, color }),
+    })
+    const updated = payload.label
+    const previousName = payload.previousName || target.name
+    labels.value = labels.value.map((item) => (item.id === updated.id ? updated : item))
+    todos.value = todos.value.map((todo) =>
+      todo.labelText === previousName
+        ? {
+            ...todo,
+            labelText: updated.name,
+            labelColor: updated.color,
+          }
+        : todo
+    )
+    cancelLabelEdit()
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -1438,7 +1514,7 @@ function formatTime(value) {
           </div>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
-            <div class="label-select-row">
+            <div v-if="labelOptions.length > 0" class="label-select-row">
               <Select :model-value="newTodoLabelId" @update:model-value="onNewTodoLabelChange">
                 <SelectTrigger class="w-full">
                   <SelectValue placeholder="Select label" />
@@ -1453,8 +1529,9 @@ function formatTime(value) {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="button" variant="outline" @click="openAddLabel">라벨 추가</Button>
+              <Button type="button" variant="outline" @click="openAddLabel">라벨 설정</Button>
             </div>
+            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">라벨 설정</Button>
           </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
@@ -1471,11 +1548,12 @@ function formatTime(value) {
     <section v-if="addLabelOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddLabel">
       <article class="modal settings-modal">
         <header class="modal-header">
-          <h2>라벨 추가</h2>
+          <h2>라벨 설정</h2>
           <Button variant="outline" size="sm" @click="closeAddLabel">{{ t('close') }}</Button>
         </header>
 
         <form class="space-y-2" @submit.prevent="createLabel">
+          <p class="text-sm font-medium">라벨 추가</p>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
             <Input
@@ -1498,6 +1576,37 @@ function formatTime(value) {
             <Button type="submit" :disabled="labelBusy">{{ t('save') }}</Button>
           </div>
         </form>
+
+        <div class="space-y-2">
+          <p class="text-sm font-medium">저장된 라벨</p>
+          <ul v-if="labelOptions.length > 0" class="label-manage-list">
+            <li v-for="label in labelOptions" :key="label.id">
+              <template v-if="editingLabelId === label.id">
+                <div class="space-y-2">
+                  <Input v-model="editLabelName" type="text" />
+                  <div class="label-color-field">
+                    <input v-model="editLabelColor" class="label-color-input" type="color" />
+                    <Input v-model="editLabelColor" class="label-color-code" type="text" inputmode="text" />
+                  </div>
+                  <div class="flex justify-end gap-2">
+                    <Button size="sm" @click="saveLabelEdit(label.id)" :disabled="labelBusy">{{ t('save') }}</Button>
+                    <Button variant="outline" size="sm" @click="cancelLabelEdit">{{ t('cancel') }}</Button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="label-manage-row">
+                  <span class="todo-label-badge" :style="{ borderColor: normalizeLabelColor(label.color), color: normalizeLabelColor(label.color), backgroundColor: hexToRgba(label.color, 0.14) }">
+                    <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
+                    {{ label.name }}
+                  </span>
+                  <Button variant="outline" size="sm" @click="startLabelEdit(label)">{{ t('edit') }}</Button>
+                </div>
+              </template>
+            </li>
+          </ul>
+          <p v-else class="text-xs text-muted-foreground">저장된 라벨이 없습니다.</p>
+        </div>
       </article>
     </section>
 

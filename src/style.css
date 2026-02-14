@@ -306,6 +306,28 @@
   gap: 6px;
 }
 
+.label-manage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.label-manage-list li {
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--muted));
+  padding: 8px;
+}
+
+.label-manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .label-color-input {
   width: 44px;
   height: 36px;
