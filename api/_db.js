@@ -65,6 +65,16 @@ export async function ensureSchema() {
       `)
 
       await client.query(`
+        CREATE TABLE IF NOT EXISTS labels (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          color TEXT NOT NULL DEFAULT '#64748b',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `)
+
+      await client.query(`
         CREATE TABLE IF NOT EXISTS comments (
           id BIGSERIAL PRIMARY KEY,
           todo_id BIGINT NOT NULL REFERENCES todos(id) ON DELETE CASCADE,
@@ -94,6 +104,14 @@ export async function ensureSchema() {
         SET label_color = '#64748b'
         WHERE label_color IS NULL OR btrim(label_color) = '';
       `)
+      await client.query('ALTER TABLE labels ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
+      await client.query('ALTER TABLE labels ADD COLUMN IF NOT EXISTS name TEXT;')
+      await client.query("ALTER TABLE labels ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT '#64748b';")
+      await client.query(`
+        UPDATE labels
+        SET color = '#64748b'
+        WHERE color IS NULL OR btrim(color) = '';
+      `)
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE;')
       await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;')
       await client.query(`
@@ -109,10 +127,24 @@ export async function ensureSchema() {
       )
       await client.query('CREATE INDEX IF NOT EXISTS idx_todos_user_position ON todos(user_id, position, created_at DESC);')
       await client.query('CREATE INDEX IF NOT EXISTS idx_todos_user_due_at ON todos(user_id, due_at);')
+      await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_labels_user_name_unique ON labels(user_id, name);')
+      await client.query('CREATE INDEX IF NOT EXISTS idx_labels_user_created ON labels(user_id, created_at DESC);')
       await client.query(
         'CREATE INDEX IF NOT EXISTS idx_comments_todo_created ON comments(todo_id, created_at DESC);'
       )
       await client.query('CREATE INDEX IF NOT EXISTS idx_sessions_user_expires ON sessions(user_id, expires_at DESC);')
+
+      await client.query(`
+        INSERT INTO labels (user_id, name, color)
+        SELECT
+          t.user_id,
+          t.label_text,
+          COALESCE(NULLIF(btrim(t.label_color), ''), '#64748b')
+        FROM todos t
+        WHERE t.user_id IS NOT NULL
+          AND btrim(t.label_text) <> ''
+        ON CONFLICT (user_id, name) DO NOTHING;
+      `)
     } finally {
       client.release()
     }
@@ -143,6 +175,15 @@ export function normalizeCommentRow(row) {
     id: Number(row.id),
     todoId: Number(row.todo_id),
     text: row.text,
+    createdAt: row.created_at,
+  }
+}
+
+export function normalizeLabelRow(row) {
+  return {
+    id: Number(row.id),
+    name: row.name,
+    color: row.color || '#64748b',
     createdAt: row.created_at,
   }
 }

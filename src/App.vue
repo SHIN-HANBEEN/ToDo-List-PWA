@@ -23,8 +23,12 @@ const calendarMonthAnchor = ref(startOfMonth(new Date()))
 const newTask = ref('')
 const newDueAt = ref('')
 const newLocation = ref('')
-const newLabelText = ref('')
-const newLabelColor = ref('#64748b')
+const LABEL_NONE_VALUE = '__none__'
+const labels = ref([])
+const newTodoLabelId = ref(LABEL_NONE_VALUE)
+const addLabelOpen = ref(false)
+const newLabelName = ref('')
+const newLabelDraftColor = ref('#64748b')
 const newRolloverEnabled = ref(false)
 const filter = ref('all')
 const todos = ref([])
@@ -49,6 +53,7 @@ const authEmail = ref('')
 const authUsername = ref('')
 const authPassword = ref('')
 const authBusy = ref(false)
+const labelBusy = ref(false)
 
 const messages = {
   ko: {
@@ -487,6 +492,17 @@ const calendarCells = computed(() => {
   })
 })
 const currentUserLabel = computed(() => user.value?.username || user.value?.email || t('guest'))
+const labelOptions = computed(() =>
+  [...labels.value].sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''), localeCodeByLanguage[locale.value] || 'en-US')
+  )
+)
+const selectedLabelForNewTodo = computed(() => {
+  if (newTodoLabelId.value === LABEL_NONE_VALUE) return null
+  const id = Number(newTodoLabelId.value)
+  if (!Number.isFinite(id)) return null
+  return labels.value.find((label) => label.id === id) || null
+})
 
 function startOfMonth(value) {
   const date = new Date(value)
@@ -546,6 +562,14 @@ function getLabelDotStyle(todo) {
   return { backgroundColor: normalizeLabelColor(todo.labelColor) }
 }
 
+function getLabelDotStyleByColor(color) {
+  return { backgroundColor: normalizeLabelColor(color) }
+}
+
+function onNewTodoLabelChange(value) {
+  newTodoLabelId.value = typeof value === 'string' ? value : LABEL_NONE_VALUE
+}
+
 function moveCalendarMonth(offset) {
   const next = new Date(calendarMonthAnchor.value)
   next.setMonth(next.getMonth() + offset)
@@ -573,7 +597,9 @@ onMounted(async () => {
   }
 
   await loadSessionUser()
-  if (user.value) await loadTodos()
+  if (user.value) {
+    await Promise.all([loadTodos(), loadLabels()])
+  }
 })
 
 function setTheme(nextTheme) {
@@ -650,7 +676,7 @@ async function submitAuth() {
     user.value = payload.user
     authUsername.value = ''
     authPassword.value = ''
-    await loadTodos()
+    await Promise.all([loadTodos(), loadLabels()])
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -666,13 +692,16 @@ async function logout() {
     await apiRequest('/api/auth', { method: 'DELETE' })
     user.value = null
     todos.value = []
+    labels.value = []
     commentDrafts.value = {}
     detailTodoId.value = null
     newTask.value = ''
     newDueAt.value = ''
     newLocation.value = ''
-    newLabelText.value = ''
-    newLabelColor.value = '#64748b'
+    newTodoLabelId.value = LABEL_NONE_VALUE
+    addLabelOpen.value = false
+    newLabelName.value = ''
+    newLabelDraftColor.value = '#64748b'
     newRolloverEnabled.value = false
     addTodoOpen.value = false
     settingsOpen.value = false
@@ -697,6 +726,16 @@ async function loadTodos() {
     errorMessage.value = translateError(error.message)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadLabels() {
+  if (!isAuthenticated.value) return
+  try {
+    const payload = await apiRequest('/api/labels')
+    labels.value = payload.labels || []
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
   }
 }
 
@@ -727,11 +766,7 @@ async function onDragEnd(event) {
 async function addTodo() {
   const text = newTask.value.trim()
   if (!text || busy.value) return
-  const labelColor = normalizeLabelColor(newLabelColor.value)
-  if (newLabelText.value.trim() && !isValidLabelColor(newLabelColor.value)) {
-    errorMessage.value = translateError('labelColor must be a valid hex color')
-    return
-  }
+  const selectedLabel = selectedLabelForNewTodo.value
   let dueAt = null
   if (newDueAt.value) {
     const parsedDueAt = new Date(newDueAt.value)
@@ -750,8 +785,8 @@ async function addTodo() {
         text,
         dueAt,
         location: newLocation.value.trim(),
-        labelText: newLabelText.value.trim(),
-        labelColor,
+        labelText: selectedLabel?.name || '',
+        labelColor: normalizeLabelColor(selectedLabel?.color),
         rolloverEnabled: newRolloverEnabled.value,
       }),
     })
@@ -760,8 +795,7 @@ async function addTodo() {
     newTask.value = ''
     newDueAt.value = ''
     newLocation.value = ''
-    newLabelText.value = ''
-    newLabelColor.value = '#64748b'
+    newTodoLabelId.value = LABEL_NONE_VALUE
     newRolloverEnabled.value = false
     addTodoOpen.value = false
   } catch (error) {
@@ -994,14 +1028,65 @@ function closeSettings() {
   settingsOpen.value = false
 }
 
+function openAddLabel() {
+  if (!isAuthenticated.value) return
+  errorMessage.value = ''
+  newLabelName.value = ''
+  newLabelDraftColor.value = '#64748b'
+  addLabelOpen.value = true
+}
+
+function closeAddLabel() {
+  addLabelOpen.value = false
+}
+
+async function createLabel() {
+  if (labelBusy.value) return
+  const name = newLabelName.value.trim()
+  if (!name) {
+    errorMessage.value = 'Label name is required.'
+    return
+  }
+  if (!isValidLabelColor(newLabelDraftColor.value)) {
+    errorMessage.value = 'Label color must be a valid hex color (#RRGGBB).'
+    return
+  }
+
+  labelBusy.value = true
+  errorMessage.value = ''
+  try {
+    const payload = await apiRequest('/api/labels', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        color: normalizeLabelColor(newLabelDraftColor.value),
+      }),
+    })
+    const next = payload.label
+    labels.value = [next, ...labels.value.filter((item) => item.id !== next.id)]
+    newTodoLabelId.value = String(next.id)
+    newLabelName.value = ''
+    newLabelDraftColor.value = '#64748b'
+    addLabelOpen.value = false
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
+  } finally {
+    labelBusy.value = false
+  }
+}
+
 function openAddTodo() {
   if (!isAuthenticated.value) return
   errorMessage.value = ''
+  if (labels.value.length === 0) {
+    void loadLabels()
+  }
   addTodoOpen.value = true
 }
 
 function closeAddTodo() {
   addTodoOpen.value = false
+  addLabelOpen.value = false
 }
 
 function closeDetail() {
@@ -1351,23 +1436,24 @@ function formatTime(value) {
               />
             </div>
           </div>
-          <div class="grid gap-2 md:grid-cols-[1fr_auto]">
-            <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
-              <Input
-                v-model="newLabelText"
-                class="w-full"
-                type="text"
-                :placeholder="t('labelPlaceholder')"
-                autocomplete="off"
-              />
-            </div>
-            <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('labelColor') }}</p>
-              <div class="label-color-field">
-                <input v-model="newLabelColor" class="label-color-input" type="color" />
-                <Input v-model="newLabelColor" class="label-color-code" type="text" inputmode="text" />
-              </div>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
+            <div class="label-select-row">
+              <Select :model-value="newTodoLabelId" @update:model-value="onNewTodoLabelChange">
+                <SelectTrigger class="w-full">
+                  <SelectValue placeholder="Select label" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="LABEL_NONE_VALUE">No label</SelectItem>
+                  <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
+                    <span class="label-option-item">
+                      <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
+                      {{ label.name }}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" @click="openAddLabel">라벨 추가</Button>
             </div>
           </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
@@ -1378,6 +1464,39 @@ function formatTime(value) {
             </span>
           </label>
           <Button class="w-full" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
+        </form>
+      </article>
+    </section>
+
+    <section v-if="addLabelOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddLabel">
+      <article class="modal settings-modal">
+        <header class="modal-header">
+          <h2>라벨 추가</h2>
+          <Button variant="outline" size="sm" @click="closeAddLabel">{{ t('close') }}</Button>
+        </header>
+
+        <form class="space-y-2" @submit.prevent="createLabel">
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
+            <Input
+              v-model="newLabelName"
+              class="w-full"
+              type="text"
+              placeholder="Label name"
+              autocomplete="off"
+            />
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('labelColor') }}</p>
+            <div class="label-color-field">
+              <input v-model="newLabelDraftColor" class="label-color-input" type="color" />
+              <Input v-model="newLabelDraftColor" class="label-color-code" type="text" inputmode="text" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-2">
+            <Button type="button" variant="outline" @click="closeAddLabel">{{ t('cancel') }}</Button>
+            <Button type="submit" :disabled="labelBusy">{{ t('save') }}</Button>
+          </div>
         </form>
       </article>
     </section>

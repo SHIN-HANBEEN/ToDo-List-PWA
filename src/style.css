@@ -294,6 +294,18 @@
   align-items: center;
 }
 
+.label-select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.label-option-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .label-color-input {
   width: 44px;
   height: 36px;
@@ -426,6 +438,10 @@
   .calendar-cell {
     min-height: 88px;
     padding: 5px;
+  }
+
+  .label-select-row {
+    grid-template-columns: 1fr;
   }
 
   .comment-form {
