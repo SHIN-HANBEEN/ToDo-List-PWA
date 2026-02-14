@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 
-// UI 상태
+const LANGUAGE_KEY = 'todo-language'
+const locale = ref('ko')
 const newTask = ref('')
 const filter = ref('all')
 const todos = ref([])
@@ -11,20 +12,208 @@ const detailTodoId = ref(null)
 const loading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
-
-// 인증 상태
 const user = ref(null)
 const authMode = ref('login')
 const authEmail = ref('')
 const authPassword = ref('')
 const authBusy = ref(false)
 
+const messages = {
+  ko: {
+    appTitle: 'TODO List',
+    appSubtitle: 'Vue 3 + PWA + Postgres',
+    language: '언어',
+    login: '로그인',
+    signup: '회원가입',
+    logout: '로그아웃',
+    createAccount: '계정 만들기',
+    emailPlaceholder: '이메일 주소',
+    passwordPlaceholder: '비밀번호 (최소 8자)',
+    authSigninHelp: '계정으로 계속 진행하세요',
+    authSignupHelp: '새 계정을 만들어 시작하세요',
+    addTask: '추가',
+    taskPlaceholder: '할 일을 입력하세요',
+    all: '전체',
+    active: '진행중',
+    done: '완료',
+    clearDone: '완료 삭제',
+    dragHint: '"전체" 필터에서만 드래그 정렬이 가능합니다.',
+    loading: '불러오는 중...',
+    detail: '상세보기',
+    delete: '삭제',
+    created: '생성',
+    noItems: '표시할 항목이 없습니다.',
+    remaining: '남은 작업 {count}',
+    doneCount: '완료 {count}',
+    close: '닫기',
+    commentPlaceholder: '댓글 작성',
+    comment: '댓글',
+    remove: '삭제',
+    noComments: '댓글이 없습니다.',
+  },
+  en: {
+    appTitle: 'TODO List',
+    appSubtitle: 'Vue 3 + PWA + Postgres',
+    language: 'Language',
+    login: 'Login',
+    signup: 'Sign up',
+    logout: 'Logout',
+    createAccount: 'Create account',
+    emailPlaceholder: 'Email address',
+    passwordPlaceholder: 'Password (min 8 chars)',
+    authSigninHelp: 'Sign in to continue',
+    authSignupHelp: 'Create your account to get started',
+    addTask: 'Add',
+    taskPlaceholder: 'Add a task',
+    all: 'All',
+    active: 'Active',
+    done: 'Done',
+    clearDone: 'Clear done',
+    dragHint: 'Drag reorder works in "All" filter only.',
+    loading: 'Loading...',
+    detail: 'Detail',
+    delete: 'Delete',
+    created: 'Created',
+    noItems: 'No items to display.',
+    remaining: 'Remaining {count}',
+    doneCount: 'Done {count}',
+    close: 'Close',
+    commentPlaceholder: 'Add comment',
+    comment: 'Comment',
+    remove: 'Remove',
+    noComments: 'No comments yet.',
+  },
+  zh: {
+    appTitle: '待办清单',
+    appSubtitle: 'Vue 3 + PWA + Postgres',
+    language: '语言',
+    login: '登录',
+    signup: '注册',
+    logout: '退出登录',
+    createAccount: '创建账号',
+    emailPlaceholder: '邮箱地址',
+    passwordPlaceholder: '密码（至少 8 位）',
+    authSigninHelp: '登录后继续使用',
+    authSignupHelp: '创建新账号开始使用',
+    addTask: '添加',
+    taskPlaceholder: '输入待办事项',
+    all: '全部',
+    active: '进行中',
+    done: '已完成',
+    clearDone: '清除已完成',
+    dragHint: '仅在“全部”筛选下支持拖拽排序。',
+    loading: '加载中...',
+    detail: '详情',
+    delete: '删除',
+    created: '创建时间',
+    noItems: '没有可显示的项目。',
+    remaining: '剩余 {count}',
+    doneCount: '已完成 {count}',
+    close: '关闭',
+    commentPlaceholder: '添加评论',
+    comment: '评论',
+    remove: '移除',
+    noComments: '暂无评论。',
+  },
+  ja: {
+    appTitle: 'TODO リスト',
+    appSubtitle: 'Vue 3 + PWA + Postgres',
+    language: '言語',
+    login: 'ログイン',
+    signup: '新規登録',
+    logout: 'ログアウト',
+    createAccount: 'アカウント作成',
+    emailPlaceholder: 'メールアドレス',
+    passwordPlaceholder: 'パスワード（8文字以上）',
+    authSigninHelp: 'ログインして続行',
+    authSignupHelp: '新しいアカウントを作成',
+    addTask: '追加',
+    taskPlaceholder: 'タスクを入力',
+    all: 'すべて',
+    active: '進行中',
+    done: '完了',
+    clearDone: '完了を削除',
+    dragHint: 'ドラッグ並び替えは「すべて」フィルターのみ対応。',
+    loading: '読み込み中...',
+    detail: '詳細',
+    delete: '削除',
+    created: '作成日時',
+    noItems: '表示する項目がありません。',
+    remaining: '残り {count}',
+    doneCount: '完了 {count}',
+    close: '閉じる',
+    commentPlaceholder: 'コメントを追加',
+    comment: 'コメント',
+    remove: '削除',
+    noComments: 'コメントはありません。',
+  },
+}
+
+const errorMessages = {
+  Unauthorized: { ko: '로그인이 필요합니다.', en: 'Login required.', zh: '需要登录。', ja: 'ログインが必要です。' },
+  'email and password are required': {
+    ko: '이메일과 비밀번호를 입력하세요.',
+    en: 'Email and password are required.',
+    zh: '请输入邮箱和密码。',
+    ja: 'メールアドレスとパスワードを入力してください。',
+  },
+  'password must be at least 8 characters': {
+    ko: '비밀번호는 최소 8자 이상이어야 합니다.',
+    en: 'Password must be at least 8 characters.',
+    zh: '密码至少需要 8 位。',
+    ja: 'パスワードは8文字以上必要です。',
+  },
+  'email already registered': {
+    ko: '이미 가입된 이메일입니다.',
+    en: 'Email is already registered.',
+    zh: '该邮箱已注册。',
+    ja: 'このメールアドレスは既に登録されています。',
+  },
+  'invalid credentials': {
+    ko: '이메일 또는 비밀번호가 올바르지 않습니다.',
+    en: 'Invalid credentials.',
+    zh: '邮箱或密码不正确。',
+    ja: 'メールアドレスまたはパスワードが正しくありません。',
+  },
+  'text is required': {
+    ko: '내용을 입력하세요.',
+    en: 'Text is required.',
+    zh: '请输入内容。',
+    ja: '内容を入力してください。',
+  },
+  'todo not found': {
+    ko: '할 일을 찾을 수 없습니다.',
+    en: 'Todo not found.',
+    zh: '未找到待办事项。',
+    ja: 'TODOが見つかりません。',
+  },
+  'comment not found': {
+    ko: '댓글을 찾을 수 없습니다.',
+    en: 'Comment not found.',
+    zh: '未找到评论。',
+    ja: 'コメントが見つかりません。',
+  },
+}
+
+const localeCodeByLanguage = {
+  ko: 'ko-KR',
+  en: 'en-US',
+  zh: 'zh-CN',
+  ja: 'ja-JP',
+}
+
+const languageOptions = [
+  { code: 'ko', label: '한국어' },
+  { code: 'en', label: 'English' },
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+]
+
 const filteredTodos = computed(() => {
   if (filter.value === 'active') return todos.value.filter((todo) => !todo.done)
   if (filter.value === 'done') return todos.value.filter((todo) => todo.done)
   return todos.value
 })
-
 const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
 const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
 const isDragEnabled = computed(() => filter.value === 'all')
@@ -32,13 +221,37 @@ const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailT
 const isAuthenticated = computed(() => Boolean(user.value))
 
 onMounted(async () => {
-  // 앱 초기 진입: 세션 복원 시도 후 사용자 데이터 로드.
+  const saved = localStorage.getItem(LANGUAGE_KEY)
+  if (saved && messages[saved]) {
+    locale.value = saved
+  } else {
+    const browser = (navigator.language || '').slice(0, 2).toLowerCase()
+    if (messages[browser]) locale.value = browser
+  }
+
   await loadSessionUser()
   if (user.value) await loadTodos()
 })
 
+function t(key, vars = {}) {
+  const current = messages[locale.value] || messages.en
+  const template = current[key] || messages.en[key] || key
+  return template.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? ''))
+}
+
+function setLocale(nextLocale) {
+  if (!messages[nextLocale]) return
+  locale.value = nextLocale
+  localStorage.setItem(LANGUAGE_KEY, nextLocale)
+}
+
+function translateError(message) {
+  const item = errorMessages[message]
+  if (!item) return message
+  return item[locale.value] || item.en || message
+}
+
 async function apiRequest(url, options = {}) {
-  // 공통 fetch 래퍼: JSON 파싱/에러 메시지 처리를 일원화.
   const baseHeaders = {}
   if (options.body) baseHeaders['Content-Type'] = 'application/json'
 
@@ -62,7 +275,6 @@ async function apiRequest(url, options = {}) {
 }
 
 async function loadSessionUser() {
-  // Spring의 "현재 사용자 조회" 엔드포인트와 같은 역할.
   try {
     const payload = await apiRequest('/api/auth')
     user.value = payload.user
@@ -72,7 +284,6 @@ async function loadSessionUser() {
 }
 
 async function submitAuth() {
-  // 회원가입/로그인 두 흐름을 공통 처리.
   if (authBusy.value) return
   authBusy.value = true
   errorMessage.value = ''
@@ -89,7 +300,7 @@ async function submitAuth() {
     authPassword.value = ''
     await loadTodos()
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     authBusy.value = false
   }
@@ -106,14 +317,13 @@ async function logout() {
     commentDrafts.value = {}
     detailTodoId.value = null
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     authBusy.value = false
   }
 }
 
 async function loadTodos() {
-  // 인증 완료 후 사용자 전용 TODO 목록 로드.
   if (!isAuthenticated.value) return
   loading.value = true
   errorMessage.value = ''
@@ -124,7 +334,7 @@ async function loadTodos() {
       if (typeof commentDrafts.value[todo.id] !== 'string') commentDrafts.value[todo.id] = ''
     }
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     loading.value = false
   }
@@ -144,14 +354,13 @@ async function addTodo() {
     commentDrafts.value[payload.todo.id] = ''
     newTask.value = ''
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     busy.value = false
   }
 }
 
 async function setTodoDone(todo, done) {
-  // 낙관적 업데이트 후 서버 실패 시 롤백.
   const previous = todo.done
   todo.done = done
   errorMessage.value = ''
@@ -162,7 +371,7 @@ async function setTodoDone(todo, done) {
     })
   } catch (error) {
     todo.done = previous
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   }
 }
 
@@ -178,7 +387,7 @@ async function deleteTodo(id) {
     await apiRequest(`/api/todos?id=${id}`, { method: 'DELETE' })
   } catch (error) {
     todos.value = previous
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     busy.value = false
   }
@@ -195,7 +404,7 @@ async function clearDone() {
     await apiRequest('/api/todos?done=true', { method: 'DELETE' })
   } catch (error) {
     todos.value = previous
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     busy.value = false
   }
@@ -216,7 +425,7 @@ async function addComment(todoId) {
     if (target) target.comments.unshift(payload.comment)
     commentDrafts.value[todoId] = ''
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     busy.value = false
   }
@@ -233,7 +442,7 @@ async function deleteComment(todoId, commentId) {
     await apiRequest(`/api/comments?id=${commentId}`, { method: 'DELETE' })
   } catch (error) {
     if (target) target.comments = originalComments
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     busy.value = false
   }
@@ -245,7 +454,6 @@ function onDragStart(todoId) {
 }
 
 async function onDrop(targetId) {
-  // 클라이언트에서 즉시 정렬 반영 후 PATCH로 순서 저장.
   if (
     !isDragEnabled.value ||
     busy.value ||
@@ -273,7 +481,7 @@ async function onDrop(targetId) {
     })
   } catch (error) {
     todos.value = previousOrder
-    errorMessage.value = error.message
+    errorMessage.value = translateError(error.message)
   } finally {
     busy.value = false
   }
@@ -293,9 +501,9 @@ function closeDetail() {
 }
 
 function formatDateTime(value) {
-  // TODO/댓글 공통 날짜 포맷터.
   if (!value) return '-'
-  return new Intl.DateTimeFormat('ko-KR', {
+  const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
+  return new Intl.DateTimeFormat(dateLocale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -309,34 +517,49 @@ function formatDateTime(value) {
   <main class="page">
     <section class="card">
       <header class="header">
-        <p class="eyebrow">Vue 3 + PWA + Postgres</p>
-        <h1>TODO List</h1>
+        <p class="eyebrow">{{ t('appSubtitle') }}</p>
+        <h1>{{ t('appTitle') }}</h1>
+        <div class="language-bar">
+          <label for="language-select">{{ t('language') }}</label>
+          <select id="language-select" :value="locale" @change="setLocale($event.target.value)">
+            <option v-for="option in languageOptions" :key="option.code" :value="option.code">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
       </header>
 
       <section v-if="!isAuthenticated" class="auth-shell">
         <article class="auth-card">
           <p class="auth-script">Todogram</p>
           <p class="auth-subtitle">
-            {{ authMode === 'signup' ? 'Create your account' : 'Sign in to continue' }}
+            {{ authMode === 'signup' ? t('authSignupHelp') : t('authSigninHelp') }}
           </p>
 
           <div class="chips auth-chips">
-            <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">Login</button>
+            <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">
+              {{ t('login') }}
+            </button>
             <button :class="{ active: authMode === 'signup' }" @click="authMode = 'signup'">
-              Sign up
+              {{ t('signup') }}
             </button>
           </div>
 
           <form class="auth-form" @submit.prevent="submitAuth">
-            <input v-model="authEmail" type="email" placeholder="Email address" autocomplete="email" />
+            <input
+              v-model="authEmail"
+              type="email"
+              :placeholder="t('emailPlaceholder')"
+              autocomplete="email"
+            />
             <input
               v-model="authPassword"
               type="password"
-              placeholder="Password (min 8 chars)"
+              :placeholder="t('passwordPlaceholder')"
               autocomplete="current-password"
             />
             <button class="auth-submit" type="submit" :disabled="authBusy">
-              {{ authMode === 'signup' ? 'Create account' : 'Login' }}
+              {{ authMode === 'signup' ? t('createAccount') : t('login') }}
             </button>
           </form>
         </article>
@@ -345,37 +568,33 @@ function formatDateTime(value) {
       <template v-else>
         <div class="user-bar">
           <span>{{ user.email }}</span>
-          <button class="ghost" @click="logout" :disabled="authBusy">Logout</button>
+          <button class="ghost" @click="logout" :disabled="authBusy">{{ t('logout') }}</button>
         </div>
 
         <form class="composer" @submit.prevent="addTodo">
-          <input v-model="newTask" type="text" placeholder="Add a task" autocomplete="off" />
-          <button type="submit" :disabled="busy">Add</button>
+          <input v-model="newTask" type="text" :placeholder="t('taskPlaceholder')" autocomplete="off" />
+          <button type="submit" :disabled="busy">{{ t('addTask') }}</button>
         </form>
 
         <div class="toolbar">
           <div class="chips" role="tablist" aria-label="filter">
             <button :class="{ active: filter === 'all' }" @click="filter = 'all'" :disabled="busy">
-              All
+              {{ t('all') }}
             </button>
-            <button
-              :class="{ active: filter === 'active' }"
-              @click="filter = 'active'"
-              :disabled="busy"
-            >
-              Active
+            <button :class="{ active: filter === 'active' }" @click="filter = 'active'" :disabled="busy">
+              {{ t('active') }}
             </button>
             <button :class="{ active: filter === 'done' }" @click="filter = 'done'" :disabled="busy">
-              Done
+              {{ t('done') }}
             </button>
           </div>
           <button class="ghost" @click="clearDone" :disabled="doneCount === 0 || busy">
-            Clear done
+            {{ t('clearDone') }}
           </button>
         </div>
 
-        <p class="hint">Drag reorder works in "All" filter only.</p>
-        <p v-if="loading" class="hint">Loading...</p>
+        <p class="hint">{{ t('dragHint') }}</p>
+        <p v-if="loading" class="hint">{{ t('loading') }}</p>
 
         <ul class="list">
           <li
@@ -398,18 +617,20 @@ function formatDateTime(value) {
                 <span>{{ todo.text }}</span>
               </label>
               <div class="todo-actions">
-                <button class="ghost" @click="openDetail(todo.id)">Detail</button>
-                <button class="danger" @click="deleteTodo(todo.id)" aria-label="delete">Delete</button>
+                <button class="ghost" @click="openDetail(todo.id)">{{ t('detail') }}</button>
+                <button class="danger" @click="deleteTodo(todo.id)" aria-label="delete">
+                  {{ t('delete') }}
+                </button>
               </div>
             </div>
-            <p class="created-at">Created: {{ formatDateTime(todo.createdAt) }}</p>
+            <p class="created-at">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
           </li>
-          <li v-if="!loading && filteredTodos.length === 0" class="empty">No items to display.</li>
+          <li v-if="!loading && filteredTodos.length === 0" class="empty">{{ t('noItems') }}</li>
         </ul>
 
         <footer class="meta">
-          <span>Remaining {{ remainingCount }}</span>
-          <span>Done {{ doneCount }}</span>
+          <span>{{ t('remaining', { count: remainingCount }) }}</span>
+          <span>{{ t('doneCount', { count: doneCount }) }}</span>
         </footer>
       </template>
 
@@ -420,18 +641,18 @@ function formatDateTime(value) {
       <article class="modal">
         <header class="modal-header">
           <h2>{{ detailTodo.text }}</h2>
-          <button class="ghost" @click="closeDetail">Close</button>
+          <button class="ghost" @click="closeDetail">{{ t('close') }}</button>
         </header>
-        <p class="created-at">Created: {{ formatDateTime(detailTodo.createdAt) }}</p>
+        <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
 
         <form class="comment-form" @submit.prevent="addComment(detailTodo.id)">
           <input
             v-model="commentDrafts[detailTodo.id]"
             type="text"
-            placeholder="Add comment"
+            :placeholder="t('commentPlaceholder')"
             autocomplete="off"
           />
-          <button type="submit" :disabled="busy">Comment</button>
+          <button type="submit" :disabled="busy">{{ t('comment') }}</button>
         </form>
 
         <ul class="comment-list" v-if="detailTodo.comments.length > 0">
@@ -441,11 +662,11 @@ function formatDateTime(value) {
               <small>{{ formatDateTime(comment.createdAt) }}</small>
             </div>
             <button class="comment-delete" @click="deleteComment(detailTodo.id, comment.id)">
-              Remove
+              {{ t('remove') }}
             </button>
           </li>
         </ul>
-        <p v-else class="empty">No comments yet.</p>
+        <p v-else class="empty">{{ t('noComments') }}</p>
       </article>
     </section>
   </main>
