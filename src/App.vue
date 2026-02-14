@@ -23,6 +23,8 @@ const calendarMonthAnchor = ref(startOfMonth(new Date()))
 const newTask = ref('')
 const newDueAt = ref('')
 const newLocation = ref('')
+const newLabelText = ref('')
+const newLabelColor = ref('#64748b')
 const newRolloverEnabled = ref(false)
 const filter = ref('all')
 const todos = ref([])
@@ -33,6 +35,8 @@ const detailTodoId = ref(null)
 const detailEditMode = ref(false)
 const detailDueAtDraft = ref('')
 const detailLocationDraft = ref('')
+const detailLabelTextDraft = ref('')
+const detailLabelColorDraft = ref('#64748b')
 const detailRolloverDraft = ref(false)
 const editingCommentId = ref(null)
 const commentEditDraft = ref('')
@@ -75,6 +79,9 @@ const messages = {
     dueAtPlaceholder: '마감일시 선택',
     pickerClear: '지우기',
     pickerDone: '확인',
+    label: '라벨',
+    labelPlaceholder: '라벨 텍스트',
+    labelColor: '라벨 색상',
     location: '장소',
     locationPlaceholder: '장소를 입력하세요',
     rolloverOption: '미완료 시 다음날로 자동 이월',
@@ -136,6 +143,9 @@ const messages = {
     dueAtPlaceholder: 'Choose due date/time',
     pickerClear: 'Clear',
     pickerDone: 'Done',
+    label: 'Label',
+    labelPlaceholder: 'Label text',
+    labelColor: 'Label color',
     location: 'Location',
     locationPlaceholder: 'Add location',
     rolloverOption: 'Auto-move deadline to next day if unfinished',
@@ -197,6 +207,9 @@ const messages = {
     dueAtPlaceholder: '选择截止日期时间',
     pickerClear: '清除',
     pickerDone: '完成',
+    label: '标签',
+    labelPlaceholder: '标签文本',
+    labelColor: '标签颜色',
     location: '地点',
     locationPlaceholder: '输入地点',
     rolloverOption: '未完成时自动顺延到次日',
@@ -258,6 +271,9 @@ const messages = {
     dueAtPlaceholder: '締切日時を選択',
     pickerClear: 'クリア',
     pickerDone: '完了',
+    label: 'ラベル',
+    labelPlaceholder: 'ラベルテキスト',
+    labelColor: 'ラベル色',
     location: '場所',
     locationPlaceholder: '場所を入力',
     rolloverOption: '未完了なら締切を翌日に自動繰り越し',
@@ -342,6 +358,12 @@ const errorMessages = {
     en: 'Please provide a valid due date/time.',
     zh: '请输入有效的截止日期时间。',
     ja: '有効な締切日時を入力してください。',
+  },
+  'labelColor must be a valid hex color': {
+    ko: '라벨 색상은 16진수 색상(#RRGGBB) 형식이어야 합니다.',
+    en: 'Label color must be a valid hex color (#RRGGBB).',
+    zh: '标签颜色必须是有效的十六进制颜色（#RRGGBB）。',
+    ja: 'ラベル色は有効な16進カラー（#RRGGBB）で入力してください。',
   },
   'id is required': {
     ko: 'ID 값이 필요합니다.',
@@ -486,6 +508,44 @@ function toDateKey(value) {
   return `${year}-${month}-${day}`
 }
 
+function isValidLabelColor(value) {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim())
+}
+
+function normalizeLabelColor(value, fallback = '#64748b') {
+  if (!isValidLabelColor(value)) return fallback
+  return value.trim().toLowerCase()
+}
+
+function hexToRgba(hex, alpha) {
+  const safe = normalizeLabelColor(hex)
+  const r = parseInt(safe.slice(1, 3), 16)
+  const g = parseInt(safe.slice(3, 5), 16)
+  const b = parseInt(safe.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function getLabelBadgeStyle(todo) {
+  const color = normalizeLabelColor(todo.labelColor)
+  return {
+    borderColor: color,
+    color,
+    backgroundColor: hexToRgba(color, 0.14),
+  }
+}
+
+function getCalendarItemStyle(todo) {
+  const color = normalizeLabelColor(todo.labelColor)
+  return {
+    borderLeft: `3px solid ${color}`,
+    backgroundColor: hexToRgba(color, 0.1),
+  }
+}
+
+function getLabelDotStyle(todo) {
+  return { backgroundColor: normalizeLabelColor(todo.labelColor) }
+}
+
 function moveCalendarMonth(offset) {
   const next = new Date(calendarMonthAnchor.value)
   next.setMonth(next.getMonth() + offset)
@@ -611,6 +671,8 @@ async function logout() {
     newTask.value = ''
     newDueAt.value = ''
     newLocation.value = ''
+    newLabelText.value = ''
+    newLabelColor.value = '#64748b'
     newRolloverEnabled.value = false
     addTodoOpen.value = false
     settingsOpen.value = false
@@ -665,6 +727,11 @@ async function onDragEnd(event) {
 async function addTodo() {
   const text = newTask.value.trim()
   if (!text || busy.value) return
+  const labelColor = normalizeLabelColor(newLabelColor.value)
+  if (newLabelText.value.trim() && !isValidLabelColor(newLabelColor.value)) {
+    errorMessage.value = translateError('labelColor must be a valid hex color')
+    return
+  }
   let dueAt = null
   if (newDueAt.value) {
     const parsedDueAt = new Date(newDueAt.value)
@@ -683,6 +750,8 @@ async function addTodo() {
         text,
         dueAt,
         location: newLocation.value.trim(),
+        labelText: newLabelText.value.trim(),
+        labelColor,
         rolloverEnabled: newRolloverEnabled.value,
       }),
     })
@@ -691,6 +760,8 @@ async function addTodo() {
     newTask.value = ''
     newDueAt.value = ''
     newLocation.value = ''
+    newLabelText.value = ''
+    newLabelColor.value = '#64748b'
     newRolloverEnabled.value = false
     addTodoOpen.value = false
   } catch (error) {
@@ -798,6 +869,8 @@ function startDetailEdit() {
   detailEditMode.value = true
   detailDueAtDraft.value = target.dueAt || ''
   detailLocationDraft.value = target.location || ''
+  detailLabelTextDraft.value = target.labelText || ''
+  detailLabelColorDraft.value = normalizeLabelColor(target.labelColor)
   detailRolloverDraft.value = Boolean(target.rolloverEnabled)
 }
 
@@ -806,22 +879,32 @@ function cancelDetailEdit() {
   const target = detailTodo.value
   detailDueAtDraft.value = target?.dueAt || ''
   detailLocationDraft.value = target?.location || ''
+  detailLabelTextDraft.value = target?.labelText || ''
+  detailLabelColorDraft.value = normalizeLabelColor(target?.labelColor)
   detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
 }
 
 async function saveDetailEdit() {
   const target = detailTodo.value
   if (!target || busy.value) return
+  if (detailLabelTextDraft.value.trim() && !isValidLabelColor(detailLabelColorDraft.value)) {
+    errorMessage.value = translateError('labelColor must be a valid hex color')
+    return
+  }
   busy.value = true
   errorMessage.value = ''
   const previous = {
     dueAt: target.dueAt || '',
     location: target.location || '',
+    labelText: target.labelText || '',
+    labelColor: normalizeLabelColor(target.labelColor),
     rolloverEnabled: Boolean(target.rolloverEnabled),
   }
 
   target.dueAt = detailDueAtDraft.value || null
   target.location = detailLocationDraft.value.trim()
+  target.labelText = detailLabelTextDraft.value.trim()
+  target.labelColor = normalizeLabelColor(detailLabelColorDraft.value)
   target.rolloverEnabled = detailRolloverDraft.value
 
   try {
@@ -831,6 +914,8 @@ async function saveDetailEdit() {
         id: target.id,
         dueAt: detailDueAtDraft.value || null,
         location: detailLocationDraft.value,
+        labelText: detailLabelTextDraft.value.trim(),
+        labelColor: normalizeLabelColor(detailLabelColorDraft.value),
         rolloverEnabled: detailRolloverDraft.value,
       }),
     })
@@ -838,6 +923,8 @@ async function saveDetailEdit() {
   } catch (error) {
     target.dueAt = previous.dueAt || null
     target.location = previous.location
+    target.labelText = previous.labelText
+    target.labelColor = previous.labelColor
     target.rolloverEnabled = previous.rolloverEnabled
     errorMessage.value = translateError(error.message)
   } finally {
@@ -892,6 +979,8 @@ function openDetail(todoId) {
   detailEditMode.value = false
   detailDueAtDraft.value = target?.dueAt || ''
   detailLocationDraft.value = target?.location || ''
+  detailLabelTextDraft.value = target?.labelText || ''
+  detailLabelColorDraft.value = normalizeLabelColor(target?.labelColor)
   detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
   editingCommentId.value = null
   commentEditDraft.value = ''
@@ -1092,14 +1181,22 @@ function formatTime(value) {
               <template #item="{ element: todo }">
                 <li class="rounded-lg border bg-card p-3">
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                    <div class="flex min-w-0 flex-1 items-start gap-2">
                       <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
                       <input
                         :checked="todo.done"
                         type="checkbox"
                         @change="setTodoDone(todo, $event.target.checked)"
                       />
-                      <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
+                      <div class="min-w-0 space-y-1">
+                        <span class="block break-words" :class="{ 'text-muted-foreground line-through': todo.done }">
+                          {{ todo.text }}
+                        </span>
+                        <span v-if="todo.labelText" class="todo-label-badge" :style="getLabelBadgeStyle(todo)">
+                          <span class="todo-label-dot" :style="getLabelDotStyle(todo)" />
+                          {{ todo.labelText }}
+                        </span>
+                      </div>
                     </div>
                     <div class="flex w-full gap-2 sm:w-auto">
                       <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
@@ -1156,10 +1253,15 @@ function formatTime(value) {
                       type="button"
                       class="calendar-item"
                       :class="{ 'calendar-item--done': todo.done }"
+                      :style="getCalendarItemStyle(todo)"
                       @click="openDetail(todo.id)"
                     >
-                      <span class="truncate">{{ todo.text }}</span>
-                      <small>{{ formatTime(todo.dueAt) }}</small>
+                      <span class="calendar-item-main">
+                        <span v-if="todo.labelText" class="todo-label-dot" :style="getLabelDotStyle(todo)" />
+                        <span class="truncate">{{ todo.text }}</span>
+                      </span>
+                      <small class="calendar-item-time">{{ formatTime(todo.dueAt) }}</small>
+                      <small v-if="todo.labelText" class="calendar-item-label">{{ todo.labelText }}</small>
                     </button>
                   </li>
                   <li v-if="cell.items.length > 3" class="calendar-more">+{{ cell.items.length - 3 }}</li>
@@ -1249,6 +1351,25 @@ function formatTime(value) {
               />
             </div>
           </div>
+          <div class="grid gap-2 md:grid-cols-[1fr_auto]">
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
+              <Input
+                v-model="newLabelText"
+                class="w-full"
+                type="text"
+                :placeholder="t('labelPlaceholder')"
+                autocomplete="off"
+              />
+            </div>
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('labelColor') }}</p>
+              <div class="label-color-field">
+                <input v-model="newLabelColor" class="label-color-input" type="color" />
+                <Input v-model="newLabelColor" class="label-color-code" type="text" inputmode="text" />
+              </div>
+            </div>
+          </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
             <span class="space-y-0.5">
@@ -1292,6 +1413,19 @@ function formatTime(value) {
             <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
             <Input v-model="detailLocationDraft" type="text" :placeholder="t('locationPlaceholder')" />
           </div>
+          <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
+              <Input v-model="detailLabelTextDraft" type="text" :placeholder="t('labelPlaceholder')" />
+            </div>
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('labelColor') }}</p>
+              <div class="label-color-field">
+                <input v-model="detailLabelColorDraft" class="label-color-input" type="color" />
+                <Input v-model="detailLabelColorDraft" class="label-color-code" type="text" inputmode="text" />
+              </div>
+            </div>
+          </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <input v-model="detailRolloverDraft" type="checkbox" class="mt-1" />
             <span class="space-y-0.5">
@@ -1303,6 +1437,13 @@ function formatTime(value) {
         <template v-else>
           <p class="created-at">{{ t('due') }}: {{ formatDateTime(detailTodo.dueAt) }}</p>
           <p class="created-at">{{ t('place') }}: {{ detailTodo.location || '-' }}</p>
+          <p v-if="detailTodo.labelText" class="created-at detail-label-row">
+            {{ t('label') }}:
+            <span class="todo-label-badge" :style="getLabelBadgeStyle(detailTodo)">
+              <span class="todo-label-dot" :style="getLabelDotStyle(detailTodo)" />
+              {{ detailTodo.labelText }}
+            </span>
+          </p>
           <p v-if="detailTodo.rolloverEnabled" class="created-at">{{ t('rolloverEnabled') }}</p>
         </template>
 

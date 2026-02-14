@@ -56,6 +56,8 @@ export async function ensureSchema() {
           done BOOLEAN NOT NULL DEFAULT FALSE,
           due_at TIMESTAMPTZ,
           location TEXT NOT NULL DEFAULT '',
+          label_text TEXT NOT NULL DEFAULT '',
+          label_color TEXT NOT NULL DEFAULT '#64748b',
           rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE,
           position INTEGER NOT NULL DEFAULT 0,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -85,6 +87,13 @@ export async function ensureSchema() {
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;')
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS location TEXT NOT NULL DEFAULT '';")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_text TEXT NOT NULL DEFAULT '';")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_color TEXT NOT NULL DEFAULT '#64748b';")
+      await client.query(`
+        UPDATE todos
+        SET label_color = '#64748b'
+        WHERE label_color IS NULL OR btrim(label_color) = '';
+      `)
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE;')
       await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;')
       await client.query(`
@@ -120,6 +129,8 @@ export function normalizeTodoRow(row) {
     done: row.done,
     dueAt: row.due_at,
     location: row.location || '',
+    labelText: row.label_text || '',
+    labelColor: row.label_color || '#64748b',
     rolloverEnabled: row.rollover_enabled,
     position: row.position,
     createdAt: row.created_at,

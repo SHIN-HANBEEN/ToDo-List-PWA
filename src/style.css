@@ -189,6 +189,23 @@
   cursor: pointer;
 }
 
+.calendar-item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calendar-item-time {
+  justify-self: end;
+}
+
+.calendar-item-label {
+  display: block;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.25;
+}
+
 .calendar-item small {
   color: hsl(var(--muted-foreground));
   font-size: 0.67rem;
@@ -244,6 +261,58 @@
 
 .drag-chosen {
   box-shadow: 0 0 0 2px hsl(var(--ring) / 0.45) inset;
+}
+
+.todo-label-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  vertical-align: middle;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.todo-label-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.label-color-field {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.label-color-input {
+  width: 44px;
+  height: 36px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--background));
+  cursor: pointer;
+  padding: 4px;
+}
+
+.label-color-code {
+  text-transform: uppercase;
+}
+
+.detail-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .modal-wrap {
