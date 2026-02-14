@@ -5,6 +5,7 @@ import { Moon, Settings, Sun } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import DateTimePicker from '@/components/DateTimePicker.vue'
 import {
   Select,
   SelectContent,
@@ -66,6 +67,8 @@ const messages = {
     taskPlaceholder: '할 일을 입력하세요',
     dueAt: '마감일시',
     dueAtPlaceholder: '마감일시 선택',
+    pickerClear: '지우기',
+    pickerDone: '확인',
     location: '장소',
     locationPlaceholder: '장소를 입력하세요',
     rolloverOption: '미완료 시 다음날로 자동 이월',
@@ -120,6 +123,8 @@ const messages = {
     taskPlaceholder: 'Add a task',
     dueAt: 'Due date/time',
     dueAtPlaceholder: 'Choose due date/time',
+    pickerClear: 'Clear',
+    pickerDone: 'Done',
     location: 'Location',
     locationPlaceholder: 'Add location',
     rolloverOption: 'Auto-move deadline to next day if unfinished',
@@ -174,6 +179,8 @@ const messages = {
     taskPlaceholder: '输入待办事项',
     dueAt: '截止日期时间',
     dueAtPlaceholder: '选择截止日期时间',
+    pickerClear: '清除',
+    pickerDone: '完成',
     location: '地点',
     locationPlaceholder: '输入地点',
     rolloverOption: '未完成时自动顺延到次日',
@@ -228,6 +235,8 @@ const messages = {
     taskPlaceholder: 'タスクを入力',
     dueAt: '締切日時',
     dueAtPlaceholder: '締切日時を選択',
+    pickerClear: 'クリア',
+    pickerDone: '完了',
     location: '場所',
     locationPlaceholder: '場所を入力',
     rolloverOption: '未完了なら締切を翌日に自動繰り越し',
@@ -1070,11 +1079,12 @@ function formatTime(value) {
           <div class="grid gap-2 md:grid-cols-2">
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
-              <Input
+              <DateTimePicker
                 v-model="newDueAt"
-                class="w-full"
-                type="datetime-local"
+                :locale="localeCodeByLanguage[locale] || 'en-US'"
                 :placeholder="t('dueAtPlaceholder')"
+                :clear-label="t('pickerClear')"
+                :done-label="t('pickerDone')"
               />
             </div>
             <div class="space-y-1">
