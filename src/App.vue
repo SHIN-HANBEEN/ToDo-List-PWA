@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CircleHelp, Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
+import { CalendarDays, CircleHelp, List, Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -1354,7 +1354,7 @@ function formatTime(value) {
 <template>
   <main class="page">
     <Card
-      class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none sm:mx-0 sm:max-w-3xl sm:rounded-xl sm:border-border/80 sm:bg-card/90 sm:shadow-2xl sm:backdrop-blur-xl"
+      class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
     >
       <CardHeader class="hidden space-y-3 p-3 sm:block sm:p-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1362,24 +1362,28 @@ function formatTime(value) {
           <div class="flex w-full flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground sm:w-auto">
             <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
 
-            <div class="grid h-8 grid-cols-2 overflow-hidden rounded-md border bg-background sm:inline-flex sm:w-auto">
+            <div class="flex items-center gap-1 rounded-full bg-muted/40 p-1 sm:w-auto">
               <Button
                 size="sm"
-                class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
-                :variant="viewMode === 'list' ? 'default' : 'ghost'"
+                class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
+                :variant="viewMode === 'list' ? 'secondary' : 'ghost'"
                 @click="viewMode = 'list'"
                 :disabled="!isAuthenticated"
+                :aria-label="t('listView')"
+                :title="t('listView')"
               >
-                {{ t('listView') }}
+                <List class="h-4 w-4" />
               </Button>
               <Button
                 size="sm"
-                class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
-                :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
+                class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
+                :variant="viewMode === 'calendar' ? 'secondary' : 'ghost'"
                 @click="viewMode = 'calendar'"
                 :disabled="!isAuthenticated"
+                :aria-label="t('calendarView')"
+                :title="t('calendarView')"
               >
-                {{ t('calendarView') }}
+                <CalendarDays class="h-4 w-4" />
               </Button>
             </div>
 
@@ -1397,32 +1401,42 @@ function formatTime(value) {
         </div>
       </CardHeader>
 
-      <CardContent class="space-y-4 px-3 pb-3 pt-0 sm:p-6 sm:pt-0">
+      <CardContent class="space-y-4 px-3 pb-3 pt-3 sm:p-6 sm:pt-0">
         <section class="space-y-2 sm:hidden">
           <div class="flex items-center justify-between gap-2">
             <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
             <div class="flex shrink-0 items-center gap-2">
-              <div class="grid h-8 grid-cols-2 overflow-hidden rounded-md border bg-background">
+              <div class="flex items-center gap-1 rounded-full bg-muted/40 p-1">
                 <Button
                   size="sm"
-                  class="h-full rounded-none px-2 first:rounded-l-md last:rounded-r-md"
-                  :variant="viewMode === 'list' ? 'default' : 'ghost'"
+                  class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
+                  :variant="viewMode === 'list' ? 'secondary' : 'ghost'"
                   @click="viewMode = 'list'"
                   :disabled="!isAuthenticated"
+                  :aria-label="t('listView')"
+                  :title="t('listView')"
                 >
-                  {{ t('listView') }}
+                  <List class="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
-                  class="h-full rounded-none px-2 first:rounded-l-md last:rounded-r-md"
-                  :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
+                  class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
+                  :variant="viewMode === 'calendar' ? 'secondary' : 'ghost'"
                   @click="viewMode = 'calendar'"
                   :disabled="!isAuthenticated"
+                  :aria-label="t('calendarView')"
+                  :title="t('calendarView')"
                 >
-                  {{ t('calendarView') }}
+                  <CalendarDays class="h-4 w-4" />
                 </Button>
               </div>
-              <Button variant="outline" size="sm" class="h-8 w-8 p-0" @click="openMobileHeader" aria-label="open menu">
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-8 w-8 border-0 p-0 shadow-none"
+                @click="openMobileHeader"
+                aria-label="open menu"
+              >
                 <Menu class="h-4 w-4" />
               </Button>
             </div>
@@ -1437,7 +1451,7 @@ function formatTime(value) {
 
         <section
           v-if="!isAuthenticated"
-          class="mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0 sm:rounded-xl sm:border sm:bg-card sm:p-5"
+          class="mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"
         >
           <div class="space-y-1 text-center">
             <p class="auth-script">Todogram</p>

@@ -78,8 +78,7 @@
 
 .page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: block;
   padding: clamp(12px, 2.4vw, 20px);
 }
 
@@ -473,7 +472,7 @@
 @media (max-width: 640px) {
   .page {
     display: block;
-    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+    padding: max(18px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
 
