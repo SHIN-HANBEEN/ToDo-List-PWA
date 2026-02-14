@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
-import { Menu, Moon, Settings, Sun } from 'lucide-vue-next'
+import { Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -1522,9 +1522,17 @@ function formatTime(value) {
 
     <section v-if="mobileHeaderOpen" class="modal-wrap sm:hidden" @click.self="closeMobileHeader">
       <article class="modal settings-modal mobile-menu-modal">
-        <header class="modal-header !flex-row !items-start !justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeMobileHeader"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+        <header class="modal-header">
           <h2>{{ t('appTitle') }}</h2>
-          <Button variant="outline" size="sm" class="ml-auto" @click="closeMobileHeader">{{ t('close') }}</Button>
         </header>
 
         <div class="grid gap-2 text-xs text-muted-foreground">
@@ -1542,9 +1550,17 @@ function formatTime(value) {
 
     <section v-if="settingsOpen" class="modal-wrap" @click.self="closeSettings">
       <article class="modal settings-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeSettings"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
         <header class="modal-header">
           <h2>{{ t('settingsTitle') }}</h2>
-          <Button variant="outline" size="sm" @click="closeSettings">{{ t('close') }}</Button>
         </header>
 
         <div class="space-y-2">
@@ -1591,9 +1607,17 @@ function formatTime(value) {
 
     <section v-if="addTodoOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddTodo">
       <article class="modal settings-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeAddTodo"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
         <header class="modal-header">
           <h2>{{ t('addScheduleTitle') }}</h2>
-          <Button variant="outline" size="sm" @click="closeAddTodo">{{ t('close') }}</Button>
         </header>
 
         <form class="space-y-2" @submit.prevent="addTodo">
@@ -1661,9 +1685,17 @@ function formatTime(value) {
 
     <section v-if="addLabelOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddLabel">
       <article class="modal settings-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeAddLabel"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
         <header class="modal-header">
           <h2>라벨 설정</h2>
-          <Button variant="outline" size="sm" @click="closeAddLabel">{{ t('close') }}</Button>
         </header>
 
         <form class="space-y-2" @submit.prevent="createLabel">
@@ -1726,6 +1758,15 @@ function formatTime(value) {
 
     <section v-if="detailTodo" class="modal-wrap" @click.self="closeDetail">
       <article class="modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeDetail"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
         <header class="modal-header">
           <h2>{{ detailTodo.text }}</h2>
           <div class="flex flex-wrap gap-2">
@@ -1734,7 +1775,6 @@ function formatTime(value) {
               <Button variant="outline" size="sm" @click="cancelDetailEdit">{{ t('cancel') }}</Button>
             </template>
             <Button v-else variant="outline" size="sm" @click="startDetailEdit">{{ t('edit') }}</Button>
-            <Button variant="outline" size="sm" @click="closeDetail">{{ t('close') }}</Button>
           </div>
         </header>
         <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
