@@ -573,17 +573,20 @@ function positionRolloverTooltip() {
   const viewportPadding = 12
   const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
   const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
-  const hardMaxWidth = Math.min(360, viewportWidth - viewportPadding * 2)
+  const preferredMaxWidth = viewportWidth <= 768 ? 248 : 320
+  const hardMaxWidth = Math.min(preferredMaxWidth, viewportWidth - viewportPadding * 2)
+  const minWidth = 120
   const triggerRect = trigger.getBoundingClientRect()
   const tooltipRect = tooltip.getBoundingClientRect()
   const naturalWidth = Math.max(tooltip.scrollWidth || 0, tooltipRect.width || 0)
-  let width = Math.min(Math.max(180, naturalWidth), hardMaxWidth)
+  let width = Math.min(Math.max(160, naturalWidth), hardMaxWidth)
 
   let left = triggerRect.left + triggerRect.width / 2 - width / 2
   left = Math.max(viewportPadding, Math.min(left, viewportWidth - width - viewportPadding))
   const rightSpace = viewportWidth - left - viewportPadding
   width = Math.min(width, rightSpace)
-  if (width < 140) width = Math.max(140, hardMaxWidth)
+  width = Math.max(minWidth, width)
+  left = Math.max(viewportPadding, Math.min(left, viewportWidth - width - viewportPadding))
 
   const estimatedHeight = Math.max(tooltip.scrollHeight || 0, tooltipRect.height || 0)
 
