@@ -1,7 +1,7 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
-import { Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
+import { CircleHelp, Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +41,7 @@ const commentDrafts = ref({})
 const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
 const mobileHeaderOpen = ref(false)
+const rolloverTooltipOpen = ref(false)
 const detailTodoId = ref(null)
 const detailEditMode = ref(false)
 const detailDueAtDraft = ref('')
@@ -75,13 +76,13 @@ const messages = {
     logout: '로그아웃',
     createAccount: '계정 만들기',
     emailPlaceholder: '이메일 주소',
-    usernamePlaceholder: '사용자 이름 (2~24자)',
+    usernamePlaceholder: '사용자 이름 (2-24자)',
     passwordPlaceholder: '비밀번호 (최소 8자)',
     theme: '테마',
     lightMode: '라이트',
     darkMode: '다크',
     authSigninHelp: '로그인해서 계속 진행하세요',
-    authSignupHelp: '새 계정을 만들어 시작하세요',
+    authSignupHelp: '새 계정을 만들고 시작하세요',
     listView: '리스트',
     calendarView: '캘린더',
     addTask: '추가',
@@ -95,13 +96,13 @@ const messages = {
     labelColor: '라벨 색상',
     location: '장소',
     locationPlaceholder: '장소를 입력하세요',
-    rolloverOption: '미완료 시 다음날로 자동 이월',
-    rolloverHint: '마감일이 지나도 완료하지 않으면 자동으로 다음날 같은 시각으로 이동합니다.',
+    rolloverOption: '미완료 시 다음날 자동 이월',
+    rolloverHint: '마감일시를 넘기면 다음날 같은 시간으로 자동 이월됩니다.',
     all: '전체',
     active: '진행중',
     done: '완료',
-    clearDone: '완료 삭제',
-    dragHint: '전체/진행중/완료 탭 모두에서 드래그 정렬이 가능합니다. 모바일에서는 핸들을 길게 눌러 이동하세요.',
+    clearDone: '완료 항목 삭제',
+    dragHint: '전체, 진행중, 완료 탭에서 드래그 정렬을 사용할 수 있습니다. 모바일에서는 핸들을 길게 눌러 이동하세요.',
     loading: '불러오는 중...',
     detail: '상세보기',
     edit: '수정',
@@ -197,19 +198,19 @@ const messages = {
     settingsTitle: '应用设置',
     addSchedule: '添加日程',
     addScheduleTitle: '添加新日程',
-    guest: '未登录',
+    guest: '访客',
     login: '登录',
     signup: '注册',
     logout: '退出登录',
     createAccount: '创建账号',
     emailPlaceholder: '邮箱地址',
     usernamePlaceholder: '用户名（2-24个字符）',
-    passwordPlaceholder: '密码（至少 8 位）',
+    passwordPlaceholder: '密码（至少8位）',
     theme: '主题',
     lightMode: '浅色',
     darkMode: '深色',
-    authSigninHelp: '登录后继续使用',
-    authSignupHelp: '创建新账号开始使用',
+    authSigninHelp: '登录后继续',
+    authSignupHelp: '创建账号开始使用',
     listView: '列表',
     calendarView: '日历',
     addTask: '添加',
@@ -224,32 +225,32 @@ const messages = {
     location: '地点',
     locationPlaceholder: '输入地点',
     rolloverOption: '未完成时自动顺延到次日',
-    rolloverHint: '若截止时间到期仍未完成，会自动顺延到次日同一时间。',
+    rolloverHint: '若到截止时间仍未完成，将自动顺延到次日同一时间。',
     all: '全部',
     active: '进行中',
     done: '已完成',
     clearDone: '清除已完成',
-    dragHint: '全部/进行中/已完成标签都支持拖拽排序。移动端请长按拖拽手柄后移动。',
+    dragHint: '可在全部、进行中、已完成标签中拖拽排序。移动端请长按拖拽手柄。',
     loading: '加载中...',
     detail: '详情',
     edit: '编辑',
     save: '保存',
     cancel: '取消',
-    editTodoMeta: '修改日程信息',
+    editTodoMeta: '编辑日程信息',
     delete: '删除',
     created: '创建时间',
     noItems: '没有可显示的项目。',
     remaining: '剩余 {count}',
-    doneCount: '已完成 {count}',
+    doneCount: '完成 {count}',
     close: '关闭',
     commentPlaceholder: '添加评论',
     commentEditPlaceholder: '编辑评论',
     comment: '评论',
-    remove: '移除',
+    remove: '删除',
     noComments: '暂无评论。',
     calendarToday: '今天',
     calendarNoItems: '该日期没有日程。',
-    calendarNoDue: '未设置截止时间的项目 {count} 个',
+    calendarNoDue: '未设置截止时间的项目：{count}',
     due: '截止',
     place: '地点',
     rolloverEnabled: '已启用自动顺延',
@@ -261,19 +262,19 @@ const messages = {
     settingsTitle: 'アプリ設定',
     addSchedule: '予定追加',
     addScheduleTitle: '新しい予定を追加',
-    guest: '未ログイン',
+    guest: 'ゲスト',
     login: 'ログイン',
     signup: '新規登録',
     logout: 'ログアウト',
     createAccount: 'アカウント作成',
     emailPlaceholder: 'メールアドレス',
-    usernamePlaceholder: 'ユーザー名（2〜24文字）',
+    usernamePlaceholder: 'ユーザー名（2-24文字）',
     passwordPlaceholder: 'パスワード（8文字以上）',
     theme: 'テーマ',
     lightMode: 'ライト',
     darkMode: 'ダーク',
-    authSigninHelp: 'ログインして続行',
-    authSignupHelp: '新しいアカウントを作成',
+    authSigninHelp: 'ログインして続行してください',
+    authSignupHelp: 'アカウントを作成して開始してください',
     listView: 'リスト',
     calendarView: 'カレンダー',
     addTask: '追加',
@@ -287,13 +288,13 @@ const messages = {
     labelColor: 'ラベル色',
     location: '場所',
     locationPlaceholder: '場所を入力',
-    rolloverOption: '未完了なら締切を翌日に自動繰り越し',
-    rolloverHint: '締切までに完了しない場合、翌日の同時刻へ自動移動します。',
+    rolloverOption: '未完了なら翌日に自動繰り越し',
+    rolloverHint: '締切までに完了しない場合、翌日の同時刻に自動で繰り越されます。',
     all: 'すべて',
     active: '進行中',
     done: '完了',
     clearDone: '完了を削除',
-    dragHint: 'すべて/進行中/完了タブでドラッグ並び替えが可能です。モバイルではハンドルを長押しして移動してください。',
+    dragHint: 'すべて、進行中、完了タブでドラッグ並び替えができます。モバイルではハンドルを長押しして移動してください。',
     loading: '読み込み中...',
     detail: '詳細',
     edit: '編集',
@@ -301,7 +302,7 @@ const messages = {
     cancel: 'キャンセル',
     editTodoMeta: '予定情報を編集',
     delete: '削除',
-    created: '作成日時',
+    created: '作成',
     noItems: '表示する項目がありません。',
     remaining: '残り {count}',
     doneCount: '完了 {count}',
@@ -313,13 +314,12 @@ const messages = {
     noComments: 'コメントはありません。',
     calendarToday: '今日',
     calendarNoItems: 'この日付の予定はありません。',
-    calendarNoDue: '締切未設定の項目 {count} 件',
+    calendarNoDue: '締切未設定の項目: {count}',
     due: '締切',
     place: '場所',
     rolloverEnabled: '自動繰り越し有効',
   },
 }
-
 const errorMessages = {
   Unauthorized: { ko: '로그인이 필요합니다.', en: 'Login required.', zh: '需要登录。', ja: 'ログインが必要です。' },
   'email and password are required': {
@@ -331,14 +331,14 @@ const errorMessages = {
   'password must be at least 8 characters': {
     ko: '비밀번호는 최소 8자 이상이어야 합니다.',
     en: 'Password must be at least 8 characters.',
-    zh: '密码至少需要 8 位。',
-    ja: 'パスワードは8文字以上必要です。',
+    zh: '密码至少需要 8 个字符。',
+    ja: 'パスワードは8文字以上である必要があります。',
   },
   'email already registered': {
     ko: '이미 가입된 이메일입니다.',
     en: 'Email is already registered.',
     zh: '该邮箱已注册。',
-    ja: 'このメールアドレスは既に登録されています。',
+    ja: 'このメールアドレスはすでに登録されています。',
   },
   'username is required': {
     ko: '사용자 이름을 입력하세요.',
@@ -349,7 +349,7 @@ const errorMessages = {
   'username must be between 2 and 24 characters': {
     ko: '사용자 이름은 2자 이상 24자 이하여야 합니다.',
     en: 'Username must be between 2 and 24 characters.',
-    zh: '用户名长度必须在 2 到 24 个字符之间。',
+    zh: '用户名长度需为 2~24 个字符。',
     ja: 'ユーザー名は2文字以上24文字以下で入力してください。',
   },
   'invalid credentials': {
@@ -374,19 +374,31 @@ const errorMessages = {
     ko: '라벨 색상은 16진수 색상(#RRGGBB) 형식이어야 합니다.',
     en: 'Label color must be a valid hex color (#RRGGBB).',
     zh: '标签颜色必须是有效的十六进制颜色（#RRGGBB）。',
-    ja: 'ラベル色は有効な16進カラー（#RRGGBB）で入力してください。',
+    ja: 'ラベル色は有効な16進カラー（#RRGGBB）である必要があります。',
   },
   'label name is required': {
+    ko: '라벨 이름을 입력하세요.',
     en: 'Label name is required.',
+    zh: '请输入标签名称。',
+    ja: 'ラベル名を入力してください。',
   },
   'label color must be a valid hex color': {
+    ko: '라벨 색상은 16진수 색상(#RRGGBB) 형식이어야 합니다.',
     en: 'Label color must be a valid hex color (#RRGGBB).',
+    zh: '标签颜色必须是有效的十六进制颜色（#RRGGBB）。',
+    ja: 'ラベル色は有効な16進カラー（#RRGGBB）である必要があります。',
   },
   'label name already exists': {
+    ko: '같은 이름의 라벨이 이미 존재합니다.',
     en: 'A label with the same name already exists.',
+    zh: '同名标签已存在。',
+    ja: '同じ名前のラベルがすでに存在します。',
   },
   'label not found': {
+    ko: '라벨을 찾을 수 없습니다.',
     en: 'Label not found.',
+    zh: '未找到标签。',
+    ja: 'ラベルが見つかりません。',
   },
   'id is required': {
     ko: 'ID 값이 필요합니다.',
@@ -403,14 +415,14 @@ const errorMessages = {
   'no valid fields to update': {
     ko: '수정할 항목이 없습니다.',
     en: 'No valid fields to update.',
-    zh: '没有可更新的字段。',
-    ja: '更新できる項目がありません。',
+    zh: '没有可更新的有效字段。',
+    ja: '更新できる有効な項目がありません。',
   },
   'todo not found': {
     ko: '할 일을 찾을 수 없습니다.',
     en: 'Todo not found.',
     zh: '未找到待办事项。',
-    ja: 'TODOが見つかりません。',
+    ja: 'TODO が見つかりません。',
   },
   'comment not found': {
     ko: '댓글을 찾을 수 없습니다.',
@@ -419,7 +431,6 @@ const errorMessages = {
     ja: 'コメントが見つかりません。',
   },
 }
-
 const localeCodeByLanguage = {
   ko: 'ko-KR',
   en: 'en-US',
@@ -433,7 +444,19 @@ const languageOptions = [
   { code: 'zh', label: '中文' },
   { code: 'ja', label: '日本語' },
 ]
+const rolloverSettingLabels = {
+  ko: '일정 자동 이월',
+  en: 'Schedule rollover',
+  zh: 'Schedule rollover',
+  ja: 'Schedule rollover',
+}
 
+const rolloverTooltipMessages = {
+  ko: '일정을 제 시간에 완료하지 못한 경우 그 다음날로 자동 이월됩니다.',
+  en: 'If a schedule is not finished on time, it automatically rolls over to the next day.',
+  zh: 'If a schedule is not finished on time, it automatically rolls over to the next day.',
+  ja: 'If a schedule is not finished on time, it automatically rolls over to the next day.',
+}
 const isAuthenticated = computed(() => Boolean(user.value))
 const isDark = computed(() => theme.value === 'dark')
 const filteredTodos = computed(() => {
@@ -474,7 +497,7 @@ const calendarMonthLabel = computed(() => {
 })
 const calendarWeekdayLabels = computed(() => {
   const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
-  const base = new Date(2024, 0, 7) // 2024-01-07은 일요일.
+  const base = new Date(2024, 0, 7) // 2024-01-07? ?쇱슂??
   return Array.from({ length: 7 }, (_, index) =>
     new Intl.DateTimeFormat(dateLocale, { weekday: 'short' }).format(addDays(base, index))
   )
@@ -521,6 +544,8 @@ const selectedLabelForNewTodo = computed(() => {
   if (!Number.isFinite(id)) return null
   return labels.value.find((label) => label.id === id) || null
 })
+const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
+const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
 
 function startOfMonth(value) {
   const date = new Date(value)
@@ -1057,10 +1082,12 @@ function openDetail(todoId) {
 }
 
 function openSettings() {
+  rolloverTooltipOpen.value = false
   settingsOpen.value = true
 }
 
 function closeSettings() {
+  rolloverTooltipOpen.value = false
   settingsOpen.value = false
 }
 
@@ -1547,7 +1574,6 @@ function formatTime(value) {
         </div>
       </article>
     </section>
-
     <section v-if="settingsOpen" class="modal-wrap" @click.self="closeSettings">
       <article class="modal settings-modal">
         <Button
@@ -1563,43 +1589,73 @@ function formatTime(value) {
           <h2>{{ t('settingsTitle') }}</h2>
         </header>
 
-        <div class="space-y-2">
-          <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
-          <div class="inline-flex w-full rounded-lg border bg-background p-1">
-            <Button class="flex-1" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
-              <Sun class="mr-1 h-4 w-4" />
-              {{ t('lightMode') }}
-            </Button>
-            <Button class="flex-1" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
-              <Moon class="mr-1 h-4 w-4" />
-              {{ t('darkMode') }}
-            </Button>
+        <div class="grid gap-3">
+          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
+            <p class="text-sm text-muted-foreground sm:text-base">{{ t('theme') }}</p>
+            <div class="inline-flex w-full rounded-lg border bg-background p-1">
+              <Button class="flex-1 text-sm sm:text-base" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
+                <Sun class="mr-1 h-4 w-4" />
+                {{ t('lightMode') }}
+              </Button>
+              <Button class="flex-1 text-sm sm:text-base" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
+                <Moon class="mr-1 h-4 w-4" />
+                {{ t('darkMode') }}
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div class="space-y-2">
-          <p class="text-sm text-muted-foreground">{{ t('language') }}</p>
-          <Select :model-value="locale" @update:model-value="setLocale">
-            <SelectTrigger class="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
-                {{ option.label }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
+            <p class="text-sm text-muted-foreground sm:text-base">{{ t('language') }}</p>
+            <Select :model-value="locale" @update:model-value="setLocale">
+              <SelectTrigger class="w-full text-sm sm:text-base">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div class="space-y-2">
-          <p class="text-sm text-muted-foreground">새 일정 자동 이월 기본값</p>
-          <div class="inline-flex w-full rounded-lg border bg-background p-1">
-            <Button class="flex-1" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
-              true
-            </Button>
-            <Button class="flex-1" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
-              false
-            </Button>
+          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
+            <div class="flex items-center gap-1.5">
+              <p class="text-sm text-muted-foreground sm:text-base">{{ rolloverSettingLabel }}</p>
+              <div class="relative">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="h-7 w-7 rounded-full p-0 text-muted-foreground"
+                  :aria-label="rolloverTooltipText"
+                  @click.stop="rolloverTooltipOpen = !rolloverTooltipOpen"
+                >
+                  <CircleHelp class="h-4 w-4" />
+                </Button>
+                <div
+                  v-if="rolloverTooltipOpen"
+                  class="absolute left-0 top-full z-30 mt-2 w-64 rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg sm:left-auto sm:right-0"
+                >
+                  {{ rolloverTooltipText }}
+                </div>
+              </div>
+            </div>
+            <div class="inline-flex w-full rounded-lg border bg-background p-1">
+              <Button
+                class="flex-1 text-sm sm:text-base"
+                :variant="defaultRolloverEnabled ? 'default' : 'ghost'"
+                @click="setDefaultRollover(true)"
+              >
+                true
+              </Button>
+              <Button
+                class="flex-1 text-sm sm:text-base"
+                :variant="defaultRolloverEnabled ? 'ghost' : 'default'"
+                @click="setDefaultRollover(false)"
+              >
+                false
+              </Button>
+            </div>
           </div>
         </div>
       </article>
@@ -1667,9 +1723,9 @@ function formatTime(value) {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="button" variant="outline" @click="openAddLabel">라벨 설정</Button>
+              <Button type="button" variant="outline" @click="openAddLabel">?쇰꺼 ?ㅼ젙</Button>
             </div>
-            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">라벨 설정</Button>
+            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">?쇰꺼 ?ㅼ젙</Button>
           </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
@@ -1695,11 +1751,11 @@ function formatTime(value) {
           <X class="h-4 w-4" />
         </Button>
         <header class="modal-header">
-          <h2>라벨 설정</h2>
+          <h2>?쇰꺼 ?ㅼ젙</h2>
         </header>
 
         <form class="space-y-2" @submit.prevent="createLabel">
-          <p class="text-sm font-medium">라벨 추가</p>
+          <p class="text-sm font-medium">?쇰꺼 異붽?</p>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
             <Input
@@ -1724,7 +1780,7 @@ function formatTime(value) {
         </form>
 
         <div class="space-y-2">
-          <p class="text-sm font-medium">저장된 라벨</p>
+          <p class="text-sm font-medium">??λ맂 ?쇰꺼</p>
           <ul v-if="labelOptions.length > 0" class="label-manage-list">
             <li v-for="label in labelOptions" :key="label.id">
               <template v-if="editingLabelId === label.id">
@@ -1751,7 +1807,7 @@ function formatTime(value) {
               </template>
             </li>
           </ul>
-          <p v-else class="text-xs text-muted-foreground">저장된 라벨이 없습니다.</p>
+          <p v-else class="text-xs text-muted-foreground">??λ맂 ?쇰꺼???놁뒿?덈떎.</p>
         </div>
       </article>
     </section>
@@ -1867,3 +1923,8 @@ function formatTime(value) {
     </section>
   </main>
 </template>
+
+
+
+
+
