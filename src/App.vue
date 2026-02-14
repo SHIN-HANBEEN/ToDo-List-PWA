@@ -1387,11 +1387,11 @@ function formatTime(value) {
 </script>
 
 <template>
-  <main class="page">
+  <main class="page" :class="{ 'page--auth': !isAuthenticated }">
     <Card
       class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
     >
-      <CardContent class="space-y-4 px-3 pb-3 pt-3">
+      <CardContent :class="isAuthenticated ? 'space-y-4 px-3 pb-3 pt-3' : 'auth-card-content'">
         <section v-if="isAuthenticated" class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <div class="flex min-w-0 items-center gap-2">
