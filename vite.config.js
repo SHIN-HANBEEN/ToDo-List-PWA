@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
         // 새 빌드가 배포되면 서비스워커를 백그라운드에서 자동 갱신.
         registerType: 'autoUpdate',
         manifest: {
-          id: '/?v=20260214-check',
+          id: '/?v=20260214-circle',
           name: 'Todogram',
           short_name: 'Todogram',
           description: 'Todogram: installable todo app that works offline.',
@@ -42,13 +42,13 @@ export default defineConfig(({ mode }) => {
           scope: '/',
           icons: [
             {
-              src: '/todogram-icon-20260214-check-192.png',
+              src: '/todogram-icon-20260214-circle-192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/todogram-icon-20260214-check-512.png',
+              src: '/todogram-icon-20260214-circle-512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable',
