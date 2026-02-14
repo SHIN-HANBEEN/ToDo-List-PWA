@@ -1092,16 +1092,13 @@ function closeSettings() {
 }
 
 function openMobileHeader() {
+  rolloverTooltipOpen.value = false
   mobileHeaderOpen.value = true
 }
 
 function closeMobileHeader() {
+  rolloverTooltipOpen.value = false
   mobileHeaderOpen.value = false
-}
-
-function openSettingsFromMobile() {
-  closeMobileHeader()
-  openSettings()
 }
 
 async function logoutFromMobile() {
@@ -1562,12 +1559,69 @@ function formatTime(value) {
           <h2>{{ t('appTitle') }}</h2>
         </header>
 
-        <div class="grid gap-2 text-xs text-muted-foreground">
+        <div class="grid gap-3 text-xs text-muted-foreground">
           <span class="truncate font-medium">{{ currentUserLabel }}</span>
-          <Button variant="outline" size="sm" @click="openSettingsFromMobile">
-            <Settings class="mr-1 h-4 w-4" />
-            {{ t('settings') }}
-          </Button>
+
+          <div class="space-y-1">
+            <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
+            <div class="inline-flex w-full rounded-lg border bg-background p-1">
+              <Button class="flex-1 text-sm" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
+                <Sun class="mr-1 h-4 w-4" />
+                {{ t('lightMode') }}
+              </Button>
+              <Button class="flex-1 text-sm" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
+                <Moon class="mr-1 h-4 w-4" />
+                {{ t('darkMode') }}
+              </Button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <p class="text-sm text-muted-foreground">{{ t('language') }}</p>
+            <Select :model-value="locale" @update:model-value="setLocale">
+              <SelectTrigger class="w-full text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center gap-1.5">
+              <p class="text-sm text-muted-foreground">{{ rolloverSettingLabel }}</p>
+              <div class="relative">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="h-7 w-7 rounded-full p-0 text-muted-foreground"
+                  :aria-label="rolloverTooltipText"
+                  @click.stop="rolloverTooltipOpen = !rolloverTooltipOpen"
+                >
+                  <CircleHelp class="h-4 w-4" />
+                </Button>
+                <div
+                  v-if="rolloverTooltipOpen"
+                  class="absolute left-0 top-full z-30 mt-2 w-64 rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
+                >
+                  {{ rolloverTooltipText }}
+                </div>
+              </div>
+            </div>
+            <div class="inline-flex w-full rounded-lg border bg-background p-1">
+              <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
+                true
+              </Button>
+              <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
+                false
+              </Button>
+            </div>
+          </div>
+
           <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logoutFromMobile" :disabled="authBusy">
             {{ t('logout') }}
           </Button>
