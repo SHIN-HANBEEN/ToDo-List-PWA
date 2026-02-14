@@ -99,6 +99,12 @@ const messages = {
     label: '라벨',
     labelPlaceholder: '라벨 텍스트',
     labelColor: '라벨 색상',
+    labelSelectPrompt: '라벨을 선택해주세요',
+    labelSettings: '라벨 설정',
+    labelAdd: '라벨 추가',
+    labelSavedList: '저장한 라벨',
+    labelNameInputPlaceholder: '라벨 이름',
+    labelEmpty: '저장한 라벨이 없습니다.',
     location: '장소',
     locationPlaceholder: '장소를 입력하세요',
     rolloverOption: '미완료 시 다음날 자동 이월',
@@ -162,6 +168,12 @@ const messages = {
     label: 'Label',
     labelPlaceholder: 'Label text',
     labelColor: 'Label color',
+    labelSelectPrompt: 'Please select a label',
+    labelSettings: 'Label settings',
+    labelAdd: 'Add label',
+    labelSavedList: 'Saved labels',
+    labelNameInputPlaceholder: 'Label name',
+    labelEmpty: 'No saved labels.',
     location: 'Location',
     locationPlaceholder: 'Add location',
     rolloverOption: 'Auto-move deadline to next day if unfinished',
@@ -225,6 +237,12 @@ const messages = {
     label: '标签',
     labelPlaceholder: '标签文本',
     labelColor: '标签颜色',
+    labelSelectPrompt: '请选择标签',
+    labelSettings: '标签设置',
+    labelAdd: '添加标签',
+    labelSavedList: '已保存的标签',
+    labelNameInputPlaceholder: '标签名称',
+    labelEmpty: '暂无已保存标签。',
     location: '地点',
     locationPlaceholder: '输入地点',
     rolloverOption: '未完成时自动顺延到次日',
@@ -288,6 +306,12 @@ const messages = {
     label: 'ラベル',
     labelPlaceholder: 'ラベルテキスト',
     labelColor: 'ラベル色',
+    labelSelectPrompt: 'ラベルを選択してください',
+    labelSettings: 'ラベル設定',
+    labelAdd: 'ラベル追加',
+    labelSavedList: '保存済みラベル',
+    labelNameInputPlaceholder: 'ラベル名',
+    labelEmpty: '保存済みラベルはありません。',
     location: '場所',
     locationPlaceholder: '場所を入力',
     rolloverOption: '未完了なら翌日に自動繰り越し',
@@ -1859,10 +1883,10 @@ function formatTime(value) {
             <div v-if="labelOptions.length > 0" class="label-select-row">
               <Select :model-value="newTodoLabelId" @update:model-value="onNewTodoLabelChange">
                 <SelectTrigger class="w-full">
-                  <SelectValue placeholder="Select label" />
+                  <SelectValue :placeholder="t('labelSelectPrompt')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem :value="LABEL_NONE_VALUE">No label</SelectItem>
+                  <SelectItem :value="LABEL_NONE_VALUE">{{ t('labelSelectPrompt') }}</SelectItem>
                   <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
                     <span class="label-option-item">
                       <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
@@ -1871,9 +1895,9 @@ function formatTime(value) {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="button" variant="outline" @click="openAddLabel">?쇰꺼 ?ㅼ젙</Button>
+              <Button type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
             </div>
-            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">?쇰꺼 ?ㅼ젙</Button>
+            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
           </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
@@ -1899,18 +1923,18 @@ function formatTime(value) {
           <X class="h-4 w-4" />
         </Button>
         <header class="modal-header">
-          <h2>?쇰꺼 ?ㅼ젙</h2>
+          <h2>{{ t('labelSettings') }}</h2>
         </header>
 
         <form class="space-y-2" @submit.prevent="createLabel">
-          <p class="text-sm font-medium">?쇰꺼 異붽?</p>
+          <p class="text-sm font-medium">{{ t('labelAdd') }}</p>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
             <Input
               v-model="newLabelName"
               class="w-full"
               type="text"
-              placeholder="Label name"
+              :placeholder="t('labelNameInputPlaceholder')"
               autocomplete="off"
             />
           </div>
@@ -1928,7 +1952,7 @@ function formatTime(value) {
         </form>
 
         <div class="space-y-2">
-          <p class="text-sm font-medium">??λ맂 ?쇰꺼</p>
+          <p class="text-sm font-medium">{{ t('labelSavedList') }}</p>
           <ul v-if="labelOptions.length > 0" class="label-manage-list">
             <li v-for="label in labelOptions" :key="label.id">
               <template v-if="editingLabelId === label.id">
@@ -1955,7 +1979,7 @@ function formatTime(value) {
               </template>
             </li>
           </ul>
-          <p v-else class="text-xs text-muted-foreground">??λ맂 ?쇰꺼???놁뒿?덈떎.</p>
+          <p v-else class="text-xs text-muted-foreground">{{ t('labelEmpty') }}</p>
         </div>
       </article>
     </section>
