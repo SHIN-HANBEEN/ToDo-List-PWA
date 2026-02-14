@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { CircleHelp, Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -42,6 +42,11 @@ const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
 const mobileHeaderOpen = ref(false)
 const rolloverTooltipOpen = ref(false)
+const rolloverTooltipContext = ref('')
+const rolloverTooltipStyle = ref({})
+const rolloverTooltipRef = ref(null)
+const mobileRolloverTooltipTriggerRef = ref(null)
+const settingsRolloverTooltipTriggerRef = ref(null)
 const detailTodoId = ref(null)
 const detailEditMode = ref(false)
 const detailDueAtDraft = ref('')
@@ -547,6 +552,63 @@ const selectedLabelForNewTodo = computed(() => {
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
 const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
 
+function closeRolloverTooltip() {
+  rolloverTooltipOpen.value = false
+  rolloverTooltipContext.value = ''
+  rolloverTooltipStyle.value = {}
+}
+
+function getRolloverTooltipTrigger() {
+  if (rolloverTooltipContext.value === 'mobile') return mobileRolloverTooltipTriggerRef.value
+  if (rolloverTooltipContext.value === 'settings') return settingsRolloverTooltipTriggerRef.value
+  return null
+}
+
+function positionRolloverTooltip() {
+  if (!rolloverTooltipOpen.value) return
+  const trigger = getRolloverTooltipTrigger()
+  const tooltip = rolloverTooltipRef.value
+  if (!trigger || !tooltip) return
+
+  const viewportPadding = 12
+  const preferredWidth = Math.min(320, window.innerWidth - viewportPadding * 2)
+  const triggerRect = trigger.getBoundingClientRect()
+  const tooltipRect = tooltip.getBoundingClientRect()
+  const width = Math.min(preferredWidth, tooltipRect.width || preferredWidth)
+  const height = tooltipRect.height || 0
+
+  let left = triggerRect.left + triggerRect.width / 2 - width / 2
+  left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding))
+
+  let top = triggerRect.bottom + 8
+  if (top + height > window.innerHeight - viewportPadding) {
+    top = triggerRect.top - height - 8
+  }
+  if (top < viewportPadding) top = viewportPadding
+
+  rolloverTooltipStyle.value = {
+    left: `${Math.round(left)}px`,
+    top: `${Math.round(top)}px`,
+    maxWidth: `${Math.round(preferredWidth)}px`,
+  }
+}
+
+async function toggleRolloverTooltip(context) {
+  if (rolloverTooltipOpen.value && rolloverTooltipContext.value === context) {
+    closeRolloverTooltip()
+    return
+  }
+  rolloverTooltipContext.value = context
+  rolloverTooltipOpen.value = true
+  await nextTick()
+  positionRolloverTooltip()
+}
+
+function handleTooltipViewportChange() {
+  if (!rolloverTooltipOpen.value) return
+  positionRolloverTooltip()
+}
+
 function startOfMonth(value) {
   const date = new Date(value)
   return new Date(date.getFullYear(), date.getMonth(), 1)
@@ -624,6 +686,9 @@ function goCalendarToday() {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', handleTooltipViewportChange)
+  window.addEventListener('scroll', handleTooltipViewportChange, true)
+
   const savedTheme = localStorage.getItem(THEME_KEY)
   if (savedTheme === 'dark' || savedTheme === 'light') {
     setTheme(savedTheme)
@@ -652,6 +717,17 @@ onMounted(async () => {
   if (user.value) {
     await Promise.all([loadTodos(), loadLabels()])
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleTooltipViewportChange)
+  window.removeEventListener('scroll', handleTooltipViewportChange, true)
+})
+
+watch([rolloverTooltipOpen, rolloverTooltipContext], async ([isOpen]) => {
+  if (!isOpen) return
+  await nextTick()
+  positionRolloverTooltip()
 })
 
 function setTheme(nextTheme) {
@@ -1082,22 +1158,22 @@ function openDetail(todoId) {
 }
 
 function openSettings() {
-  rolloverTooltipOpen.value = false
+  closeRolloverTooltip()
   settingsOpen.value = true
 }
 
 function closeSettings() {
-  rolloverTooltipOpen.value = false
+  closeRolloverTooltip()
   settingsOpen.value = false
 }
 
 function openMobileHeader() {
-  rolloverTooltipOpen.value = false
+  closeRolloverTooltip()
   mobileHeaderOpen.value = true
 }
 
 function closeMobileHeader() {
-  rolloverTooltipOpen.value = false
+  closeRolloverTooltip()
   mobileHeaderOpen.value = false
 }
 
@@ -1598,14 +1674,17 @@ function formatTime(value) {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  ref="mobileRolloverTooltipTriggerRef"
                   class="h-7 w-7 rounded-full p-0 text-muted-foreground"
                   :aria-label="rolloverTooltipText"
-                  @click.stop="rolloverTooltipOpen = !rolloverTooltipOpen"
+                  @click.stop="toggleRolloverTooltip('mobile')"
                 >
                   <CircleHelp class="h-4 w-4" />
                 </Button>
                 <div
-                  v-if="rolloverTooltipOpen"
+                  v-if="rolloverTooltipOpen && rolloverTooltipContext === 'mobile'"
+                  ref="rolloverTooltipRef"
+                  :style="rolloverTooltipStyle"
                   class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
                 >
                   {{ rolloverTooltipText }}
@@ -1680,15 +1759,18 @@ function formatTime(value) {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  ref="settingsRolloverTooltipTriggerRef"
                   class="h-7 w-7 rounded-full p-0 text-muted-foreground"
                   :aria-label="rolloverTooltipText"
-                  @click.stop="rolloverTooltipOpen = !rolloverTooltipOpen"
+                  @click.stop="toggleRolloverTooltip('settings')"
                 >
                   <CircleHelp class="h-4 w-4" />
                 </Button>
                 <div
-                  v-if="rolloverTooltipOpen"
-                  class="settings-tooltip settings-tooltip--align-end rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
+                  v-if="rolloverTooltipOpen && rolloverTooltipContext === 'settings'"
+                  ref="rolloverTooltipRef"
+                  :style="rolloverTooltipStyle"
+                  class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
                 >
                   {{ rolloverTooltipText }}
                 </div>

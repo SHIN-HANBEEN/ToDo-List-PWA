@@ -400,18 +400,13 @@
 }
 
 .settings-tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 30;
-  width: min(20rem, calc(100vw - 32px));
-}
-
-@media (min-width: 641px) {
-  .settings-tooltip--align-end {
-    left: auto;
-    right: 0;
-  }
+  position: fixed;
+  z-index: 50;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 24px));
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .created-at {
