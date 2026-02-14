@@ -1225,10 +1225,10 @@ function formatTime(value) {
           <div class="flex w-full flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground sm:w-auto">
             <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
 
-            <div class="grid grid-cols-2 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
+            <div class="grid h-8 grid-cols-2 overflow-hidden rounded-md border bg-background sm:inline-flex sm:w-auto">
               <Button
                 size="sm"
-                class="w-full"
+                class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
                 :variant="viewMode === 'list' ? 'default' : 'ghost'"
                 @click="viewMode = 'list'"
                 :disabled="!isAuthenticated"
@@ -1237,7 +1237,7 @@ function formatTime(value) {
               </Button>
               <Button
                 size="sm"
-                class="w-full"
+                class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
                 :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
                 @click="viewMode = 'calendar'"
                 :disabled="!isAuthenticated"
