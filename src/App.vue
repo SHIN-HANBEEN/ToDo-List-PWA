@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import draggable from 'vuedraggable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,7 +18,6 @@ const newTask = ref('')
 const filter = ref('all')
 const todos = ref([])
 const commentDrafts = ref({})
-const draggingId = ref(null)
 const detailTodoId = ref(null)
 const loading = ref(false)
 const busy = ref(false)
@@ -47,7 +47,7 @@ const messages = {
     active: '진행중',
     done: '완료',
     clearDone: '완료 삭제',
-    dragHint: '"전체" 필터에서만 드래그 정렬이 가능합니다.',
+    dragHint: '전체/진행중/완료 탭 모두에서 드래그 정렬이 가능합니다.',
     loading: '불러오는 중...',
     detail: '상세보기',
     delete: '삭제',
@@ -79,7 +79,7 @@ const messages = {
     active: 'Active',
     done: 'Done',
     clearDone: 'Clear done',
-    dragHint: 'Drag reorder works in "All" filter only.',
+    dragHint: 'Drag reorder is available in All, Active, and Done tabs.',
     loading: 'Loading...',
     detail: 'Detail',
     delete: 'Delete',
@@ -111,7 +111,7 @@ const messages = {
     active: '进行中',
     done: '已完成',
     clearDone: '清除已完成',
-    dragHint: '仅在“全部”筛选下支持拖拽排序。',
+    dragHint: '全部/进行中/已完成标签都支持拖拽排序。',
     loading: '加载中...',
     detail: '详情',
     delete: '删除',
@@ -143,7 +143,7 @@ const messages = {
     active: '進行中',
     done: '完了',
     clearDone: '完了を削除',
-    dragHint: 'ドラッグ並び替えは「すべて」フィルターのみ対応。',
+    dragHint: 'すべて/進行中/完了タブでドラッグ並び替えが可能です。',
     loading: '読み込み中...',
     detail: '詳細',
     delete: '削除',
@@ -219,16 +219,38 @@ const languageOptions = [
   { code: 'ja', label: '日本語' },
 ]
 
+const isAuthenticated = computed(() => Boolean(user.value))
 const filteredTodos = computed(() => {
   if (filter.value === 'active') return todos.value.filter((todo) => !todo.done)
   if (filter.value === 'done') return todos.value.filter((todo) => todo.done)
   return todos.value
 })
+const draggableTodos = computed({
+  get() {
+    return filteredTodos.value
+  },
+  set(reorderedSubset) {
+    if (filter.value === 'all') {
+      todos.value = [...reorderedSubset]
+      return
+    }
+
+    const shouldInclude = filter.value === 'active' ? (todo) => !todo.done : (todo) => todo.done
+    const byId = new Map(todos.value.map((todo) => [todo.id, todo]))
+    const reorderedIds = reorderedSubset.map((todo) => todo.id)
+    let cursor = 0
+
+    todos.value = todos.value.map((todo) => {
+      if (!shouldInclude(todo)) return todo
+      const nextId = reorderedIds[cursor]
+      cursor += 1
+      return byId.get(nextId) || todo
+    })
+  },
+})
 const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
 const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
-const isDragEnabled = computed(() => filter.value === 'all')
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
-const isAuthenticated = computed(() => Boolean(user.value))
 const currentUserLabel = computed(() => user.value?.email || t('guest'))
 
 onMounted(async () => {
@@ -351,6 +373,29 @@ async function loadTodos() {
   }
 }
 
+async function persistOrder() {
+  busy.value = true
+  errorMessage.value = ''
+  const previous = [...todos.value]
+  try {
+    await apiRequest('/api/todos', {
+      method: 'PATCH',
+      body: JSON.stringify({ order: todos.value.map((todo) => todo.id) }),
+    })
+  } catch (error) {
+    todos.value = previous
+    errorMessage.value = translateError(error.message)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function onDragChange(event) {
+  if (!event?.moved) return
+  if (busy.value) return
+  await persistOrder()
+}
+
 async function addTodo() {
   const text = newTask.value.trim()
   if (!text || busy.value) return
@@ -457,49 +502,6 @@ async function deleteComment(todoId, commentId) {
   } finally {
     busy.value = false
   }
-}
-
-function onDragStart(todoId) {
-  if (!isDragEnabled.value || busy.value) return
-  draggingId.value = todoId
-}
-
-async function onDrop(targetId) {
-  if (
-    !isDragEnabled.value ||
-    busy.value ||
-    draggingId.value === null ||
-    draggingId.value === targetId
-  ) {
-    return
-  }
-
-  const fromIndex = todos.value.findIndex((todo) => todo.id === draggingId.value)
-  const toIndex = todos.value.findIndex((todo) => todo.id === targetId)
-  if (fromIndex < 0 || toIndex < 0) return
-
-  const previousOrder = [...todos.value]
-  const [moved] = todos.value.splice(fromIndex, 1)
-  todos.value.splice(toIndex, 0, moved)
-  draggingId.value = null
-
-  busy.value = true
-  errorMessage.value = ''
-  try {
-    await apiRequest('/api/todos', {
-      method: 'PATCH',
-      body: JSON.stringify({ order: todos.value.map((todo) => todo.id) }),
-    })
-  } catch (error) {
-    todos.value = previousOrder
-    errorMessage.value = translateError(error.message)
-  } finally {
-    busy.value = false
-  }
-}
-
-function onDragEnd() {
-  draggingId.value = null
 }
 
 function openDetail(todoId) {
@@ -637,38 +639,47 @@ function formatDateTime(value) {
           <p class="text-xs text-muted-foreground">{{ t('dragHint') }}</p>
           <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
 
-          <ul class="space-y-2">
-            <li
-              v-for="todo in filteredTodos"
-              :key="todo.id"
-              class="rounded-lg border bg-card p-3"
-              :class="{ 'opacity-50': draggingId === todo.id }"
-              :draggable="isDragEnabled && !busy"
-              @dragstart="onDragStart(todo.id)"
-              @dragover.prevent
-              @drop="onDrop(todo.id)"
-              @dragend="onDragEnd"
-            >
-              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <label class="flex min-w-0 flex-1 items-center gap-2">
-                  <input :checked="todo.done" type="checkbox" @change="setTodoDone(todo, $event.target.checked)" />
-                  <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
-                </label>
-                <div class="flex w-full gap-2 sm:w-auto">
-                  <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
-                    {{ t('detail') }}
-                  </Button>
-                  <Button class="flex-1 sm:flex-none" variant="destructive" size="sm" @click="deleteTodo(todo.id)">
-                    {{ t('delete') }}
-                  </Button>
+          <draggable
+            v-model="draggableTodos"
+            tag="ul"
+            class="todo-list"
+            item-key="id"
+            handle=".drag-handle"
+            :animation="180"
+            :disabled="busy"
+            ghost-class="drag-ghost"
+            chosen-class="drag-chosen"
+            @change="onDragChange"
+          >
+            <template #item="{ element: todo }">
+              <li class="rounded-lg border bg-card p-3">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="flex min-w-0 flex-1 items-center gap-2">
+                    <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
+                    <input
+                      :checked="todo.done"
+                      type="checkbox"
+                      @change="setTodoDone(todo, $event.target.checked)"
+                    />
+                    <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
+                  </div>
+                  <div class="flex w-full gap-2 sm:w-auto">
+                    <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
+                      {{ t('detail') }}
+                    </Button>
+                    <Button class="flex-1 sm:flex-none" variant="destructive" size="sm" @click="deleteTodo(todo.id)">
+                      {{ t('delete') }}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
-            </li>
-            <li v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
-              {{ t('noItems') }}
-            </li>
-          </ul>
+                <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
+              </li>
+            </template>
+          </draggable>
+
+          <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
+            {{ t('noItems') }}
+          </p>
 
           <footer class="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
             <span>{{ t('remaining', { count: remainingCount }) }}</span>
