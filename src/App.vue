@@ -1077,11 +1077,6 @@ function openSettingsFromMobile() {
   openSettings()
 }
 
-function openAddTodoFromMobile() {
-  closeMobileHeader()
-  openAddTodo()
-}
-
 async function logoutFromMobile() {
   closeMobileHeader()
   await logout()
@@ -1286,12 +1281,41 @@ function formatTime(value) {
       </CardHeader>
 
       <CardContent class="space-y-4 px-3 pb-3 pt-0 sm:p-6 sm:pt-0">
-        <section class="flex items-center justify-between gap-2 sm:hidden">
-          <p class="text-xl font-semibold tracking-tight">{{ t('appTitle') }}</p>
-          <Button variant="outline" size="sm" @click="openMobileHeader">
-            <Menu class="mr-1 h-4 w-4" />
-            Menu
-          </Button>
+        <section class="space-y-2 sm:hidden">
+          <div class="flex items-center justify-between gap-2">
+            <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
+            <div class="flex shrink-0 items-center gap-2">
+              <div class="grid h-8 grid-cols-2 overflow-hidden rounded-md border bg-background">
+                <Button
+                  size="sm"
+                  class="h-full rounded-none px-2 first:rounded-l-md last:rounded-r-md"
+                  :variant="viewMode === 'list' ? 'default' : 'ghost'"
+                  @click="viewMode = 'list'"
+                  :disabled="!isAuthenticated"
+                >
+                  {{ t('listView') }}
+                </Button>
+                <Button
+                  size="sm"
+                  class="h-full rounded-none px-2 first:rounded-l-md last:rounded-r-md"
+                  :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
+                  @click="viewMode = 'calendar'"
+                  :disabled="!isAuthenticated"
+                >
+                  {{ t('calendarView') }}
+                </Button>
+              </div>
+              <Button variant="outline" size="sm" class="h-8 w-8 p-0" @click="openMobileHeader" aria-label="open menu">
+                <Menu class="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="min-w-0 flex-1 truncate text-xs text-muted-foreground">{{ currentUserLabel }}</span>
+            <Button v-if="isAuthenticated" variant="outline" size="sm" class="shrink-0" @click="openAddTodo">
+              {{ t('addSchedule') }}
+            </Button>
+          </div>
         </section>
 
         <section
@@ -1497,39 +1521,14 @@ function formatTime(value) {
     </Card>
 
     <section v-if="mobileHeaderOpen" class="modal-wrap sm:hidden" @click.self="closeMobileHeader">
-      <article class="modal settings-modal">
-        <header class="modal-header">
+      <article class="modal settings-modal mobile-menu-modal">
+        <header class="modal-header !flex-row !items-start !justify-between">
           <h2>{{ t('appTitle') }}</h2>
-          <Button variant="outline" size="sm" @click="closeMobileHeader">{{ t('close') }}</Button>
+          <Button variant="outline" size="sm" class="ml-auto" @click="closeMobileHeader">{{ t('close') }}</Button>
         </header>
 
         <div class="grid gap-2 text-xs text-muted-foreground">
           <span class="truncate font-medium">{{ currentUserLabel }}</span>
-
-          <div class="grid h-8 grid-cols-2 overflow-hidden rounded-md border bg-background">
-            <Button
-              size="sm"
-              class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
-              :variant="viewMode === 'list' ? 'default' : 'ghost'"
-              @click="viewMode = 'list'; closeMobileHeader()"
-              :disabled="!isAuthenticated"
-            >
-              {{ t('listView') }}
-            </Button>
-            <Button
-              size="sm"
-              class="h-full w-full rounded-none first:rounded-l-md last:rounded-r-md"
-              :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
-              @click="viewMode = 'calendar'; closeMobileHeader()"
-              :disabled="!isAuthenticated"
-            >
-              {{ t('calendarView') }}
-            </Button>
-          </div>
-
-          <Button v-if="isAuthenticated" variant="outline" size="sm" @click="openAddTodoFromMobile">
-            {{ t('addSchedule') }}
-          </Button>
           <Button variant="outline" size="sm" @click="openSettingsFromMobile">
             <Settings class="mr-1 h-4 w-4" />
             {{ t('settings') }}
