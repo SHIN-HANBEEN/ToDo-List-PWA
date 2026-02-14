@@ -526,22 +526,22 @@ function formatDateTime(value) {
 
 <template>
   <main class="page">
-    <Card class="w-full max-w-3xl border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl">
+    <Card class="mx-1 w-full max-w-3xl border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl sm:mx-0">
       <CardHeader class="space-y-4">
-        <div class="flex items-center justify-between gap-3">
-          <CardTitle class="text-3xl tracking-tight">{{ t('appTitle') }}</CardTitle>
-          <div class="flex items-center gap-2 text-xs text-muted-foreground">
-            <span class="font-medium">{{ currentUserLabel }}</span>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
+          <div class="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground sm:w-auto sm:justify-end">
+            <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
             <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logout" :disabled="authBusy">
               {{ t('logout') }}
             </Button>
           </div>
         </div>
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
             <span class="text-sm text-muted-foreground">{{ t('language') }}</span>
             <Select :model-value="locale" @update:model-value="setLocale">
-              <SelectTrigger class="w-32">
+              <SelectTrigger class="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -551,9 +551,10 @@ function formatDateTime(value) {
               </SelectContent>
             </Select>
           </div>
-          <div class="inline-flex rounded-lg border bg-background p-1">
+          <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1 sm:inline-flex sm:w-auto sm:gap-0">
             <Button
               size="sm"
+              class="w-full"
               :variant="filter === 'all' ? 'default' : 'ghost'"
               @click="filter = 'all'"
               :disabled="busy || !isAuthenticated"
@@ -562,6 +563,7 @@ function formatDateTime(value) {
             </Button>
             <Button
               size="sm"
+              class="w-full"
               :variant="filter === 'active' ? 'default' : 'ghost'"
               @click="filter = 'active'"
               :disabled="busy || !isAuthenticated"
@@ -570,6 +572,7 @@ function formatDateTime(value) {
             </Button>
             <Button
               size="sm"
+              class="w-full"
               :variant="filter === 'done' ? 'default' : 'ghost'"
               @click="filter = 'done'"
               :disabled="busy || !isAuthenticated"
@@ -611,10 +614,22 @@ function formatDateTime(value) {
         </section>
 
         <template v-else>
-          <form class="grid gap-2 sm:grid-cols-[1fr_auto_auto]" @submit.prevent="addTodo">
-            <Input v-model="newTask" type="text" :placeholder="t('taskPlaceholder')" autocomplete="off" />
-            <Button type="submit" :disabled="busy">{{ t('addTask') }}</Button>
-            <Button variant="outline" type="button" @click="clearDone" :disabled="doneCount === 0 || busy">
+          <form class="flex flex-col gap-2 md:flex-row" @submit.prevent="addTodo">
+            <Input
+              v-model="newTask"
+              class="md:flex-1"
+              type="text"
+              :placeholder="t('taskPlaceholder')"
+              autocomplete="off"
+            />
+            <Button class="w-full md:w-auto" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
+            <Button
+              class="w-full md:w-auto"
+              variant="outline"
+              type="button"
+              @click="clearDone"
+              :disabled="doneCount === 0 || busy"
+            >
               {{ t('clearDone') }}
             </Button>
           </form>
@@ -634,14 +649,18 @@ function formatDateTime(value) {
               @drop="onDrop(todo.id)"
               @dragend="onDragEnd"
             >
-              <div class="flex items-start justify-between gap-3">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <label class="flex min-w-0 flex-1 items-center gap-2">
                   <input :checked="todo.done" type="checkbox" @change="setTodoDone(todo, $event.target.checked)" />
                   <span :class="{ 'text-muted-foreground line-through': todo.done }">{{ todo.text }}</span>
                 </label>
-                <div class="flex gap-2">
-                  <Button variant="ghost" size="sm" @click="openDetail(todo.id)">{{ t('detail') }}</Button>
-                  <Button variant="destructive" size="sm" @click="deleteTodo(todo.id)">{{ t('delete') }}</Button>
+                <div class="flex w-full gap-2 sm:w-auto">
+                  <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
+                    {{ t('detail') }}
+                  </Button>
+                  <Button class="flex-1 sm:flex-none" variant="destructive" size="sm" @click="deleteTodo(todo.id)">
+                    {{ t('delete') }}
+                  </Button>
                 </div>
               </div>
               <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
