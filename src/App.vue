@@ -55,7 +55,7 @@ const messages = {
     active: '진행중',
     done: '완료',
     clearDone: '완료 삭제',
-    dragHint: '전체/진행중/완료 탭 모두에서 드래그 정렬이 가능합니다.',
+    dragHint: '전체/진행중/완료 탭 모두에서 드래그 정렬이 가능합니다. 모바일에서는 핸들을 길게 눌러 이동하세요.',
     loading: '불러오는 중...',
     detail: '상세보기',
     delete: '삭제',
@@ -91,7 +91,7 @@ const messages = {
     active: 'Active',
     done: 'Done',
     clearDone: 'Clear done',
-    dragHint: 'Drag reorder is available in All, Active, and Done tabs.',
+    dragHint: 'Drag reorder is available in All, Active, and Done tabs. On mobile, long-press the handle to move.',
     loading: 'Loading...',
     detail: 'Detail',
     delete: 'Delete',
@@ -127,7 +127,7 @@ const messages = {
     active: '进行中',
     done: '已完成',
     clearDone: '清除已完成',
-    dragHint: '全部/进行中/已完成标签都支持拖拽排序。',
+    dragHint: '全部/进行中/已完成标签都支持拖拽排序。移动端请长按拖拽手柄后移动。',
     loading: '加载中...',
     detail: '详情',
     delete: '删除',
@@ -163,7 +163,7 @@ const messages = {
     active: '進行中',
     done: '完了',
     clearDone: '完了を削除',
-    dragHint: 'すべて/進行中/完了タブでドラッグ並び替えが可能です。',
+    dragHint: 'すべて/進行中/完了タブでドラッグ並び替えが可能です。モバイルではハンドルを長押しして移動してください。',
     loading: '読み込み中...',
     detail: '詳細',
     delete: '削除',
@@ -443,8 +443,9 @@ async function persistOrder() {
   }
 }
 
-async function onDragChange(event) {
-  if (!event?.moved) return
+async function onDragEnd(event) {
+  if (!event) return
+  if (event.oldIndex === event.newIndex) return
   if (busy.value) return
   await persistOrder()
 }
@@ -715,10 +716,16 @@ function formatDateTime(value) {
             item-key="id"
             handle=".drag-handle"
             :animation="180"
+            :delay="140"
+            :delay-on-touch-only="true"
+            :touch-start-threshold="4"
+            :fallback-tolerance="8"
+            :force-fallback="true"
+            :fallback-on-body="true"
             :disabled="busy"
             ghost-class="drag-ghost"
             chosen-class="drag-chosen"
-            @change="onDragChange"
+            @end="onDragEnd"
           >
             <template #item="{ element: todo }">
               <li class="rounded-lg border bg-card p-3">
