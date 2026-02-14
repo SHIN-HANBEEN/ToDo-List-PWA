@@ -1641,9 +1641,7 @@ function formatTime(value) {
           <h2>{{ t('appTitle') }}</h2>
         </header>
 
-        <div class="grid gap-3 text-xs text-muted-foreground">
-          <span class="truncate font-medium">{{ currentUserLabel }}</span>
-
+        <div class="grid min-h-[380px] gap-3 text-xs text-muted-foreground">
           <div class="space-y-1">
             <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
             <div class="inline-flex w-full rounded-lg border bg-background p-1">
@@ -1711,7 +1709,7 @@ function formatTime(value) {
             v-if="isAuthenticated"
             variant="ghost"
             size="sm"
-            class="justify-start gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
+            class="mt-auto ml-auto justify-center gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
             @click="logoutFromMobile"
             :disabled="authBusy"
           >
