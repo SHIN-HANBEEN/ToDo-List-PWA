@@ -85,6 +85,12 @@
   color: hsl(var(--foreground));
 }
 
+.auth-centered {
+  min-height: calc(100vh - clamp(24px, 4.8vw, 40px));
+  display: grid;
+  align-content: center;
+}
+
 .today-task-badge {
   display: inline-flex;
   min-width: 1.75rem;
@@ -489,6 +495,10 @@
     display: block;
     padding: max(18px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  .auth-centered {
+    min-height: calc(100vh - max(18px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
   }
 
   .calendar-toolbar {

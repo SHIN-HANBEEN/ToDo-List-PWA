@@ -1392,7 +1392,7 @@ function formatTime(value) {
       class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
     >
       <CardContent class="space-y-4 px-3 pb-3 pt-3">
-        <section class="space-y-2">
+        <section v-if="isAuthenticated" class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <div class="flex min-w-0 items-center gap-2">
               <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
@@ -1460,7 +1460,7 @@ function formatTime(value) {
 
         <section
           v-if="!isAuthenticated"
-          class="mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"
+          class="auth-centered mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"
         >
           <div class="space-y-1 text-center">
             <p class="auth-script">Todogram</p>
