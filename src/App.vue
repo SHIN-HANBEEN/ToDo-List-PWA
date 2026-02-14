@@ -1,10 +1,10 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, CircleHelp, List, Menu, Moon, Settings, Sun, X } from 'lucide-vue-next'
+import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Sun, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import {
   Select,
@@ -1356,53 +1356,8 @@ function formatTime(value) {
     <Card
       class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
     >
-      <CardHeader class="hidden space-y-3 p-3 sm:block sm:p-6">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
-          <div class="flex w-full flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground sm:w-auto">
-            <span class="max-w-[70vw] truncate font-medium sm:max-w-[220px]">{{ currentUserLabel }}</span>
-
-            <div class="flex items-center gap-1 rounded-full bg-muted/40 p-1 sm:w-auto">
-              <Button
-                size="sm"
-                class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
-                :variant="viewMode === 'list' ? 'secondary' : 'ghost'"
-                @click="viewMode = 'list'"
-                :disabled="!isAuthenticated"
-                :aria-label="t('listView')"
-                :title="t('listView')"
-              >
-                <List class="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
-                :variant="viewMode === 'calendar' ? 'secondary' : 'ghost'"
-                @click="viewMode = 'calendar'"
-                :disabled="!isAuthenticated"
-                :aria-label="t('calendarView')"
-                :title="t('calendarView')"
-              >
-                <CalendarDays class="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button v-if="isAuthenticated" variant="outline" size="sm" @click="openAddTodo">
-              {{ t('addSchedule') }}
-            </Button>
-            <Button variant="outline" size="sm" @click="openSettings">
-              <Settings class="mr-1 h-4 w-4" />
-              {{ t('settings') }}
-            </Button>
-            <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logout" :disabled="authBusy">
-              {{ t('logout') }}
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent class="space-y-4 px-3 pb-3 pt-3 sm:p-6 sm:pt-0">
-        <section class="space-y-2 sm:hidden">
+      <CardContent class="space-y-4 px-3 pb-3 pt-3">
+        <section class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
             <div class="flex shrink-0 items-center gap-2">
@@ -1443,8 +1398,16 @@ function formatTime(value) {
           </div>
           <div class="flex items-center gap-2">
             <span class="min-w-0 flex-1 truncate text-xs text-muted-foreground">{{ currentUserLabel }}</span>
-            <Button v-if="isAuthenticated" variant="outline" size="sm" class="shrink-0" @click="openAddTodo">
-              {{ t('addSchedule') }}
+            <Button
+              v-if="isAuthenticated"
+              variant="ghost"
+              size="sm"
+              class="h-8 w-8 shrink-0 rounded-full border-0 bg-muted/50 p-0 shadow-none"
+              @click="openAddTodo"
+              :aria-label="t('addSchedule')"
+              :title="t('addSchedule')"
+            >
+              <Plus class="h-4 w-4" />
             </Button>
           </div>
         </section>
@@ -1651,7 +1614,7 @@ function formatTime(value) {
       </CardContent>
     </Card>
 
-    <section v-if="mobileHeaderOpen" class="modal-wrap sm:hidden" @click.self="closeMobileHeader">
+    <section v-if="mobileHeaderOpen" class="modal-wrap" @click.self="closeMobileHeader">
       <article class="modal modal--allow-overflow settings-modal mobile-menu-modal">
         <Button
           variant="ghost"
@@ -1732,7 +1695,15 @@ function formatTime(value) {
             </div>
           </div>
 
-          <Button v-if="isAuthenticated" variant="outline" size="sm" @click="logoutFromMobile" :disabled="authBusy">
+          <Button
+            v-if="isAuthenticated"
+            variant="ghost"
+            size="sm"
+            class="justify-start gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
+            @click="logoutFromMobile"
+            :disabled="authBusy"
+          >
+            <LogOut class="h-4 w-4" />
             {{ t('logout') }}
           </Button>
         </div>
