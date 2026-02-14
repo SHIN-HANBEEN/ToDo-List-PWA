@@ -1216,8 +1216,10 @@ function formatTime(value) {
 
 <template>
   <main class="page">
-    <Card class="mx-1 w-full max-w-3xl border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl sm:mx-0">
-      <CardHeader class="space-y-3">
+    <Card
+      class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none sm:mx-0 sm:max-w-3xl sm:rounded-xl sm:border-border/80 sm:bg-card/90 sm:shadow-2xl sm:backdrop-blur-xl"
+    >
+      <CardHeader class="space-y-3 p-3 sm:p-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle class="text-2xl tracking-tight sm:text-3xl">{{ t('appTitle') }}</CardTitle>
           <div class="flex w-full flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground sm:w-auto">
@@ -1258,8 +1260,11 @@ function formatTime(value) {
         </div>
       </CardHeader>
 
-      <CardContent class="space-y-4">
-        <section v-if="!isAuthenticated" class="mx-auto max-w-md space-y-4 rounded-xl border bg-card p-5">
+      <CardContent class="space-y-4 px-3 pb-3 pt-0 sm:p-6 sm:pt-0">
+        <section
+          v-if="!isAuthenticated"
+          class="mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0 sm:rounded-xl sm:border sm:bg-card sm:p-5"
+        >
           <div class="space-y-1 text-center">
             <p class="auth-script">Todogram</p>
             <p class="text-sm text-muted-foreground">

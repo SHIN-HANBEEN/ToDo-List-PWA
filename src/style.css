@@ -445,6 +445,12 @@
 }
 
 @media (max-width: 640px) {
+  .page {
+    display: block;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
   .calendar-toolbar {
     grid-template-columns: auto 1fr auto;
   }
@@ -454,12 +460,16 @@
   }
 
   .calendar-grid {
-    gap: 4px;
+    gap: 3px;
   }
 
   .calendar-cell {
-    min-height: 88px;
-    padding: 5px;
+    min-height: 78px;
+    padding: 4px;
+  }
+
+  .calendar-item {
+    padding: 4px 5px;
   }
 
   .label-select-row {
