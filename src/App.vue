@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Sun, X } from 'lucide-vue-next'
+import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Search, Sun, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -36,6 +36,7 @@ const editLabelColor = ref('#64748b')
 const defaultRolloverEnabled = ref(true)
 const newRolloverEnabled = ref(true)
 const filter = ref('all')
+const searchQuery = ref('')
 const todos = ref([])
 const commentDrafts = ref({})
 const addTodoOpen = ref(false)
@@ -111,6 +112,7 @@ const messages = {
     rolloverHint: '마감일시를 넘기면 다음날 같은 시간으로 자동 이월됩니다.',
     all: '전체',
     status: '상태',
+    searchPlaceholder: '할 일을 검색하세요',
     active: '진행중',
     done: '완료',
     loading: '불러오는 중...',
@@ -181,6 +183,7 @@ const messages = {
     rolloverHint: 'If not completed by due date, it will automatically move to the same time next day.',
     all: 'All',
     status: 'Status',
+    searchPlaceholder: 'Search tasks',
     active: 'Active',
     done: 'Done',
     loading: 'Loading...',
@@ -251,6 +254,7 @@ const messages = {
     rolloverHint: '若到截止时间仍未完成，将自动顺延到次日同一时间。',
     all: '全部',
     status: '状态',
+    searchPlaceholder: '搜索任务',
     active: '进行中',
     done: '已完成',
     loading: '加载中...',
@@ -321,6 +325,7 @@ const messages = {
     rolloverHint: '締切までに完了しない場合、翌日の同時刻に自動で繰り越されます。',
     all: 'すべて',
     status: 'ステータス',
+    searchPlaceholder: 'タスクを検索',
     active: '進行中',
     done: '完了',
     loading: '読み込み中...',
@@ -489,9 +494,19 @@ const rolloverTooltipMessages = {
 const isAuthenticated = computed(() => Boolean(user.value))
 const isDark = computed(() => theme.value === 'dark')
 const filteredTodos = computed(() => {
-  if (filter.value === 'active') return todos.value.filter((todo) => !todo.done)
-  if (filter.value === 'done') return todos.value.filter((todo) => todo.done)
-  return todos.value
+  let subset = todos.value
+  if (filter.value === 'active') subset = subset.filter((todo) => !todo.done)
+  if (filter.value === 'done') subset = subset.filter((todo) => todo.done)
+
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return subset
+
+  return subset.filter((todo) => {
+    const text = String(todo.text || '').toLowerCase()
+    const location = String(todo.location || '').toLowerCase()
+    const label = String(todo.labelText || '').toLowerCase()
+    return text.includes(query) || location.includes(query) || label.includes(query)
+  })
 })
 const draggableTodos = computed({
   get() {
@@ -518,6 +533,11 @@ const draggableTodos = computed({
 })
 const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
 const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
+const completionPercent = computed(() => {
+  const total = todos.value.length
+  if (total <= 0) return 0
+  return Math.round((doneCount.value / total) * 100)
+})
 const todayTodoCount = computed(() => {
   const todayKey = toDateKey(new Date())
   return todos.value.filter((todo) => !todo.done && todo.dueAt && toDateKey(todo.dueAt) === todayKey).length
@@ -924,6 +944,7 @@ async function logout() {
     newDueAt.value = ''
     newLocation.value = ''
     newTodoLabelId.value = LABEL_NONE_VALUE
+    searchQuery.value = ''
     addLabelOpen.value = false
     newLabelName.value = ''
     newLabelDraftColor.value = '#64748b'
@@ -1418,72 +1439,6 @@ function formatTime(value) {
       class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
     >
       <CardContent :class="isAuthenticated ? 'space-y-4 px-3 pb-3 pt-3' : 'auth-card-content'">
-        <section v-if="isAuthenticated" class="space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex min-w-0 items-center gap-2">
-              <p class="truncate text-lg font-semibold tracking-tight">{{ t('appTitle') }}</p>
-              <span
-                v-if="isAuthenticated"
-                class="today-task-badge"
-                :class="{ 'today-task-badge--zero': todayTodoCount === 0 }"
-                :title="t('todayTasksBadge', { count: todayTodoCount })"
-                :aria-label="t('todayTasksBadge', { count: todayTodoCount })"
-              >
-                {{ todayTodoCount }}
-              </span>
-            </div>
-            <div class="flex shrink-0 items-center gap-2">
-              <div class="flex items-center gap-1 rounded-full bg-muted/40 p-1">
-                <Button
-                  size="sm"
-                  class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
-                  :variant="viewMode === 'list' ? 'secondary' : 'ghost'"
-                  @click="viewMode = 'list'"
-                  :disabled="!isAuthenticated"
-                  :aria-label="t('listView')"
-                  :title="t('listView')"
-                >
-                  <List class="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  class="h-8 w-8 rounded-full border-0 p-0 shadow-none"
-                  :variant="viewMode === 'calendar' ? 'secondary' : 'ghost'"
-                  @click="viewMode = 'calendar'"
-                  :disabled="!isAuthenticated"
-                  :aria-label="t('calendarView')"
-                  :title="t('calendarView')"
-                >
-                  <CalendarDays class="h-4 w-4" />
-                </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-8 w-8 border-0 p-0 shadow-none"
-                @click="openMobileHeader"
-                aria-label="open menu"
-              >
-                <Menu class="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="min-w-0 flex-1 truncate text-xs text-muted-foreground">{{ currentUserLabel }}</span>
-            <Button
-              v-if="isAuthenticated"
-              variant="ghost"
-              size="sm"
-              class="h-9 w-9 shrink-0 rounded-full border-0 bg-rose-500 p-0 text-white shadow-sm hover:bg-rose-600"
-              @click="openAddTodo"
-              :aria-label="t('addSchedule')"
-              :title="t('addSchedule')"
-            >
-              <Plus class="h-5 w-5" />
-            </Button>
-          </div>
-        </section>
-
         <section
           v-if="!isAuthenticated"
           class="auth-centered mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"
@@ -1524,63 +1479,88 @@ function formatTime(value) {
         </section>
 
         <template v-else>
-          <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
-
-          <template v-if="viewMode === 'list'">
-            <div>
-              <div class="grid w-full grid-cols-3 gap-1 rounded-lg border bg-background p-1">
+          <div class="todo-layout">
+            <header class="todo-topbar">
+              <div class="todo-brand">
+                <img src="/todogram-icon-20260214-glyph-192.png" alt="Todogram icon" class="todo-brand-icon" />
+                <p class="todo-brand-name">To-Do List</p>
+              </div>
+              <div class="todo-top-actions">
                 <Button
                   size="sm"
-                  class="h-10 w-full sm:h-11 sm:text-base"
-                  :variant="filter === 'all' ? 'default' : 'ghost'"
-                  @click="filter = 'all'"
-                  :disabled="busy"
+                  class="todo-top-icon-btn"
+                  :variant="viewMode === 'list' ? 'secondary' : 'ghost'"
+                  @click="viewMode = 'list'"
+                  :aria-label="t('listView')"
                 >
-                  {{ t('all') }}
+                  <List class="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
-                  class="h-10 w-full sm:h-11 sm:text-base"
-                  :variant="filter === 'active' ? 'default' : 'ghost'"
-                  @click="filter = 'active'"
-                  :disabled="busy"
+                  class="todo-top-icon-btn"
+                  :variant="viewMode === 'calendar' ? 'secondary' : 'ghost'"
+                  @click="viewMode = 'calendar'"
+                  :aria-label="t('calendarView')"
                 >
-                  {{ t('active') }}
+                  <CalendarDays class="h-4 w-4" />
                 </Button>
-                <Button
-                  size="sm"
-                  class="h-10 w-full sm:h-11 sm:text-base"
-                  :variant="filter === 'done' ? 'default' : 'ghost'"
-                  @click="filter = 'done'"
-                  :disabled="busy"
-                >
-                  {{ t('done') }}
+                <Button size="sm" variant="ghost" class="todo-top-icon-btn" @click="openMobileHeader" aria-label="open menu">
+                  <Menu class="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </header>
 
-            <draggable
-              v-model="draggableTodos"
-              tag="ul"
-              class="todo-list"
-              item-key="id"
-              handle=".drag-handle"
-              :animation="180"
-              :delay="140"
-              :delay-on-touch-only="true"
-              :touch-start-threshold="4"
-              :fallback-tolerance="8"
-              :force-fallback="true"
-              :fallback-on-body="true"
-              :disabled="busy"
-              ghost-class="drag-ghost"
-              chosen-class="drag-chosen"
-              @end="onDragEnd"
-            >
-              <template #item="{ element: todo }">
-                <li class="rounded-lg border bg-card p-3">
-                  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="flex min-w-0 flex-1 items-start gap-2">
+            <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
+
+            <template v-if="viewMode === 'list'">
+              <section class="todo-heading-row">
+                <div class="todo-heading-texts">
+                  <h1 class="todo-heading-title">To-Do List</h1>
+                  <p class="todo-heading-sub">{{ currentUserLabel }}</p>
+                </div>
+                <Button
+                  class="todo-add-task-btn"
+                  variant="ghost"
+                  @click="openAddTodo"
+                  :aria-label="t('addSchedule')"
+                >
+                  <Plus class="h-5 w-5" />
+                  {{ t('addSchedule') }}
+                </Button>
+              </section>
+
+              <div class="todo-searchbar">
+                <Search class="todo-search-icon" />
+                <Input
+                  v-model="searchQuery"
+                  type="text"
+                  class="todo-search-input border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  :placeholder="t('searchPlaceholder')"
+                  autocomplete="off"
+                />
+              </div>
+
+              <draggable
+                v-model="draggableTodos"
+                tag="ul"
+                class="todo-list todo-list--panel"
+                item-key="id"
+                handle=".drag-handle"
+                :animation="180"
+                :delay="140"
+                :delay-on-touch-only="true"
+                :touch-start-threshold="4"
+                :fallback-tolerance="8"
+                :force-fallback="true"
+                :fallback-on-body="true"
+                :disabled="busy || searchQuery.trim().length > 0"
+                ghost-class="drag-ghost"
+                chosen-class="drag-chosen"
+                @end="onDragEnd"
+              >
+                <template #item="{ element: todo }">
+                  <li class="todo-item-row">
+                    <div class="todo-item-main">
                       <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
                       <Select
                         :model-value="todo.done ? 'done' : 'active'"
@@ -1604,7 +1584,7 @@ function formatTime(value) {
                         </span>
                       </div>
                     </div>
-                    <div class="flex w-full gap-2 sm:w-auto">
+                    <div class="todo-item-actions">
                       <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
                         {{ t('detail') }}
                       </Button>
@@ -1612,71 +1592,109 @@ function formatTime(value) {
                         {{ t('delete') }}
                       </Button>
                     </div>
-                  </div>
-                  <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
-                  <p v-if="todo.dueAt" class="mt-1 text-xs text-muted-foreground">{{ t('due') }}: {{ formatDateTime(todo.dueAt) }}</p>
-                  <p v-if="todo.location" class="mt-1 text-xs text-muted-foreground">{{ t('place') }}: {{ todo.location }}</p>
-                  <p v-if="todo.rolloverEnabled" class="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    {{ t('rolloverEnabled') }}
-                  </p>
-                </li>
-              </template>
-            </draggable>
-
-            <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
-              {{ t('noItems') }}
-            </p>
-
-            <footer class="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-              <span>{{ t('remaining', { count: remainingCount }) }}</span>
-              <span>{{ t('doneCount', { count: doneCount }) }}</span>
-            </footer>
-          </template>
-
-          <section v-else class="space-y-3">
-            <div class="calendar-toolbar">
-              <Button variant="outline" size="sm" @click="moveCalendarMonth(-1)">&#10094;</Button>
-              <p class="calendar-month">{{ calendarMonthLabel }}</p>
-              <Button variant="outline" size="sm" @click="moveCalendarMonth(1)">&#10095;</Button>
-              <Button variant="secondary" size="sm" @click="goCalendarToday">{{ t('calendarToday') }}</Button>
-            </div>
-
-            <ul class="calendar-weekdays">
-              <li v-for="label in calendarWeekdayLabels" :key="label">{{ label }}</li>
-            </ul>
-
-            <ul class="calendar-grid">
-              <li
-                v-for="cell in calendarCells"
-                :key="cell.key"
-                class="calendar-cell"
-                :class="{ 'calendar-cell--muted': !cell.isCurrentMonth, 'calendar-cell--today': cell.isToday }"
-              >
-                <p class="calendar-day">{{ cell.day }}</p>
-                <ul class="calendar-items">
-                  <li v-for="todo in cell.items.slice(0, 3)" :key="todo.id">
-                    <button
-                      type="button"
-                      class="calendar-item"
-                      :class="{ 'calendar-item--done': todo.done }"
-                      :style="getCalendarItemStyle(todo)"
-                      @click="openDetail(todo.id)"
-                    >
-                      <span class="calendar-item-main">
-                        <span v-if="todo.labelText" class="todo-label-dot" :style="getLabelDotStyle(todo)" />
-                        <span class="truncate">{{ todo.text }}</span>
-                      </span>
-                      <small class="calendar-item-time">{{ formatTime(todo.dueAt) }}</small>
-                      <small v-if="todo.labelText" class="calendar-item-label">{{ todo.labelText }}</small>
-                    </button>
+                    <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
+                    <p v-if="todo.dueAt" class="mt-1 text-xs text-muted-foreground">{{ t('due') }}: {{ formatDateTime(todo.dueAt) }}</p>
+                    <p v-if="todo.location" class="mt-1 text-xs text-muted-foreground">{{ t('place') }}: {{ todo.location }}</p>
+                    <p v-if="todo.rolloverEnabled" class="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      {{ t('rolloverEnabled') }}
+                    </p>
                   </li>
-                  <li v-if="cell.items.length > 3" class="calendar-more">+{{ cell.items.length - 3 }}</li>
-                </ul>
-              </li>
-            </ul>
+                </template>
+              </draggable>
 
-            <p class="text-xs text-muted-foreground">{{ t('calendarNoDue', { count: todosWithoutDueCount }) }}</p>
-          </section>
+              <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
+                {{ t('noItems') }}
+              </p>
+
+              <section class="todo-summary-panel">
+                <div class="todo-summary-head">
+                  <span>{{ t('done') }} ({{ doneCount }})</span>
+                  <span>{{ t('remaining', { count: remainingCount }) }}</span>
+                </div>
+                <div class="todo-progress-row">
+                  <span>{{ doneCount }} / {{ todos.length }} {{ t('done') }}</span>
+                  <div class="todo-progress-track">
+                    <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
+                  </div>
+                </div>
+              </section>
+
+              <nav class="todo-bottom-tabs">
+                <Button
+                  size="sm"
+                  class="todo-tab-btn"
+                  :variant="filter === 'all' ? 'default' : 'ghost'"
+                  @click="filter = 'all'"
+                  :disabled="busy"
+                >
+                  {{ t('all') }}
+                </Button>
+                <Button
+                  size="sm"
+                  class="todo-tab-btn"
+                  :variant="filter === 'active' ? 'default' : 'ghost'"
+                  @click="filter = 'active'"
+                  :disabled="busy"
+                >
+                  {{ t('active') }}
+                </Button>
+                <Button
+                  size="sm"
+                  class="todo-tab-btn"
+                  :variant="filter === 'done' ? 'default' : 'ghost'"
+                  @click="filter = 'done'"
+                  :disabled="busy"
+                >
+                  {{ t('done') }}
+                </Button>
+              </nav>
+            </template>
+
+            <section v-else class="todo-calendar-shell">
+              <div class="calendar-toolbar">
+                <Button variant="outline" size="sm" @click="moveCalendarMonth(-1)">&#10094;</Button>
+                <p class="calendar-month">{{ calendarMonthLabel }}</p>
+                <Button variant="outline" size="sm" @click="moveCalendarMonth(1)">&#10095;</Button>
+                <Button variant="secondary" size="sm" @click="goCalendarToday">{{ t('calendarToday') }}</Button>
+              </div>
+
+              <ul class="calendar-weekdays">
+                <li v-for="label in calendarWeekdayLabels" :key="label">{{ label }}</li>
+              </ul>
+
+              <ul class="calendar-grid">
+                <li
+                  v-for="cell in calendarCells"
+                  :key="cell.key"
+                  class="calendar-cell"
+                  :class="{ 'calendar-cell--muted': !cell.isCurrentMonth, 'calendar-cell--today': cell.isToday }"
+                >
+                  <p class="calendar-day">{{ cell.day }}</p>
+                  <ul class="calendar-items">
+                    <li v-for="todo in cell.items.slice(0, 3)" :key="todo.id">
+                      <button
+                        type="button"
+                        class="calendar-item"
+                        :class="{ 'calendar-item--done': todo.done }"
+                        :style="getCalendarItemStyle(todo)"
+                        @click="openDetail(todo.id)"
+                      >
+                        <span class="calendar-item-main">
+                          <span v-if="todo.labelText" class="todo-label-dot" :style="getLabelDotStyle(todo)" />
+                          <span class="truncate">{{ todo.text }}</span>
+                        </span>
+                        <small class="calendar-item-time">{{ formatTime(todo.dueAt) }}</small>
+                        <small v-if="todo.labelText" class="calendar-item-label">{{ todo.labelText }}</small>
+                      </button>
+                    </li>
+                    <li v-if="cell.items.length > 3" class="calendar-more">+{{ cell.items.length - 3 }}</li>
+                  </ul>
+                </li>
+              </ul>
+
+              <p class="text-xs text-muted-foreground">{{ t('calendarNoDue', { count: todosWithoutDueCount }) }}</p>
+            </section>
+          </div>
         </template>
 
         <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
