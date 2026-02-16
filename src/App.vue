@@ -110,6 +110,7 @@ const messages = {
     rolloverOption: '미완료 시 다음날 자동 이월',
     rolloverHint: '마감일시를 넘기면 다음날 같은 시간으로 자동 이월됩니다.',
     all: '전체',
+    status: '상태',
     active: '진행중',
     done: '완료',
     loading: '불러오는 중...',
@@ -179,6 +180,7 @@ const messages = {
     rolloverOption: 'Auto-move deadline to next day if unfinished',
     rolloverHint: 'If not completed by due date, it will automatically move to the same time next day.',
     all: 'All',
+    status: 'Status',
     active: 'Active',
     done: 'Done',
     loading: 'Loading...',
@@ -248,6 +250,7 @@ const messages = {
     rolloverOption: '未完成时自动顺延到次日',
     rolloverHint: '若到截止时间仍未完成，将自动顺延到次日同一时间。',
     all: '全部',
+    status: '状态',
     active: '进行中',
     done: '已完成',
     loading: '加载中...',
@@ -317,6 +320,7 @@ const messages = {
     rolloverOption: '未完了なら翌日に自動繰り越し',
     rolloverHint: '締切までに完了しない場合、翌日の同時刻に自動で繰り越されます。',
     all: 'すべて',
+    status: 'ステータス',
     active: '進行中',
     done: '完了',
     loading: '読み込み中...',
@@ -1042,6 +1046,12 @@ async function setTodoDone(todo, done) {
   }
 }
 
+function onTodoStatusChange(todo, value) {
+  const nextDone = value === 'done'
+  if (Boolean(todo.done) === nextDone) return
+  void setTodoDone(todo, nextDone)
+}
+
 async function deleteTodo(id) {
   if (busy.value) return
   busy.value = true
@@ -1572,11 +1582,18 @@ function formatTime(value) {
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div class="flex min-w-0 flex-1 items-start gap-2">
                       <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
-                      <input
-                        :checked="todo.done"
-                        type="checkbox"
-                        @change="setTodoDone(todo, $event.target.checked)"
-                      />
+                      <Select
+                        :model-value="todo.done ? 'done' : 'active'"
+                        @update:model-value="(value) => onTodoStatusChange(todo, value)"
+                      >
+                        <SelectTrigger class="h-8 w-[110px] shrink-0 text-xs sm:text-sm" :aria-label="t('status')">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">{{ t('active') }}</SelectItem>
+                          <SelectItem value="done">{{ t('done') }}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <div class="min-w-0 space-y-1">
                         <span class="block break-words" :class="{ 'text-muted-foreground line-through': todo.done }">
                           {{ todo.text }}
