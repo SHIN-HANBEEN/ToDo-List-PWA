@@ -1822,9 +1822,16 @@ function formatTime(value) {
             <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
 
             <template v-if="viewMode === 'list'">
-              <section class="todo-heading-row">
-                <div class="todo-heading-texts">
-                  <h1 class="todo-heading-title">To-Do List</h1>
+              <div class="todo-search-row">
+                <div class="todo-searchbar">
+                  <Search class="todo-search-icon" />
+                  <Input
+                    v-model="searchQuery"
+                    type="text"
+                    class="todo-search-input border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    :placeholder="t('searchPlaceholder')"
+                    autocomplete="off"
+                  />
                 </div>
                 <Button
                   class="todo-add-task-btn"
@@ -1835,17 +1842,6 @@ function formatTime(value) {
                   <Plus class="h-5 w-5" />
                   {{ t('addSchedule') }}
                 </Button>
-              </section>
-
-              <div class="todo-searchbar">
-                <Search class="todo-search-icon" />
-                <Input
-                  v-model="searchQuery"
-                  type="text"
-                  class="todo-search-input border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                  :placeholder="t('searchPlaceholder')"
-                  autocomplete="off"
-                />
               </div>
 
               <draggable
