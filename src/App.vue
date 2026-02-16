@@ -576,6 +576,13 @@ const selectedLabelForNewTodo = computed(() => {
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
 const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
 
+function syncAuthScrollLock() {
+  if (typeof document === 'undefined') return
+  const shouldLock = !isAuthenticated.value
+  document.documentElement.classList.toggle('auth-no-scroll', shouldLock)
+  document.body.classList.toggle('auth-no-scroll', shouldLock)
+}
+
 async function syncAppBadge() {
   if (typeof navigator === 'undefined') return
   const canSet = typeof navigator.setAppBadge === 'function'
@@ -745,6 +752,7 @@ function goCalendarToday() {
 }
 
 onMounted(async () => {
+  syncAuthScrollLock()
   window.addEventListener('resize', handleTooltipViewportChange)
   window.addEventListener('scroll', handleTooltipViewportChange, true)
 
@@ -779,6 +787,10 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.remove('auth-no-scroll')
+    document.body.classList.remove('auth-no-scroll')
+  }
   window.removeEventListener('resize', handleTooltipViewportChange)
   window.removeEventListener('scroll', handleTooltipViewportChange, true)
 })
@@ -791,6 +803,10 @@ watch([rolloverTooltipOpen, rolloverTooltipContext], async ([isOpen]) => {
 
 watch([isAuthenticated, todayTodoCount], () => {
   void syncAppBadge()
+}, { immediate: true })
+
+watch(isAuthenticated, () => {
+  syncAuthScrollLock()
 }, { immediate: true })
 
 watch(rolloverTooltipText, async () => {

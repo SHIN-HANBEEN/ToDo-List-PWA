@@ -70,6 +70,13 @@
   min-height: 100vh;
 }
 
+html.auth-no-scroll,
+body.auth-no-scroll {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .page {
   min-height: 100vh;
   display: block;
