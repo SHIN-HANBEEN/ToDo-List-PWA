@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Search, Sun, X } from 'lucide-vue-next'
+import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,6 +17,8 @@ import {
 const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
 const ROLLOVER_DEFAULT_KEY = 'todo-default-rollover'
+const PROFILE_IMAGE_MAX_DATA_LENGTH = 2_000_000
+const PROFILE_IMAGE_MAX_UPLOAD_BYTES = 1_200_000
 const locale = ref('ko')
 const theme = ref('light')
 const viewMode = ref('list')
@@ -42,6 +44,15 @@ const commentDrafts = ref({})
 const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
 const mobileHeaderOpen = ref(false)
+const profileOpen = ref(false)
+const profileEditMode = ref(false)
+const profileBusy = ref(false)
+const profileUsernameDraft = ref('')
+const profileAvatarDraft = ref('')
+const profileUsernameCheckBusy = ref(false)
+const profileUsernameCheckMessage = ref('')
+const profileUsernameAvailable = ref(null)
+const profileFileInputRef = ref(null)
 const rolloverTooltipOpen = ref(false)
 const rolloverTooltipContext = ref('')
 const rolloverTooltipStyle = ref({})
@@ -74,6 +85,15 @@ const messages = {
     language: '언어',
     settings: '설정',
     settingsTitle: '앱 설정',
+    profileTitle: '내 프로필',
+    profileImage: '유저 이미지',
+    profileUsername: '유저 네임',
+    profileEmail: '이메일',
+    changeImage: '이미지 변경',
+    removeImage: '이미지 제거',
+    checkDuplicate: '중복 확인',
+    usernameAvailable: '사용 가능한 유저 네임입니다.',
+    usernameTaken: '이미 사용 중인 유저 네임입니다.',
     addSchedule: '일정 추가',
     addScheduleTitle: '새 일정 추가',
     guest: '비로그인',
@@ -145,6 +165,15 @@ const messages = {
     language: 'Language',
     settings: 'Settings',
     settingsTitle: 'App settings',
+    profileTitle: 'My profile',
+    profileImage: 'User image',
+    profileUsername: 'Username',
+    profileEmail: 'Email',
+    changeImage: 'Change image',
+    removeImage: 'Remove image',
+    checkDuplicate: 'Check duplicate',
+    usernameAvailable: 'This username is available.',
+    usernameTaken: 'This username is already taken.',
     addSchedule: 'Add schedule',
     addScheduleTitle: 'Add new schedule',
     guest: 'Guest',
@@ -216,6 +245,15 @@ const messages = {
     language: '语言',
     settings: '设置',
     settingsTitle: '应用设置',
+    profileTitle: '我的资料',
+    profileImage: '用户头像',
+    profileUsername: '用户名',
+    profileEmail: '邮箱',
+    changeImage: '更换图片',
+    removeImage: '移除图片',
+    checkDuplicate: '重复检查',
+    usernameAvailable: '该用户名可用。',
+    usernameTaken: '该用户名已被使用。',
     addSchedule: '添加日程',
     addScheduleTitle: '添加新日程',
     guest: '访客',
@@ -287,6 +325,15 @@ const messages = {
     language: '言語',
     settings: '設定',
     settingsTitle: 'アプリ設定',
+    profileTitle: 'プロフィール',
+    profileImage: 'ユーザー画像',
+    profileUsername: 'ユーザー名',
+    profileEmail: 'メール',
+    changeImage: '画像を変更',
+    removeImage: '画像を削除',
+    checkDuplicate: '重複確認',
+    usernameAvailable: 'このユーザー名は使用できます。',
+    usernameTaken: 'このユーザー名はすでに使われています。',
     addSchedule: '予定追加',
     addScheduleTitle: '新しい予定を追加',
     guest: 'ゲスト',
@@ -374,6 +421,12 @@ const errorMessages = {
     zh: '该邮箱已注册。',
     ja: 'このメールアドレスはすでに登録されています。',
   },
+  'username already exists': {
+    ko: '이미 사용 중인 유저 네임입니다.',
+    en: 'Username already exists.',
+    zh: '用户名已存在。',
+    ja: 'このユーザー名はすでに存在します。',
+  },
   'username is required': {
     ko: '사용자 이름을 입력하세요.',
     en: 'Username is required.',
@@ -391,6 +444,18 @@ const errorMessages = {
     en: 'Invalid credentials.',
     zh: '邮箱或密码不正确。',
     ja: 'メールアドレスまたはパスワードが正しくありません。',
+  },
+  'avatarUrl must be a valid image url': {
+    ko: '올바른 이미지 형식으로 업로드하세요.',
+    en: 'Please provide a valid image format.',
+    zh: '请提供有效的图片格式。',
+    ja: '有効な画像形式で指定してください。',
+  },
+  'avatar image is too large': {
+    ko: '이미지 크기가 너무 큽니다. 2MB 이하 이미지를 사용하세요.',
+    en: 'Image is too large. Please use an image smaller than 2MB.',
+    zh: '图片过大，请使用 2MB 以下的图片。',
+    ja: '画像サイズが大きすぎます。2MB以下の画像を使用してください。',
   },
   'text is required': {
     ko: '내용을 입력하세요.',
@@ -585,7 +650,20 @@ const calendarCells = computed(() => {
     }
   })
 })
-const currentUserLabel = computed(() => user.value?.username || user.value?.email || t('guest'))
+const currentUserInitial = computed(() => {
+  const base = String(user.value?.username || user.value?.email || '').trim()
+  if (!base) return '?'
+  return base.charAt(0).toUpperCase()
+})
+const currentUserAvatar = computed(() => {
+  const raw = String(user.value?.avatarUrl || '').trim()
+  return raw || ''
+})
+const profileAvatarPreview = computed(() => {
+  const raw = String(profileAvatarDraft.value || '').trim()
+  if (raw) return raw
+  return currentUserAvatar.value
+})
 const labelOptions = computed(() =>
   [...labels.value].sort((a, b) =>
     String(a.name || '').localeCompare(String(b.name || ''), localeCodeByLanguage[locale.value] || 'en-US')
@@ -775,6 +853,207 @@ function goCalendarToday() {
   calendarMonthAnchor.value = startOfMonth(new Date())
 }
 
+function normalizeProfileUsername(value) {
+  return String(value || '').trim()
+}
+
+function clearProfileUsernameCheckResult() {
+  profileUsernameCheckMessage.value = ''
+  profileUsernameAvailable.value = null
+}
+
+function resetProfileDraftFromUser() {
+  profileUsernameDraft.value = normalizeProfileUsername(user.value?.username)
+  profileAvatarDraft.value = String(user.value?.avatarUrl || '').trim()
+  clearProfileUsernameCheckResult()
+}
+
+function resetProfileFileInput() {
+  const input = profileFileInputRef.value
+  if (input) input.value = ''
+}
+
+function openProfile() {
+  if (!isAuthenticated.value) return
+  closeRolloverTooltip()
+  settingsOpen.value = false
+  mobileHeaderOpen.value = false
+  errorMessage.value = ''
+  profileOpen.value = true
+  profileEditMode.value = false
+  resetProfileDraftFromUser()
+}
+
+function closeProfile() {
+  profileOpen.value = false
+  profileEditMode.value = false
+  profileBusy.value = false
+  profileUsernameCheckBusy.value = false
+  clearProfileUsernameCheckResult()
+  resetProfileFileInput()
+}
+
+function startProfileEdit() {
+  if (!isAuthenticated.value) return
+  errorMessage.value = ''
+  profileEditMode.value = true
+  resetProfileDraftFromUser()
+}
+
+function cancelProfileEdit() {
+  profileEditMode.value = false
+  resetProfileDraftFromUser()
+  resetProfileFileInput()
+}
+
+function onProfileUsernameInput() {
+  clearProfileUsernameCheckResult()
+}
+
+function openProfileFilePicker() {
+  if (!profileEditMode.value) return
+  profileFileInputRef.value?.click()
+}
+
+function removeProfileImage() {
+  if (!profileEditMode.value) return
+  profileAvatarDraft.value = ''
+  resetProfileFileInput()
+}
+
+function handleProfileImageChange(event) {
+  if (!profileEditMode.value) return
+  const input = event?.target
+  const file = input?.files?.[0]
+  if (!file) return
+
+  if (!file.type || !file.type.startsWith('image/')) {
+    errorMessage.value = translateError('avatarUrl must be a valid image url')
+    resetProfileFileInput()
+    return
+  }
+
+  if (file.size > PROFILE_IMAGE_MAX_UPLOAD_BYTES) {
+    errorMessage.value = translateError('avatar image is too large')
+    resetProfileFileInput()
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    const result = String(reader.result || '')
+    if (!result.startsWith('data:image/')) {
+      errorMessage.value = translateError('avatarUrl must be a valid image url')
+      resetProfileFileInput()
+      return
+    }
+    if (result.length > PROFILE_IMAGE_MAX_DATA_LENGTH) {
+      errorMessage.value = translateError('avatar image is too large')
+      resetProfileFileInput()
+      return
+    }
+    profileAvatarDraft.value = result
+    errorMessage.value = ''
+    resetProfileFileInput()
+  }
+  reader.onerror = () => {
+    errorMessage.value = translateError('avatarUrl must be a valid image url')
+    resetProfileFileInput()
+  }
+  reader.readAsDataURL(file)
+}
+
+async function checkProfileUsernameDuplicate() {
+  if (!isAuthenticated.value || profileUsernameCheckBusy.value) return
+  const username = normalizeProfileUsername(profileUsernameDraft.value)
+  if (!username) {
+    errorMessage.value = translateError('username is required')
+    return
+  }
+  if (username.length < 2 || username.length > 24) {
+    errorMessage.value = translateError('username must be between 2 and 24 characters')
+    return
+  }
+
+  profileUsernameCheckBusy.value = true
+  profileUsernameCheckMessage.value = ''
+  errorMessage.value = ''
+  try {
+    const payload = await apiRequest('/api/auth', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'check-username',
+        username,
+      }),
+    })
+    profileUsernameAvailable.value = Boolean(payload.available)
+    profileUsernameCheckMessage.value = payload.available ? t('usernameAvailable') : t('usernameTaken')
+  } catch (error) {
+    profileUsernameAvailable.value = null
+    errorMessage.value = translateError(error.message)
+  } finally {
+    profileUsernameCheckBusy.value = false
+  }
+}
+
+async function saveProfile() {
+  if (!isAuthenticated.value || profileBusy.value) return
+  const username = normalizeProfileUsername(profileUsernameDraft.value)
+  const avatarUrl = String(profileAvatarDraft.value || '').trim()
+  if (!username) {
+    errorMessage.value = translateError('username is required')
+    return
+  }
+  if (username.length < 2 || username.length > 24) {
+    errorMessage.value = translateError('username must be between 2 and 24 characters')
+    return
+  }
+  if (avatarUrl.length > PROFILE_IMAGE_MAX_DATA_LENGTH) {
+    errorMessage.value = translateError('avatar image is too large')
+    return
+  }
+
+  const currentUsername = normalizeProfileUsername(user.value?.username).toLowerCase()
+  const changedUsername = username.toLowerCase() !== currentUsername
+
+  profileBusy.value = true
+  errorMessage.value = ''
+  try {
+    if (changedUsername) {
+      const check = await apiRequest('/api/auth', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'check-username',
+          username,
+        }),
+      })
+      if (!check.available) {
+        profileUsernameAvailable.value = false
+        profileUsernameCheckMessage.value = t('usernameTaken')
+        return
+      }
+      profileUsernameAvailable.value = true
+      profileUsernameCheckMessage.value = t('usernameAvailable')
+    }
+
+    const payload = await apiRequest('/api/auth', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        username,
+        avatarUrl,
+      }),
+    })
+    user.value = payload.user
+    profileEditMode.value = false
+    resetProfileDraftFromUser()
+    resetProfileFileInput()
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
+  } finally {
+    profileBusy.value = false
+  }
+}
+
 onMounted(async () => {
   syncAuthScrollLock()
   window.addEventListener('resize', handleTooltipViewportChange)
@@ -952,6 +1231,15 @@ async function logout() {
     addTodoOpen.value = false
     settingsOpen.value = false
     mobileHeaderOpen.value = false
+    profileOpen.value = false
+    profileEditMode.value = false
+    profileBusy.value = false
+    profileUsernameDraft.value = ''
+    profileAvatarDraft.value = ''
+    profileUsernameCheckBusy.value = false
+    profileUsernameCheckMessage.value = ''
+    profileUsernameAvailable.value = null
+    resetProfileFileInput()
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -1258,6 +1546,8 @@ function openDetail(todoId) {
 
 function openSettings() {
   closeRolloverTooltip()
+  profileOpen.value = false
+  profileEditMode.value = false
   settingsOpen.value = true
 }
 
@@ -1268,6 +1558,8 @@ function closeSettings() {
 
 function openMobileHeader() {
   closeRolloverTooltip()
+  profileOpen.value = false
+  profileEditMode.value = false
   mobileHeaderOpen.value = true
 }
 
@@ -1504,6 +1796,23 @@ function formatTime(value) {
                 >
                   <CalendarDays class="h-4 w-4" />
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  class="todo-top-icon-btn todo-user-trigger"
+                  @click="openProfile"
+                  :aria-label="t('profileTitle')"
+                >
+                  <img
+                    v-if="currentUserAvatar"
+                    :src="currentUserAvatar"
+                    alt=""
+                    class="todo-top-user-avatar"
+                  />
+                  <span v-else class="todo-top-user-fallback">
+                    <UserRound class="h-4 w-4" />
+                  </span>
+                </Button>
                 <Button size="sm" variant="ghost" class="todo-top-icon-btn" @click="openMobileHeader" aria-label="open menu">
                   <Menu class="h-4 w-4" />
                 </Button>
@@ -1516,7 +1825,6 @@ function formatTime(value) {
               <section class="todo-heading-row">
                 <div class="todo-heading-texts">
                   <h1 class="todo-heading-title">To-Do List</h1>
-                  <p class="todo-heading-sub">{{ currentUserLabel }}</p>
                 </div>
                 <Button
                   class="todo-add-task-btn"
@@ -1700,6 +2008,108 @@ function formatTime(value) {
         <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
       </CardContent>
     </Card>
+
+    <section v-if="profileOpen && isAuthenticated" class="modal-wrap" @click.self="closeProfile">
+      <article class="modal profile-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeProfile"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+        <header class="modal-header">
+          <h2>{{ t('profileTitle') }}</h2>
+        </header>
+
+        <div class="profile-shell">
+          <div class="profile-avatar-section">
+            <div class="profile-avatar-preview">
+              <img
+                v-if="profileAvatarPreview"
+                :src="profileAvatarPreview"
+                alt=""
+                class="profile-avatar-image"
+              />
+              <span v-else class="profile-avatar-fallback">{{ currentUserInitial }}</span>
+            </div>
+            <input
+              ref="profileFileInputRef"
+              type="file"
+              accept="image/*"
+              class="profile-file-input"
+              @change="handleProfileImageChange"
+            />
+            <div v-if="profileEditMode" class="profile-avatar-actions">
+              <Button type="button" variant="outline" size="sm" @click="openProfileFilePicker">
+                {{ t('changeImage') }}
+              </Button>
+              <Button type="button" variant="outline" size="sm" @click="removeProfileImage">
+                {{ t('removeImage') }}
+              </Button>
+            </div>
+          </div>
+
+          <div class="profile-fields">
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('profileUsername') }}</p>
+              <Input
+                v-if="profileEditMode"
+                v-model="profileUsernameDraft"
+                type="text"
+                maxlength="24"
+                autocomplete="nickname"
+                @input="onProfileUsernameInput"
+              />
+              <p v-else class="profile-value">{{ user?.username || '-' }}</p>
+            </div>
+
+            <div v-if="profileEditMode" class="profile-check-row">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                :disabled="profileUsernameCheckBusy || profileBusy"
+                @click="checkProfileUsernameDuplicate"
+              >
+                {{ t('checkDuplicate') }}
+              </Button>
+              <p
+                v-if="profileUsernameCheckMessage"
+                class="profile-check-message"
+                :class="{
+                  'profile-check-message--ok': profileUsernameAvailable === true,
+                  'profile-check-message--error': profileUsernameAvailable === false,
+                }"
+              >
+                {{ profileUsernameCheckMessage }}
+              </p>
+            </div>
+
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('profileEmail') }}</p>
+              <p class="profile-value">{{ user?.email || '-' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <template v-if="profileEditMode">
+            <Button type="button" variant="outline" @click="cancelProfileEdit">
+              {{ t('cancel') }}
+            </Button>
+            <Button type="button" :disabled="profileBusy || profileUsernameCheckBusy" @click="saveProfile">
+              {{ t('save') }}
+            </Button>
+          </template>
+          <Button v-else type="button" @click="startProfileEdit">
+            {{ t('edit') }}
+          </Button>
+        </div>
+      </article>
+    </section>
 
     <section v-if="mobileHeaderOpen" class="modal-wrap" @click.self="closeMobileHeader">
       <article class="modal modal--allow-overflow settings-modal mobile-menu-modal">

@@ -100,7 +100,7 @@ export async function getUserFromRequest(req, pool) {
   const tokenHash = hashSha256(token)
   const result = await pool.query(
     `
-      SELECT u.id, u.email, u.username
+      SELECT u.id, u.email, u.username, u.avatar_url
       FROM sessions s
       JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1
@@ -115,6 +115,7 @@ export async function getUserFromRequest(req, pool) {
     id: Number(result.rows[0].id),
     email: result.rows[0].email,
     username: result.rows[0].username,
+    avatarUrl: result.rows[0].avatar_url || '',
   }
 }
 

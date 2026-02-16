@@ -43,6 +43,7 @@ export async function ensureSchema() {
           id BIGSERIAL PRIMARY KEY,
           email TEXT NOT NULL UNIQUE,
           username TEXT NOT NULL,
+          avatar_url TEXT NOT NULL DEFAULT '',
           password_hash TEXT NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
@@ -114,12 +115,18 @@ export async function ensureSchema() {
       `)
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE;')
       await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;')
+      await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT '';")
       await client.query(`
         UPDATE users
         SET username = COALESCE(NULLIF(split_part(email, '@', 1), ''), 'user' || id::text)
         WHERE username IS NULL OR btrim(username) = '';
       `)
       await client.query('ALTER TABLE users ALTER COLUMN username SET NOT NULL;')
+      await client.query(`
+        UPDATE users
+        SET avatar_url = ''
+        WHERE avatar_url IS NULL;
+      `)
 
       // 자주 사용하는 조회/정렬 패턴 기준 인덱스.
       await client.query(
