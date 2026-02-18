@@ -61,9 +61,14 @@ npx web-push generate-vapid-keys
 - `WEB_PUSH_SUBJECT` (example: `mailto:you@example.com`)
 - `CRON_SECRET` (used by `/api/notifications/reminders`)
 
-3. Deploy. `vercel.json` already includes a 5-minute cron schedule for reminder dispatch.
+3. Add GitHub repository secret:
+- `CRON_SECRET`
 
-4. On device/browser, allow notifications in app settings and keep the PWA installed for best iOS behavior.
+4. Reminder scheduler runs via GitHub Actions:
+- `.github/workflows/reminder-cron.yml` (every 5 minutes)
+- calls `https://todo-list-pwa-xi.vercel.app/api/notifications/reminders`
+
+5. On device/browser, allow notifications in app settings and keep the PWA installed for best iOS behavior.
 
 ## Deploy
 
