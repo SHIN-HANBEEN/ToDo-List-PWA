@@ -4,6 +4,7 @@ import draggable from 'vuedraggable'
 import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import {
@@ -2578,12 +2579,10 @@ function formatTime(value) {
         </header>
 
         <form class="space-y-2" @submit.prevent="addTodo">
-          <Input
+          <Textarea
             v-model="newTask"
             class="w-full"
-            type="text"
             :placeholder="t('taskPlaceholder')"
-            autocomplete="off"
           />
           <div class="grid gap-2 md:grid-cols-2">
             <div class="space-y-1">
