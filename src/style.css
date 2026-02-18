@@ -809,19 +809,27 @@ body.auth-no-scroll {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 6px;
+  gap: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  overflow: hidden;
+  background: hsl(var(--muted));
 }
 
 .comment-list li {
-  border: 1px solid hsl(var(--border));
-  border-radius: 10px;
+  border: 0;
+  border-radius: 0;
   padding: 8px 10px;
   display: flex;
   justify-content: space-between;
   gap: 8px;
   align-items: flex-start;
-  background: hsl(var(--muted));
+  background: transparent;
   min-width: 0;
+}
+
+.comment-list li + li {
+  border-top: 1px solid hsl(var(--border));
 }
 
 .comment-content {
@@ -856,6 +864,7 @@ body.auth-no-scroll {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .empty {
@@ -1014,13 +1023,14 @@ body.auth-no-scroll {
   }
 
   .comment-list li {
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-start;
   }
 
   .comment-actions {
-    width: 100%;
-    justify-content: flex-end;
+    width: auto;
+    justify-content: flex-start;
+    align-self: flex-start;
   }
 }
 
