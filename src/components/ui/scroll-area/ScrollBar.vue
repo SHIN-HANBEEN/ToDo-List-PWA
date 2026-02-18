@@ -13,7 +13,7 @@ const props = defineProps({
     :orientation="props.orientation"
     :class="
       cn(
-        'flex touch-none select-none transition-colors',
+        'flex touch-none select-none rounded-full bg-muted/45 transition-colors',
         props.orientation === 'vertical' &&
           'h-full w-2.5 border-l border-l-transparent p-[1px]',
         props.orientation === 'horizontal' &&
@@ -22,6 +22,6 @@ const props = defineProps({
       )
     "
   >
-    <ScrollAreaThumb class="relative flex-1 rounded-full bg-border" />
+    <ScrollAreaThumb class="relative flex-1 rounded-full bg-muted-foreground/55 hover:bg-muted-foreground/75" />
   </ScrollAreaScrollbar>
 </template>
