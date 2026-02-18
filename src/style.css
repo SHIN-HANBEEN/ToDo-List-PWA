@@ -809,27 +809,23 @@ body.auth-no-scroll {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0;
-  border: 1px solid hsl(var(--border));
-  border-radius: 10px;
-  overflow: hidden;
-  background: hsl(var(--muted));
+  gap: 6px;
 }
 
 .comment-list li {
-  border: 0;
-  border-radius: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
   padding: 8px 10px;
   display: flex;
   justify-content: space-between;
   gap: 8px;
   align-items: flex-start;
-  background: transparent;
+  background: hsl(var(--muted));
   min-width: 0;
 }
 
-.comment-list li + li {
-  border-top: 1px solid hsl(var(--border));
+.comment-list li:nth-child(even) {
+  background: hsl(var(--muted) / 0.72);
 }
 
 .comment-content {
