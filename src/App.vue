@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-vue-next'
+import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Pencil, Plus, Search, Sun, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -2801,7 +2801,16 @@ function formatTime(value) {
               <Button size="sm" @click="saveDetailEdit" :disabled="busy">{{ t('save') }}</Button>
               <Button variant="outline" size="sm" @click="cancelDetailEdit">{{ t('cancel') }}</Button>
             </template>
-            <Button v-else variant="outline" size="sm" @click="startDetailEdit">{{ t('edit') }}</Button>
+            <Button
+              v-else
+              variant="outline"
+              size="sm"
+              class="h-9 w-9 p-0"
+              :aria-label="t('edit')"
+              @click="startDetailEdit"
+            >
+              <Pencil class="h-4 w-4" />
+            </Button>
           </div>
         </header>
         <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
