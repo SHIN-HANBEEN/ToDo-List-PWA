@@ -2786,18 +2786,22 @@ function formatTime(value) {
         </template>
 
         <form class="comment-form" @submit.prevent="addComment(detailTodo.id)">
-          <Input v-model="commentDrafts[detailTodo.id]" type="text" :placeholder="t('commentPlaceholder')" />
+          <Textarea
+            v-model="commentDrafts[detailTodo.id]"
+            class="comment-textarea"
+            :placeholder="t('commentPlaceholder')"
+          />
           <Button type="submit" :disabled="busy">{{ t('comment') }}</Button>
         </form>
 
         <ul class="comment-list" v-if="detailTodo.comments.length > 0">
           <li v-for="comment in detailTodo.comments" :key="comment.id">
-            <div class="min-w-0 flex-1">
-              <p v-if="editingCommentId !== comment.id">{{ comment.text }}</p>
-              <Input
+            <div class="comment-content min-w-0 flex-1">
+              <p v-if="editingCommentId !== comment.id" class="comment-text">{{ comment.text }}</p>
+              <Textarea
                 v-else
                 v-model="commentEditDraft"
-                type="text"
+                class="comment-edit-textarea"
                 :placeholder="t('commentEditPlaceholder')"
               />
               <small>{{ formatDateTime(comment.createdAt) }}</small>

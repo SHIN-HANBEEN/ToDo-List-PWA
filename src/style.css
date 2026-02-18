@@ -796,6 +796,12 @@ body.auth-no-scroll {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+  align-items: end;
+}
+
+.comment-textarea {
+  max-width: 100%;
+  resize: vertical;
 }
 
 .comment-list {
@@ -815,12 +821,28 @@ body.auth-no-scroll {
   gap: 8px;
   align-items: flex-start;
   background: hsl(var(--muted));
+  min-width: 0;
+}
+
+.comment-content {
+  max-width: 100%;
 }
 
 .comment-list p {
   margin: 0 0 3px;
   font-size: 0.9rem;
   color: hsl(var(--foreground));
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.comment-edit-textarea {
+  max-width: 100%;
+  min-height: 72px;
+  resize: vertical;
 }
 
 .comment-list small {
