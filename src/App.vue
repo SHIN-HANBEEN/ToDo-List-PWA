@@ -2803,9 +2803,9 @@ function formatTime(value) {
             </template>
             <Button
               v-else
-              variant="outline"
+              variant="ghost"
               size="sm"
-              class="h-9 w-9 p-0"
+              class="h-9 w-9 border-0 p-0 shadow-none"
               :aria-label="t('edit')"
               @click="startDetailEdit"
             >
