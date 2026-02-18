@@ -1076,16 +1076,41 @@ function findDetailLabelId(todo) {
   return String(byName.id)
 }
 
+function resolveTextareaElement(target) {
+  if (!target) return null
+  if (target instanceof HTMLTextAreaElement) return target
+  if (Array.isArray(target)) {
+    for (const item of target) {
+      const resolved = resolveTextareaElement(item)
+      if (resolved) return resolved
+    }
+    return null
+  }
+  if (target?.$el) return resolveTextareaElement(target.$el)
+  if (target instanceof HTMLElement) {
+    if (target.tagName === 'TEXTAREA') return target
+    const nested = target.querySelector('textarea')
+    if (nested instanceof HTMLTextAreaElement) return nested
+  }
+  return null
+}
+
 function resizeTextarea(target) {
-  const element =
-    target instanceof HTMLTextAreaElement
-      ? target
-      : target?.$el instanceof HTMLTextAreaElement
-        ? target.$el
-        : null
+  const element = resolveTextareaElement(target)
   if (!element) return
   element.style.height = 'auto'
   element.style.height = `${element.scrollHeight}px`
+}
+
+function resizeActiveCommentEditTextarea() {
+  const textareaFromRef = resolveTextareaElement(commentEditTextareaRef.value)
+  if (textareaFromRef) {
+    resizeTextarea(textareaFromRef)
+    return
+  }
+  if (typeof document === 'undefined') return
+  const fallback = document.querySelector('textarea.comment-edit-textarea')
+  if (fallback) resizeTextarea(fallback)
 }
 
 function onCommentEditTextareaInput(event) {
@@ -1380,6 +1405,15 @@ watch(rolloverTooltipText, async () => {
   await nextTick()
   positionRolloverTooltip()
 })
+
+watch(
+  editingCommentId,
+  async (nextId) => {
+    if (nextId === null) return
+    await nextTick()
+    resizeActiveCommentEditTextarea()
+  }
+)
 
 function setTheme(nextTheme) {
   if (nextTheme !== 'light' && nextTheme !== 'dark') return
@@ -1769,9 +1803,9 @@ async function saveDetailEdit() {
 }
 
 function startCommentEdit(comment) {
-  editingCommentId.value = comment.id
   commentEditDraft.value = comment.text
-  nextTick(() => resizeTextarea(commentEditTextareaRef.value))
+  editingCommentId.value = comment.id
+  nextTick(() => resizeActiveCommentEditTextarea())
 }
 
 function cancelCommentEdit() {
