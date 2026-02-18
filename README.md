@@ -7,6 +7,7 @@ Features:
 - drag-and-drop todo ordering
 - detail comments per todo
 - PWA install support
+- 30-minute reminder push notifications (Web Push + PWA)
 
 ## Run locally
 
@@ -40,6 +41,29 @@ npx vercel env pull .env.local
 - `DELETE /api/todos?done=true`
 - `POST /api/comments`
 - `DELETE /api/comments?id=...`
+- `GET /api/notifications/subscriptions`
+- `POST /api/notifications/subscriptions`
+- `DELETE /api/notifications/subscriptions`
+- `GET /api/notifications/reminders` (cron only)
+
+## Push reminder setup (30 minutes before due time)
+
+1. Generate VAPID keys:
+
+```sh
+npx web-push generate-vapid-keys
+```
+
+2. Add these environment variables in Vercel and local `.env.local`:
+
+- `VITE_WEB_PUSH_PUBLIC_KEY`
+- `WEB_PUSH_PRIVATE_KEY`
+- `WEB_PUSH_SUBJECT` (example: `mailto:you@example.com`)
+- `CRON_SECRET` (used by `/api/notifications/reminders`)
+
+3. Deploy. `vercel.json` already includes a 5-minute cron schedule for reminder dispatch.
+
+4. On device/browser, allow notifications in app settings and keep the PWA installed for best iOS behavior.
 
 ## Deploy
 

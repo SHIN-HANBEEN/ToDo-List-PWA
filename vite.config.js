@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         // 새 빌드가 배포되면 서비스워커를 백그라운드에서 자동 갱신.
         registerType: 'autoUpdate',
+        workbox: {
+          importScripts: ['/sw-events.js'],
+        },
         manifest: {
           id: '/?v=20260214-glyph',
           name: 'Todogram',

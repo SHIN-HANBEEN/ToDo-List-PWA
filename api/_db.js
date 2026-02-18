@@ -94,6 +94,33 @@ export async function ensureSchema() {
         );
       `)
 
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          endpoint TEXT NOT NULL UNIQUE,
+          p256dh TEXT NOT NULL,
+          auth TEXT NOT NULL,
+          locale TEXT NOT NULL DEFAULT 'en-US',
+          timezone TEXT NOT NULL DEFAULT 'UTC',
+          user_agent TEXT NOT NULL DEFAULT '',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `)
+
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS todo_reminder_logs (
+          id BIGSERIAL PRIMARY KEY,
+          todo_id BIGINT NOT NULL REFERENCES todos(id) ON DELETE CASCADE,
+          user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          due_at TIMESTAMPTZ NOT NULL,
+          reminder_type TEXT NOT NULL,
+          sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          UNIQUE (todo_id, reminder_type, due_at)
+        );
+      `)
+
       // 기존 배포본 호환을 위한 안전한 마이그레이션.
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;')
@@ -127,6 +154,25 @@ export async function ensureSchema() {
         SET avatar_url = ''
         WHERE avatar_url IS NULL;
       `)
+      await client.query("ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT 'en-US';")
+      await client.query("ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'UTC';")
+      await client.query("ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS user_agent TEXT NOT NULL DEFAULT '';")
+      await client.query('ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();')
+      await client.query(`
+        UPDATE push_subscriptions
+        SET locale = 'en-US'
+        WHERE locale IS NULL OR btrim(locale) = '';
+      `)
+      await client.query(`
+        UPDATE push_subscriptions
+        SET timezone = 'UTC'
+        WHERE timezone IS NULL OR btrim(timezone) = '';
+      `)
+      await client.query(`
+        UPDATE push_subscriptions
+        SET user_agent = ''
+        WHERE user_agent IS NULL;
+      `)
 
       // 자주 사용하는 조회/정렬 패턴 기준 인덱스.
       await client.query(
@@ -140,6 +186,10 @@ export async function ensureSchema() {
         'CREATE INDEX IF NOT EXISTS idx_comments_todo_created ON comments(todo_id, created_at DESC);'
       )
       await client.query('CREATE INDEX IF NOT EXISTS idx_sessions_user_expires ON sessions(user_id, expires_at DESC);')
+      await client.query('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);')
+      await client.query('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_last_seen ON push_subscriptions(last_seen_at DESC);')
+      await client.query('CREATE INDEX IF NOT EXISTS idx_todo_reminder_logs_todo_sent ON todo_reminder_logs(todo_id, sent_at DESC);')
+      await client.query('CREATE INDEX IF NOT EXISTS idx_todo_reminder_logs_user_sent ON todo_reminder_logs(user_id, sent_at DESC);')
 
       await client.query(`
         INSERT INTO labels (user_id, name, color)

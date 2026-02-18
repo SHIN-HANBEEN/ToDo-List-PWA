@@ -22,6 +22,7 @@ const PROFILE_IMAGE_MAX_UPLOAD_BYTES = 1_200_000
 const locale = ref('ko')
 const theme = ref('light')
 const viewMode = ref('list')
+const WEB_PUSH_PUBLIC_KEY = String(import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY || '').trim()
 const calendarMonthAnchor = ref(startOfMonth(new Date()))
 const newTask = ref('')
 const newDueAt = ref('')
@@ -78,6 +79,10 @@ const authUsername = ref('')
 const authPassword = ref('')
 const authBusy = ref(false)
 const labelBusy = ref(false)
+const notificationBusy = ref(false)
+const notificationSupported = ref(false)
+const notificationEnabled = ref(false)
+const notificationPermission = ref('default')
 
 const messages = {
   ko: {
@@ -159,6 +164,15 @@ const messages = {
     due: '마감',
     place: '장소',
     rolloverEnabled: '자동 이월 사용',
+    notifications: '알림',
+    notificationReminder30m: '일정 시작 30분 전 알림',
+    notificationUnsupported: '현재 기기 또는 브라우저에서 푸시 알림을 지원하지 않습니다.',
+    notificationNotConfigured: '알림 기능이 아직 서버에 설정되지 않았습니다.',
+    notificationPermissionDenied: '브라우저 알림 권한이 차단되었습니다. 브라우저 설정에서 허용해 주세요.',
+    notificationStatusOn: '현재 활성화됨',
+    notificationStatusOff: '현재 비활성화됨',
+    notificationEnableAction: '켜기',
+    notificationDisableAction: '끄기',
   },
   en: {
     appTitle: 'Todogram',
@@ -239,6 +253,15 @@ const messages = {
     due: 'Due',
     place: 'Location',
     rolloverEnabled: 'Auto rollover enabled',
+    notifications: 'Notifications',
+    notificationReminder30m: 'Notify 30 minutes before schedule starts',
+    notificationUnsupported: 'Push notifications are not supported on this device or browser.',
+    notificationNotConfigured: 'Notification service is not configured on server yet.',
+    notificationPermissionDenied: 'Browser notification permission is blocked. Allow it in browser settings.',
+    notificationStatusOn: 'Currently enabled',
+    notificationStatusOff: 'Currently disabled',
+    notificationEnableAction: 'Enable',
+    notificationDisableAction: 'Disable',
   },
   zh: {
     appTitle: 'Todogram',
@@ -319,6 +342,15 @@ const messages = {
     due: '截止',
     place: '地点',
     rolloverEnabled: '已启用自动顺延',
+    notifications: '通知',
+    notificationReminder30m: '开始前30分钟通知',
+    notificationUnsupported: '当前设备或浏览器不支持推送通知。',
+    notificationNotConfigured: '服务器尚未完成通知配置。',
+    notificationPermissionDenied: '浏览器通知权限已被阻止，请在浏览器设置中允许。',
+    notificationStatusOn: '当前已启用',
+    notificationStatusOff: '当前未启用',
+    notificationEnableAction: '开启',
+    notificationDisableAction: '关闭',
   },
   ja: {
     appTitle: 'Todogram',
@@ -399,10 +431,55 @@ const messages = {
     due: '締切',
     place: '場所',
     rolloverEnabled: '自動繰り越し有効',
+    notifications: '通知',
+    notificationReminder30m: '予定開始30分前に通知',
+    notificationUnsupported: 'この端末またはブラウザではプッシュ通知を利用できません。',
+    notificationNotConfigured: '通知機能のサーバー設定がまだ完了していません。',
+    notificationPermissionDenied: 'ブラウザの通知権限がブロックされています。設定で許可してください。',
+    notificationStatusOn: '現在有効',
+    notificationStatusOff: '現在無効',
+    notificationEnableAction: '有効化',
+    notificationDisableAction: '無効化',
   },
 }
 const errorMessages = {
   Unauthorized: { ko: '로그인이 필요합니다.', en: 'Login required.', zh: '需要登录。', ja: 'ログインが必要です。' },
+  'forbidden': {
+    ko: '접근 권한이 없습니다.',
+    en: 'Forbidden.',
+    zh: '没有访问权限。',
+    ja: 'アクセス権限がありません。',
+  },
+  'web push is not configured on server': {
+    ko: '서버에 푸시 알림 설정이 없습니다.',
+    en: 'Web push is not configured on server.',
+    zh: '服务器尚未配置推送通知。',
+    ja: 'サーバーでWebプッシュが設定されていません。',
+  },
+  'push notifications are not supported on this device/browser': {
+    ko: '현재 기기 또는 브라우저에서 푸시 알림을 지원하지 않습니다.',
+    en: 'Push notifications are not supported on this device/browser.',
+    zh: '当前设备或浏览器不支持推送通知。',
+    ja: 'この端末またはブラウザではプッシュ通知を利用できません。',
+  },
+  'notification permission denied': {
+    ko: '알림 권한이 거부되었습니다.',
+    en: 'Notification permission denied.',
+    zh: '通知权限被拒绝。',
+    ja: '通知権限が拒否されました。',
+  },
+  'subscription endpoint is required': {
+    ko: '구독 endpoint 값이 필요합니다.',
+    en: 'Subscription endpoint is required.',
+    zh: '需要 subscription endpoint。',
+    ja: 'subscription endpoint が必要です。',
+  },
+  'subscription keys are required': {
+    ko: '구독 키 값이 필요합니다.',
+    en: 'Subscription keys are required.',
+    zh: '需要 subscription keys。',
+    ja: 'subscription keys が必要です。',
+  },
   'email and password are required': {
     ko: '이메일과 비밀번호를 입력하세요.',
     en: 'Email and password are required.',
@@ -677,6 +754,13 @@ const selectedLabelForNewTodo = computed(() => {
 })
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
 const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
+const isPushConfigured = computed(() => WEB_PUSH_PUBLIC_KEY.length > 0)
+const notificationHelpText = computed(() => {
+  if (!notificationSupported.value) return t('notificationUnsupported')
+  if (!isPushConfigured.value) return t('notificationNotConfigured')
+  if (notificationPermission.value === 'denied') return t('notificationPermissionDenied')
+  return notificationEnabled.value ? t('notificationStatusOn') : t('notificationStatusOff')
+})
 
 function syncAuthScrollLock() {
   if (typeof document === 'undefined') return
@@ -706,6 +790,137 @@ async function syncAppBadge() {
     }
   } catch {
     // Ignore unsupported badge environments and transient platform failures.
+  }
+}
+
+function isPushSupported() {
+  if (typeof window === 'undefined') return false
+  return (
+    window.isSecureContext &&
+    'Notification' in window &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window
+  )
+}
+
+function decodeVapidKey(key) {
+  const base64 = key.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+  const binary = atob(padded)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+  return bytes
+}
+
+async function getCurrentPushSubscription() {
+  if (!isPushSupported()) return null
+  const registration = await navigator.serviceWorker.ready
+  return registration.pushManager.getSubscription()
+}
+
+async function syncPushStatus() {
+  notificationSupported.value = isPushSupported()
+  if (!notificationSupported.value) {
+    notificationPermission.value = 'default'
+    notificationEnabled.value = false
+    return
+  }
+
+  notificationPermission.value = Notification.permission
+  try {
+    const subscription = await getCurrentPushSubscription()
+    notificationEnabled.value = Boolean(subscription)
+  } catch {
+    notificationEnabled.value = false
+  }
+}
+
+async function attachSubscriptionToServer(subscription) {
+  await apiRequest('/api/notifications/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify({
+      subscription,
+      locale: navigator.language || localeCodeByLanguage[locale.value] || 'en-US',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      userAgent: navigator.userAgent || '',
+    }),
+  })
+}
+
+async function detachSubscriptionFromServer(endpoint = '') {
+  await apiRequest('/api/notifications/subscriptions', {
+    method: 'DELETE',
+    body: JSON.stringify({ endpoint }),
+  })
+}
+
+async function syncPushSubscriptionToServer() {
+  if (!isAuthenticated.value) return
+  if (!isPushSupported()) return
+  if (Notification.permission !== 'granted') return
+  if (!isPushConfigured.value) return
+
+  const subscription = await getCurrentPushSubscription()
+  if (!subscription) return
+  await attachSubscriptionToServer(subscription.toJSON())
+}
+
+async function enableReminderNotifications() {
+  if (notificationBusy.value) return
+  notificationBusy.value = true
+  errorMessage.value = ''
+
+  try {
+    if (!isPushSupported()) throw new Error('push notifications are not supported on this device/browser')
+    if (!isPushConfigured.value) throw new Error('web push is not configured on server')
+
+    const permission = await Notification.requestPermission()
+    notificationPermission.value = permission
+    if (permission !== 'granted') {
+      if (permission === 'denied') throw new Error('notification permission denied')
+      notificationEnabled.value = false
+      return
+    }
+
+    const registration = await navigator.serviceWorker.ready
+    let subscription = await registration.pushManager.getSubscription()
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: decodeVapidKey(WEB_PUSH_PUBLIC_KEY),
+      })
+    }
+
+    await attachSubscriptionToServer(subscription.toJSON())
+    notificationEnabled.value = true
+  } catch (error) {
+    errorMessage.value = translateError(error.message || 'notification permission denied')
+  } finally {
+    notificationBusy.value = false
+  }
+}
+
+async function disableReminderNotifications() {
+  if (notificationBusy.value) return
+  notificationBusy.value = true
+  errorMessage.value = ''
+
+  try {
+    if (!isPushSupported()) return
+    const subscription = await getCurrentPushSubscription()
+    if (subscription) {
+      await detachSubscriptionFromServer(subscription.endpoint)
+      await subscription.unsubscribe()
+    } else if (isAuthenticated.value) {
+      await detachSubscriptionFromServer('')
+    }
+    notificationEnabled.value = false
+  } catch (error) {
+    errorMessage.value = translateError(error.message || 'Request failed')
+  } finally {
+    notificationBusy.value = false
   }
 }
 
@@ -1086,6 +1301,10 @@ onMounted(async () => {
   await loadSessionUser()
   if (user.value) {
     await Promise.all([loadTodos(), loadLabels()])
+    await syncPushStatus()
+    await syncPushSubscriptionToServer()
+  } else {
+    await syncPushStatus()
   }
 })
 
@@ -1108,9 +1327,19 @@ watch([isAuthenticated, todayTodoCount], () => {
   void syncAppBadge()
 }, { immediate: true })
 
-watch(isAuthenticated, () => {
-  syncAuthScrollLock()
-}, { immediate: true })
+watch(
+  isAuthenticated,
+  async (authenticated) => {
+    syncAuthScrollLock()
+    if (authenticated) {
+      await syncPushStatus()
+      await syncPushSubscriptionToServer()
+      return
+    }
+    await syncPushStatus()
+  },
+  { immediate: true }
+)
 
 watch(rolloverTooltipText, async () => {
   if (!rolloverTooltipOpen.value) return
@@ -1201,6 +1430,8 @@ async function submitAuth() {
     authUsername.value = ''
     authPassword.value = ''
     await Promise.all([loadTodos(), loadLabels()])
+    await syncPushStatus()
+    await syncPushSubscriptionToServer()
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -1213,6 +1444,17 @@ async function logout() {
   authBusy.value = true
   errorMessage.value = ''
   try {
+    if (isPushSupported()) {
+      try {
+        const subscription = await getCurrentPushSubscription()
+        if (subscription) {
+          await detachSubscriptionFromServer(subscription.endpoint)
+        }
+      } catch {
+        // Ignore local cleanup errors during logout.
+      }
+    }
+
     await apiRequest('/api/auth', { method: 'DELETE' })
     user.value = null
     todos.value = []
@@ -1240,6 +1482,7 @@ async function logout() {
     profileUsernameCheckMessage.value = ''
     profileUsernameAvailable.value = null
     resetProfileFileInput()
+    notificationEnabled.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -1544,11 +1787,15 @@ function openDetail(todoId) {
   commentEditDraft.value = ''
 }
 
-function openSettings() {
+async function openSettings() {
   closeRolloverTooltip()
   profileOpen.value = false
   profileEditMode.value = false
   settingsOpen.value = true
+  await syncPushStatus()
+  if (isAuthenticated.value) {
+    await syncPushSubscriptionToServer()
+  }
 }
 
 function closeSettings() {
@@ -2283,6 +2530,31 @@ function formatTime(value) {
                 @click="setDefaultRollover(false)"
               >
                 false
+              </Button>
+            </div>
+          </div>
+
+          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
+            <div class="grid gap-1">
+              <p class="text-sm text-muted-foreground sm:text-base">{{ t('notificationReminder30m') }}</p>
+              <p class="text-xs text-muted-foreground">{{ notificationHelpText }}</p>
+            </div>
+            <div class="inline-flex w-full rounded-lg border bg-background p-1">
+              <Button
+                class="flex-1 text-sm sm:text-base"
+                :variant="notificationEnabled ? 'default' : 'ghost'"
+                :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !isPushConfigured || notificationPermission === 'denied'"
+                @click="enableReminderNotifications"
+              >
+                {{ t('notificationEnableAction') }}
+              </Button>
+              <Button
+                class="flex-1 text-sm sm:text-base"
+                :variant="notificationEnabled ? 'ghost' : 'default'"
+                :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !notificationEnabled"
+                @click="disableReminderNotifications"
+              >
+                {{ t('notificationDisableAction') }}
               </Button>
             </div>
           </div>
