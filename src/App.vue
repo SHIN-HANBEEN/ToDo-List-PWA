@@ -1062,6 +1062,20 @@ function getLabelDotStyleByColor(color) {
   return { backgroundColor: normalizeLabelColor(color) }
 }
 
+function getDetailStateDotStyle(todo) {
+  const color = normalizeLabelColor(todo?.labelColor, '#94a3b8')
+  if (todo?.done) {
+    return {
+      borderColor: color,
+      backgroundColor: color,
+    }
+  }
+  return {
+    borderColor: color,
+    backgroundColor: 'transparent',
+  }
+}
+
 function onNewTodoLabelChange(value) {
   newTodoLabelId.value = typeof value === 'string' ? value : LABEL_NONE_VALUE
 }
@@ -2805,7 +2819,7 @@ function formatTime(value) {
 
           <header class="detail-header">
             <div class="detail-title-wrap">
-              <span class="detail-state-dot" :class="{ 'detail-state-dot--done': detailTodo.done }">
+              <span class="detail-state-dot" :style="getDetailStateDotStyle(detailTodo)">
                 <Check v-if="detailTodo.done" class="h-3 w-3" />
               </span>
               <div class="detail-title-copy">

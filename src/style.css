@@ -675,6 +675,8 @@ body.auth-no-scroll {
   width: min(560px, 100%);
   border-radius: 18px;
   padding: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .detail-close-btn {
@@ -724,16 +726,12 @@ body.auth-no-scroll {
   height: 18px;
   margin-top: 3px;
   border-radius: 999px;
-  border: 1.5px solid #dd5345;
+  border: 1.5px solid #94a3b8;
+  background: transparent;
   display: grid;
   place-items: center;
   flex-shrink: 0;
   color: #ffffff;
-}
-
-.detail-state-dot--done {
-  border-color: #16a34a;
-  background: #16a34a;
 }
 
 .detail-title-copy {
