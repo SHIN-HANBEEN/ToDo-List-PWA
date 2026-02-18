@@ -5,6 +5,7 @@ import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Plus, Search, Sun, 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import {
@@ -2872,36 +2873,42 @@ function formatTime(value) {
           <Button type="submit" :disabled="busy">{{ t('comment') }}</Button>
         </form>
 
-        <ul class="comment-list" v-if="detailTodo.comments.length > 0">
-          <li v-for="comment in detailTodo.comments" :key="comment.id">
-            <div class="comment-content min-w-0 flex-1">
-              <p v-if="editingCommentId !== comment.id" class="comment-text">{{ comment.text }}</p>
-              <Textarea
-                v-else
-                ref="commentEditTextareaRef"
-                v-model="commentEditDraft"
-                class="comment-edit-textarea"
-                :placeholder="t('commentEditPlaceholder')"
-                @input="onCommentEditTextareaInput"
-              />
-              <small>{{ formatDateTime(comment.createdAt) }}</small>
-            </div>
-            <div class="comment-actions">
-              <template v-if="editingCommentId === comment.id">
-                <Button size="sm" @click="saveCommentEdit(detailTodo.id, comment.id)" :disabled="busy">
-                  {{ t('save') }}
-                </Button>
-                <Button variant="outline" size="sm" @click="cancelCommentEdit">{{ t('cancel') }}</Button>
-              </template>
-              <template v-else>
-                <Button variant="ghost" size="sm" @click="startCommentEdit(comment)">{{ t('edit') }}</Button>
-                <Button variant="ghost" size="sm" @click="deleteComment(detailTodo.id, comment.id)">
-                  {{ t('remove') }}
-                </Button>
-              </template>
-            </div>
-          </li>
-        </ul>
+        <component
+          :is="detailTodo.comments.length > 3 ? ScrollArea : 'div'"
+          v-if="detailTodo.comments.length > 0"
+          :class="detailTodo.comments.length > 3 ? 'comment-scroll-area' : null"
+        >
+          <ul class="comment-list" :class="{ 'comment-list--scroll': detailTodo.comments.length > 3 }">
+            <li v-for="comment in detailTodo.comments" :key="comment.id">
+              <div class="comment-content min-w-0 flex-1">
+                <p v-if="editingCommentId !== comment.id" class="comment-text">{{ comment.text }}</p>
+                <Textarea
+                  v-else
+                  ref="commentEditTextareaRef"
+                  v-model="commentEditDraft"
+                  class="comment-edit-textarea"
+                  :placeholder="t('commentEditPlaceholder')"
+                  @input="onCommentEditTextareaInput"
+                />
+                <small>{{ formatDateTime(comment.createdAt) }}</small>
+              </div>
+              <div class="comment-actions">
+                <template v-if="editingCommentId === comment.id">
+                  <Button size="sm" @click="saveCommentEdit(detailTodo.id, comment.id)" :disabled="busy">
+                    {{ t('save') }}
+                  </Button>
+                  <Button variant="outline" size="sm" @click="cancelCommentEdit">{{ t('cancel') }}</Button>
+                </template>
+                <template v-else>
+                  <Button variant="ghost" size="sm" @click="startCommentEdit(comment)">{{ t('edit') }}</Button>
+                  <Button variant="ghost" size="sm" @click="deleteComment(detailTodo.id, comment.id)">
+                    {{ t('remove') }}
+                  </Button>
+                </template>
+              </div>
+            </li>
+          </ul>
+        </component>
         <p v-else class="empty">{{ t('noComments') }}</p>
       </article>
     </section>

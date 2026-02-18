@@ -804,12 +804,23 @@ body.auth-no-scroll {
   resize: vertical;
 }
 
+.comment-scroll-area {
+  height: min(46vh, 320px);
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+}
+
 .comment-list {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
   gap: 6px;
+}
+
+.comment-list--scroll {
+  padding: 6px;
 }
 
 .comment-list li {
