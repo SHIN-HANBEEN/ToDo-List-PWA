@@ -65,11 +65,11 @@ const detailTodoId = ref(null)
 const detailEditMode = ref(false)
 const detailDueAtDraft = ref('')
 const detailLocationDraft = ref('')
-const detailLabelTextDraft = ref('')
-const detailLabelColorDraft = ref('#64748b')
+const detailTodoLabelId = ref(LABEL_NONE_VALUE)
 const detailRolloverDraft = ref(false)
 const editingCommentId = ref(null)
 const commentEditDraft = ref('')
+const commentEditTextareaRef = ref(null)
 const loading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
@@ -753,6 +753,12 @@ const selectedLabelForNewTodo = computed(() => {
   if (!Number.isFinite(id)) return null
   return labels.value.find((label) => label.id === id) || null
 })
+const selectedLabelForDetailTodo = computed(() => {
+  if (detailTodoLabelId.value === LABEL_NONE_VALUE) return null
+  const id = Number(detailTodoLabelId.value)
+  if (!Number.isFinite(id)) return null
+  return labels.value.find((label) => label.id === id) || null
+})
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
 const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
 const isPushConfigured = computed(() => WEB_PUSH_PUBLIC_KEY.length > 0)
@@ -1057,6 +1063,33 @@ function getLabelDotStyleByColor(color) {
 
 function onNewTodoLabelChange(value) {
   newTodoLabelId.value = typeof value === 'string' ? value : LABEL_NONE_VALUE
+}
+
+function onDetailTodoLabelChange(value) {
+  detailTodoLabelId.value = typeof value === 'string' ? value : LABEL_NONE_VALUE
+}
+
+function findDetailLabelId(todo) {
+  if (!todo?.labelText) return LABEL_NONE_VALUE
+  const byName = labels.value.find((label) => String(label.name || '') === String(todo.labelText || ''))
+  if (!byName) return LABEL_NONE_VALUE
+  return String(byName.id)
+}
+
+function resizeTextarea(target) {
+  const element =
+    target instanceof HTMLTextAreaElement
+      ? target
+      : target?.$el instanceof HTMLTextAreaElement
+        ? target.$el
+        : null
+  if (!element) return
+  element.style.height = 'auto'
+  element.style.height = `${element.scrollHeight}px`
+}
+
+function onCommentEditTextareaInput(event) {
+  resizeTextarea(event?.target)
 }
 
 function moveCalendarMonth(offset) {
@@ -1462,6 +1495,7 @@ async function logout() {
     labels.value = []
     commentDrafts.value = {}
     detailTodoId.value = null
+    detailTodoLabelId.value = LABEL_NONE_VALUE
     newTask.value = ''
     newDueAt.value = ''
     newLocation.value = ''
@@ -1665,14 +1699,16 @@ async function deleteComment(todoId, commentId) {
   }
 }
 
-function startDetailEdit() {
+async function startDetailEdit() {
   const target = detailTodo.value
   if (!target) return
+  if (labels.value.length === 0) {
+    await loadLabels()
+  }
   detailEditMode.value = true
   detailDueAtDraft.value = target.dueAt || ''
   detailLocationDraft.value = target.location || ''
-  detailLabelTextDraft.value = target.labelText || ''
-  detailLabelColorDraft.value = normalizeLabelColor(target.labelColor)
+  detailTodoLabelId.value = findDetailLabelId(target)
   detailRolloverDraft.value = Boolean(target.rolloverEnabled)
 }
 
@@ -1681,18 +1717,16 @@ function cancelDetailEdit() {
   const target = detailTodo.value
   detailDueAtDraft.value = target?.dueAt || ''
   detailLocationDraft.value = target?.location || ''
-  detailLabelTextDraft.value = target?.labelText || ''
-  detailLabelColorDraft.value = normalizeLabelColor(target?.labelColor)
+  detailTodoLabelId.value = findDetailLabelId(target)
   detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
 }
 
 async function saveDetailEdit() {
   const target = detailTodo.value
   if (!target || busy.value) return
-  if (detailLabelTextDraft.value.trim() && !isValidLabelColor(detailLabelColorDraft.value)) {
-    errorMessage.value = translateError('labelColor must be a valid hex color')
-    return
-  }
+  const selectedLabel = selectedLabelForDetailTodo.value
+  const nextLabelText = selectedLabel?.name || ''
+  const nextLabelColor = normalizeLabelColor(selectedLabel?.color)
   busy.value = true
   errorMessage.value = ''
   const previous = {
@@ -1705,8 +1739,8 @@ async function saveDetailEdit() {
 
   target.dueAt = detailDueAtDraft.value || null
   target.location = detailLocationDraft.value.trim()
-  target.labelText = detailLabelTextDraft.value.trim()
-  target.labelColor = normalizeLabelColor(detailLabelColorDraft.value)
+  target.labelText = nextLabelText
+  target.labelColor = nextLabelColor
   target.rolloverEnabled = detailRolloverDraft.value
 
   try {
@@ -1716,8 +1750,8 @@ async function saveDetailEdit() {
         id: target.id,
         dueAt: detailDueAtDraft.value || null,
         location: detailLocationDraft.value,
-        labelText: detailLabelTextDraft.value.trim(),
-        labelColor: normalizeLabelColor(detailLabelColorDraft.value),
+        labelText: nextLabelText,
+        labelColor: nextLabelColor,
         rolloverEnabled: detailRolloverDraft.value,
       }),
     })
@@ -1737,6 +1771,7 @@ async function saveDetailEdit() {
 function startCommentEdit(comment) {
   editingCommentId.value = comment.id
   commentEditDraft.value = comment.text
+  nextTick(() => resizeTextarea(commentEditTextareaRef.value))
 }
 
 function cancelCommentEdit() {
@@ -1781,8 +1816,7 @@ function openDetail(todoId) {
   detailEditMode.value = false
   detailDueAtDraft.value = target?.dueAt || ''
   detailLocationDraft.value = target?.location || ''
-  detailLabelTextDraft.value = target?.labelText || ''
-  detailLabelColorDraft.value = normalizeLabelColor(target?.labelColor)
+  detailTodoLabelId.value = findDetailLabelId(target)
   detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
   editingCommentId.value = null
   commentEditDraft.value = ''
@@ -1862,6 +1896,7 @@ async function createLabel() {
     const next = payload.label
     labels.value = [next, ...labels.value.filter((item) => item.id !== next.id)]
     newTodoLabelId.value = String(next.id)
+    if (detailEditMode.value) detailTodoLabelId.value = String(next.id)
     newLabelName.value = ''
     newLabelDraftColor.value = '#64748b'
   } catch (error) {
@@ -1947,6 +1982,7 @@ function closeAddTodo() {
 function closeDetail() {
   detailTodoId.value = null
   detailEditMode.value = false
+  detailTodoLabelId.value = LABEL_NONE_VALUE
   editingCommentId.value = null
   commentEditDraft.value = ''
 }
@@ -2751,18 +2787,26 @@ function formatTime(value) {
             <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
             <Input v-model="detailLocationDraft" type="text" :placeholder="t('locationPlaceholder')" />
           </div>
-          <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
-              <Input v-model="detailLabelTextDraft" type="text" :placeholder="t('labelPlaceholder')" />
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
+            <div v-if="labelOptions.length > 0" class="label-select-row">
+              <Select :model-value="detailTodoLabelId" @update:model-value="onDetailTodoLabelChange">
+                <SelectTrigger class="w-full">
+                  <SelectValue :placeholder="t('labelSelectPrompt')" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="LABEL_NONE_VALUE">{{ t('labelSelectPrompt') }}</SelectItem>
+                  <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
+                    <span class="label-option-item">
+                      <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
+                      {{ label.name }}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
             </div>
-            <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('labelColor') }}</p>
-              <div class="label-color-field">
-                <input v-model="detailLabelColorDraft" class="label-color-input" type="color" />
-                <Input v-model="detailLabelColorDraft" class="label-color-code" type="text" inputmode="text" />
-              </div>
-            </div>
+            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
           </div>
           <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
             <input v-model="detailRolloverDraft" type="checkbox" class="mt-1" />
@@ -2800,9 +2844,11 @@ function formatTime(value) {
               <p v-if="editingCommentId !== comment.id" class="comment-text">{{ comment.text }}</p>
               <Textarea
                 v-else
+                ref="commentEditTextareaRef"
                 v-model="commentEditDraft"
                 class="comment-edit-textarea"
                 :placeholder="t('commentEditPlaceholder')"
+                @input="onCommentEditTextareaInput"
               />
               <small>{{ formatDateTime(comment.createdAt) }}</small>
             </div>
