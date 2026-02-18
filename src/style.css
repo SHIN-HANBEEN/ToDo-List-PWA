@@ -636,6 +636,201 @@ body.auth-no-scroll {
   flex-wrap: wrap;
 }
 
+.detail-modal {
+  width: min(560px, 100%);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.detail-close-btn {
+  top: 8px;
+  right: 8px;
+}
+
+.detail-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 44px);
+  font-size: 0.78rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.detail-breadcrumb-sep {
+  opacity: 0.7;
+}
+
+.detail-breadcrumb-current {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.detail-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.detail-state-dot {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  border-radius: 999px;
+  border: 1.5px solid #dd5345;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+
+.detail-state-dot--done {
+  border-color: #16a34a;
+  background: #16a34a;
+}
+
+.detail-title-copy {
+  min-width: 0;
+}
+
+.detail-title-copy h2 {
+  margin: 0;
+  font-size: 1.32rem;
+  line-height: 1.32;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detail-title-sub {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.detail-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.detail-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  box-shadow: none;
+}
+
+.detail-edit-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 10px;
+  background: hsl(var(--muted) / 0.26);
+}
+
+.detail-meta-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  overflow: hidden;
+  background: hsl(var(--muted) / 0.24);
+}
+
+.detail-meta-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.detail-meta-item:last-child {
+  border-bottom: 0;
+}
+
+.detail-meta-icon {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: hsl(var(--muted-foreground));
+}
+
+.detail-meta-content {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.detail-meta-label {
+  margin: 0;
+  font-size: 0.72rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.detail-meta-value {
+  margin: 0;
+  font-size: 0.9rem;
+  color: hsl(var(--foreground));
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detail-meta-value--truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-comment-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-comment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-comment-head p {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.detail-comment-head span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  font-size: 0.74rem;
+  color: hsl(var(--muted-foreground));
+}
+
 .modal-wrap {
   position: fixed;
   inset: 0;
@@ -802,6 +997,29 @@ body.auth-no-scroll {
 .comment-textarea {
   max-width: 100%;
   resize: vertical;
+}
+
+.detail-comment-form {
+  gap: 6px;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 6px;
+  background: hsl(var(--background));
+}
+
+.detail-comment-input {
+  min-height: 40px;
+  max-height: 120px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  resize: vertical;
+}
+
+.detail-comment-submit {
+  align-self: stretch;
 }
 
 .comment-scroll-area {
@@ -1027,6 +1245,19 @@ body.auth-no-scroll {
   .modal-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .detail-modal {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .detail-title-copy h2 {
+    font-size: 1.1rem;
+  }
+
+  .detail-comment-form {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .comment-list li {

@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, CircleHelp, List, LogOut, Menu, Moon, Pencil, Plus, Search, Sun, UserRound, X } from 'lucide-vue-next'
+import { CalendarDays, Check, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pencil, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -2784,141 +2784,255 @@ function formatTime(value) {
     </section>
 
     <section v-if="detailTodo" class="modal-wrap" @click.self="closeDetail">
-      <article class="modal">
+      <article class="modal detail-modal">
         <Button
           variant="ghost"
           size="sm"
-          class="modal-close"
+          class="modal-close detail-close-btn"
           @click="closeDetail"
           :aria-label="t('close')"
         >
           <X class="h-4 w-4" />
         </Button>
-        <header class="modal-header">
-          <h2>{{ detailTodo.text }}</h2>
-          <div class="flex flex-wrap gap-2">
-            <template v-if="detailEditMode">
-              <Button size="sm" @click="saveDetailEdit" :disabled="busy">{{ t('save') }}</Button>
-              <Button variant="outline" size="sm" @click="cancelDetailEdit">{{ t('cancel') }}</Button>
-            </template>
-            <Button
-              v-else
-              variant="ghost"
-              size="sm"
-              class="h-9 w-9 border-0 p-0 shadow-none"
-              :aria-label="t('edit')"
-              @click="startDetailEdit"
-            >
-              <Pencil class="h-4 w-4" />
-            </Button>
-          </div>
-        </header>
-        <p class="created-at">{{ t('created') }}: {{ formatDateTime(detailTodo.createdAt) }}</p>
 
-        <template v-if="detailEditMode">
-          <p class="text-sm font-medium">{{ t('editTodoMeta') }}</p>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
-            <DateTimePicker
-              v-model="detailDueAtDraft"
-              :locale="localeCodeByLanguage[locale] || 'en-US'"
-              :placeholder="t('dueAtPlaceholder')"
-              :clear-label="t('pickerClear')"
-              :done-label="t('pickerDone')"
-            />
+        <div class="detail-shell">
+          <div class="detail-breadcrumb">
+            <List class="h-3.5 w-3.5" />
+            <span>{{ t('listView') }}</span>
+            <span class="detail-breadcrumb-sep">›</span>
+            <span class="detail-breadcrumb-current">{{ t('detail') }}</span>
           </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
-            <Input v-model="detailLocationDraft" type="text" :placeholder="t('locationPlaceholder')" />
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
-            <div v-if="labelOptions.length > 0" class="label-select-row">
-              <Select :model-value="detailTodoLabelId" @update:model-value="onDetailTodoLabelChange">
-                <SelectTrigger class="w-full">
-                  <SelectValue :placeholder="t('labelSelectPrompt')" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="LABEL_NONE_VALUE">{{ t('labelSelectPrompt') }}</SelectItem>
-                  <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
-                    <span class="label-option-item">
-                      <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
-                      {{ label.name }}
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
+
+          <header class="detail-header">
+            <div class="detail-title-wrap">
+              <span class="detail-state-dot" :class="{ 'detail-state-dot--done': detailTodo.done }">
+                <Check v-if="detailTodo.done" class="h-3 w-3" />
+              </span>
+              <div class="detail-title-copy">
+                <h2>{{ detailTodo.text }}</h2>
+                <p class="detail-title-sub">{{ detailTodo.done ? t('done') : t('active') }}</p>
+              </div>
             </div>
-            <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
-          </div>
-          <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
-            <input v-model="detailRolloverDraft" type="checkbox" class="mt-1" />
-            <span class="space-y-0.5">
-              <span class="block font-medium">{{ t('rolloverOption') }}</span>
-              <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
-            </span>
-          </label>
-        </template>
-        <template v-else>
-          <p class="created-at">{{ t('due') }}: {{ formatDateTime(detailTodo.dueAt) }}</p>
-          <p class="created-at">{{ t('place') }}: {{ detailTodo.location || '-' }}</p>
-          <p v-if="detailTodo.labelText" class="created-at detail-label-row">
-            {{ t('label') }}:
-            <span class="todo-label-badge" :style="getLabelBadgeStyle(detailTodo)">
-              <span class="todo-label-dot" :style="getLabelDotStyle(detailTodo)" />
-              {{ detailTodo.labelText }}
-            </span>
-          </p>
-          <p v-if="detailTodo.rolloverEnabled" class="created-at">{{ t('rolloverEnabled') }}</p>
-        </template>
 
-        <form class="comment-form" @submit.prevent="addComment(detailTodo.id)">
-          <Textarea
-            v-model="commentDrafts[detailTodo.id]"
-            class="comment-textarea"
-            :placeholder="t('commentPlaceholder')"
-          />
-          <Button type="submit" :disabled="busy">{{ t('comment') }}</Button>
-        </form>
+            <div class="detail-toolbar">
+              <template v-if="detailEditMode">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  class="detail-icon-btn"
+                  :aria-label="t('save')"
+                  :disabled="busy"
+                  @click="saveDetailEdit"
+                >
+                  <Check class="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="detail-icon-btn"
+                  :aria-label="t('cancel')"
+                  @click="cancelDetailEdit"
+                >
+                  <X class="h-4 w-4" />
+                </Button>
+              </template>
+              <Button
+                v-else
+                variant="ghost"
+                size="sm"
+                class="detail-icon-btn"
+                :aria-label="t('edit')"
+                @click="startDetailEdit"
+              >
+                <Pencil class="h-4 w-4" />
+              </Button>
+            </div>
+          </header>
 
-        <component
-          :is="detailTodo.comments.length > 3 ? ScrollArea : 'div'"
-          v-if="detailTodo.comments.length > 0"
-          :class="detailTodo.comments.length > 3 ? 'comment-scroll-area' : null"
-        >
-          <ul class="comment-list" :class="{ 'comment-list--scroll': detailTodo.comments.length > 3 }">
-            <li v-for="comment in detailTodo.comments" :key="comment.id">
-              <div class="comment-content min-w-0 flex-1">
-                <p v-if="editingCommentId !== comment.id" class="comment-text">{{ comment.text }}</p>
-                <Textarea
-                  v-else
-                  ref="commentEditTextareaRef"
-                  v-model="commentEditDraft"
-                  class="comment-edit-textarea"
-                  :placeholder="t('commentEditPlaceholder')"
-                  @input="onCommentEditTextareaInput"
+          <template v-if="detailEditMode">
+            <div class="detail-edit-panel">
+              <p class="text-sm font-medium">{{ t('editTodoMeta') }}</p>
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
+                <DateTimePicker
+                  v-model="detailDueAtDraft"
+                  :locale="localeCodeByLanguage[locale] || 'en-US'"
+                  :placeholder="t('dueAtPlaceholder')"
+                  :clear-label="t('pickerClear')"
+                  :done-label="t('pickerDone')"
                 />
-                <small>{{ formatDateTime(comment.createdAt) }}</small>
               </div>
-              <div class="comment-actions">
-                <template v-if="editingCommentId === comment.id">
-                  <Button size="sm" @click="saveCommentEdit(detailTodo.id, comment.id)" :disabled="busy">
-                    {{ t('save') }}
-                  </Button>
-                  <Button variant="outline" size="sm" @click="cancelCommentEdit">{{ t('cancel') }}</Button>
-                </template>
-                <template v-else>
-                  <Button variant="ghost" size="sm" @click="startCommentEdit(comment)">{{ t('edit') }}</Button>
-                  <Button variant="ghost" size="sm" @click="deleteComment(detailTodo.id, comment.id)">
-                    {{ t('remove') }}
-                  </Button>
-                </template>
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
+                <Input v-model="detailLocationDraft" type="text" :placeholder="t('locationPlaceholder')" />
               </div>
-            </li>
-          </ul>
-        </component>
-        <p v-else class="empty">{{ t('noComments') }}</p>
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
+                <div v-if="labelOptions.length > 0" class="label-select-row">
+                  <Select :model-value="detailTodoLabelId" @update:model-value="onDetailTodoLabelChange">
+                    <SelectTrigger class="w-full">
+                      <SelectValue :placeholder="t('labelSelectPrompt')" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem :value="LABEL_NONE_VALUE">{{ t('labelSelectPrompt') }}</SelectItem>
+                      <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
+                        <span class="label-option-item">
+                          <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
+                          {{ label.name }}
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
+                </div>
+                <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
+              </div>
+              <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <input v-model="detailRolloverDraft" type="checkbox" class="mt-1" />
+                <span class="space-y-0.5">
+                  <span class="block font-medium">{{ t('rolloverOption') }}</span>
+                  <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
+                </span>
+              </label>
+            </div>
+          </template>
+          <template v-else>
+            <ul class="detail-meta-list">
+              <li class="detail-meta-item">
+                <CalendarDays class="detail-meta-icon" />
+                <div class="detail-meta-content">
+                  <p class="detail-meta-label">{{ t('due') }}</p>
+                  <p class="detail-meta-value">{{ formatDateTime(detailTodo.dueAt) }}</p>
+                </div>
+              </li>
+              <li v-if="detailTodo.labelText" class="detail-meta-item">
+                <Tag class="detail-meta-icon" />
+                <div class="detail-meta-content">
+                  <p class="detail-meta-label">{{ t('label') }}</p>
+                  <div class="detail-meta-value">
+                    <span class="todo-label-badge" :style="getLabelBadgeStyle(detailTodo)">
+                      <span class="todo-label-dot" :style="getLabelDotStyle(detailTodo)" />
+                      {{ detailTodo.labelText }}
+                    </span>
+                  </div>
+                </div>
+              </li>
+              <li class="detail-meta-item">
+                <MapPin class="detail-meta-icon" />
+                <div class="detail-meta-content">
+                  <p class="detail-meta-label">{{ t('place') }}</p>
+                  <p class="detail-meta-value detail-meta-value--truncate">{{ detailTodo.location || '-' }}</p>
+                </div>
+              </li>
+              <li class="detail-meta-item">
+                <Clock3 class="detail-meta-icon" />
+                <div class="detail-meta-content">
+                  <p class="detail-meta-label">{{ t('created') }}</p>
+                  <p class="detail-meta-value">{{ formatDateTime(detailTodo.createdAt) }}</p>
+                </div>
+              </li>
+              <li v-if="detailTodo.rolloverEnabled" class="detail-meta-item">
+                <RotateCcw class="detail-meta-icon" />
+                <div class="detail-meta-content">
+                  <p class="detail-meta-label">{{ t('rolloverOption') }}</p>
+                  <p class="detail-meta-value">{{ t('rolloverEnabled') }}</p>
+                </div>
+              </li>
+            </ul>
+          </template>
+
+          <section class="detail-comment-panel">
+            <div class="detail-comment-head">
+              <p>{{ t('comment') }}</p>
+              <span>{{ detailTodo.comments.length }}</span>
+            </div>
+
+            <form class="comment-form detail-comment-form" @submit.prevent="addComment(detailTodo.id)">
+              <Textarea
+                v-model="commentDrafts[detailTodo.id]"
+                class="comment-textarea detail-comment-input"
+                :placeholder="t('commentPlaceholder')"
+              />
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                class="detail-icon-btn detail-comment-submit"
+                :aria-label="t('comment')"
+                :disabled="busy"
+              >
+                <SendHorizontal class="h-4 w-4" />
+              </Button>
+            </form>
+
+            <component
+              :is="detailTodo.comments.length > 3 ? ScrollArea : 'div'"
+              v-if="detailTodo.comments.length > 0"
+              :class="detailTodo.comments.length > 3 ? 'comment-scroll-area' : null"
+            >
+              <ul class="comment-list" :class="{ 'comment-list--scroll': detailTodo.comments.length > 3 }">
+                <li v-for="comment in detailTodo.comments" :key="comment.id">
+                  <div class="comment-content min-w-0 flex-1">
+                    <p v-if="editingCommentId !== comment.id" class="comment-text">{{ comment.text }}</p>
+                    <Textarea
+                      v-else
+                      ref="commentEditTextareaRef"
+                      v-model="commentEditDraft"
+                      class="comment-edit-textarea"
+                      :placeholder="t('commentEditPlaceholder')"
+                      @input="onCommentEditTextareaInput"
+                    />
+                    <small>{{ formatDateTime(comment.createdAt) }}</small>
+                  </div>
+                  <div class="comment-actions">
+                    <template v-if="editingCommentId === comment.id">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        class="detail-icon-btn"
+                        :aria-label="t('save')"
+                        :disabled="busy"
+                        @click="saveCommentEdit(detailTodo.id, comment.id)"
+                      >
+                        <Check class="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="detail-icon-btn"
+                        :aria-label="t('cancel')"
+                        @click="cancelCommentEdit"
+                      >
+                        <X class="h-4 w-4" />
+                      </Button>
+                    </template>
+                    <template v-else>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="detail-icon-btn"
+                        :aria-label="t('edit')"
+                        @click="startCommentEdit(comment)"
+                      >
+                        <Pencil class="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="detail-icon-btn"
+                        :aria-label="t('remove')"
+                        @click="deleteComment(detailTodo.id, comment.id)"
+                      >
+                        <Trash2 class="h-4 w-4" />
+                      </Button>
+                    </template>
+                  </div>
+                </li>
+              </ul>
+            </component>
+            <p v-else class="empty">{{ t('noComments') }}</p>
+          </section>
+        </div>
       </article>
     </section>
   </main>
