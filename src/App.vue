@@ -760,6 +760,14 @@ const selectedLabelForDetailTodo = computed(() => {
   if (!Number.isFinite(id)) return null
   return labels.value.find((label) => label.id === id) || null
 })
+const isAnyModalOpen = computed(() =>
+  profileOpen.value ||
+  mobileHeaderOpen.value ||
+  settingsOpen.value ||
+  addTodoOpen.value ||
+  addLabelOpen.value ||
+  Boolean(detailTodo.value)
+)
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
 const rolloverTooltipText = computed(() => rolloverTooltipMessages[locale.value] || rolloverTooltipMessages.en)
 const isPushConfigured = computed(() => WEB_PUSH_PUBLIC_KEY.length > 0)
@@ -775,6 +783,13 @@ function syncAuthScrollLock() {
   const shouldLock = !isAuthenticated.value
   document.documentElement.classList.toggle('auth-no-scroll', shouldLock)
   document.body.classList.toggle('auth-no-scroll', shouldLock)
+}
+
+function syncModalInteractionLock() {
+  if (typeof document === 'undefined') return
+  const shouldLock = isAnyModalOpen.value
+  document.documentElement.classList.toggle('modal-open-lock', shouldLock)
+  document.body.classList.toggle('modal-open-lock', shouldLock)
 }
 
 async function syncAppBadge() {
@@ -1385,7 +1400,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (typeof document !== 'undefined') {
     document.documentElement.classList.remove('auth-no-scroll')
+    document.documentElement.classList.remove('modal-open-lock')
     document.body.classList.remove('auth-no-scroll')
+    document.body.classList.remove('modal-open-lock')
   }
   window.removeEventListener('resize', handleTooltipViewportChange)
   window.removeEventListener('scroll', handleTooltipViewportChange, true)
@@ -1411,6 +1428,14 @@ watch(
       return
     }
     await syncPushStatus()
+  },
+  { immediate: true }
+)
+
+watch(
+  isAnyModalOpen,
+  () => {
+    syncModalInteractionLock()
   },
   { immediate: true }
 )
@@ -2060,10 +2085,15 @@ function formatTime(value) {
 
 <template>
   <main class="page" :class="{ 'page--auth': !isAuthenticated }">
-    <Card
-      class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
+    <div
+      :inert="isAnyModalOpen"
+      :aria-hidden="isAnyModalOpen ? 'true' : null"
+      :class="{ 'app-shell--modal-lock': isAnyModalOpen }"
     >
-      <CardContent :class="isAuthenticated ? 'space-y-4 px-3 pb-3 pt-3' : 'auth-card-content'">
+      <Card
+        class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
+      >
+        <CardContent :class="isAuthenticated ? 'space-y-4 px-3 pb-3 pt-3' : 'auth-card-content'">
         <section
           v-if="!isAuthenticated"
           class="auth-centered mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"
@@ -2335,8 +2365,9 @@ function formatTime(value) {
         </template>
 
         <p v-if="errorMessage" class="text-sm font-semibold text-rose-600">{{ errorMessage }}</p>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
 
     <section v-if="profileOpen && isAuthenticated" class="modal-wrap" @click.self="closeProfile">
       <article class="modal profile-modal">

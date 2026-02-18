@@ -112,6 +112,18 @@ body.auth-no-scroll {
   overscroll-behavior: none;
 }
 
+html.modal-open-lock,
+body.modal-open-lock {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.app-shell--modal-lock {
+  pointer-events: none;
+  user-select: none;
+}
+
 .page {
   min-height: 100vh;
   display: block;
