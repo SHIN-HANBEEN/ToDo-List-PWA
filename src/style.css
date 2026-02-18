@@ -689,8 +689,6 @@ body.modal-open-lock {
   padding: 12px;
   margin-top: 8px;
   margin-bottom: 8px;
-  overflow: hidden;
-  --detail-shell-max-height: calc(min(88vh, 760px) - 24px);
 }
 
 .detail-close-btn {
@@ -701,9 +699,6 @@ body.modal-open-lock {
 .detail-shell {
   display: grid;
   gap: 10px;
-  max-height: var(--detail-shell-max-height);
-  overflow-y: auto;
-  padding-right: 2px;
 }
 
 .detail-breadcrumb {
@@ -1301,7 +1296,6 @@ body.modal-open-lock {
   .detail-modal {
     padding: 10px;
     border-radius: 14px;
-    --detail-shell-max-height: calc(min(88vh, 760px) - 20px);
   }
 
   .detail-title-copy h2 {
