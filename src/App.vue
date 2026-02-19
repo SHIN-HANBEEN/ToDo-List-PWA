@@ -1163,7 +1163,6 @@ function getLabelBadgeStyle(todo) {
 function getCalendarItemStyle(todo) {
   const color = normalizeLabelColor(todo.labelColor)
   return {
-    borderLeft: `3px solid ${color}`,
     backgroundColor: hexToRgba(color, 0.1),
   }
 }
@@ -2496,12 +2495,9 @@ function formatTime(value) {
                         :style="getCalendarItemStyle(todo)"
                         @click="openDetail(todo.id)"
                       >
-                        <span class="calendar-item-main">
-                          <span v-if="todo.labelText" class="todo-label-dot" :style="getLabelDotStyle(todo)" />
-                          <span :title="getTodoTitle(todo)">{{ truncateText(getTodoTitle(todo), 7) }}</span>
+                        <span class="calendar-item-main" :title="getTodoTitle(todo)">
+                          {{ truncateText(getTodoTitle(todo), 7) }}
                         </span>
-                        <small class="calendar-item-time">{{ formatTime(todo.dueAt) }}</small>
-                        <small v-if="todo.labelText" class="calendar-item-label">{{ todo.labelText }}</small>
                       </button>
                     </li>
                     <li v-if="cell.items.length > 3" class="calendar-more">+{{ cell.items.length - 3 }}</li>
