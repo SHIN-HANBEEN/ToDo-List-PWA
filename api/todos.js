@@ -20,6 +20,19 @@ function parseLabelColor(value) {
   return trimmed.toLowerCase()
 }
 
+const TODO_STATUSES = new Set(['waiting', 'active', 'done'])
+
+function parseTodoStatus(value) {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toLowerCase()
+  if (!TODO_STATUSES.has(normalized)) return null
+  return normalized
+}
+
+function statusToDone(status) {
+  return status === 'done'
+}
+
 export default async function handler(req, res) {
   try {
     await ensureSchema()
@@ -46,7 +59,7 @@ export default async function handler(req, res) {
       // todo/comment를 분리 조회 후 메모리에서 중첩 구조로 조합.
       const todosResult = await pool.query(
         `
-          SELECT id, text, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at
+          SELECT id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at
           FROM todos
           WHERE user_id = $1
           ORDER BY position ASC, created_at DESC;
@@ -92,17 +105,20 @@ export default async function handler(req, res) {
       const parsedLabelColor = parseLabelColor(body.labelColor || '#64748b')
       const labelColor = labelText ? parsedLabelColor : '#64748b'
       const rolloverEnabled = Boolean(body.rolloverEnabled)
+      const hasStatus = Object.prototype.hasOwnProperty.call(body, 'status')
+      const status = hasStatus ? parseTodoStatus(body.status) : 'active'
       if (!text) return res.status(400).json({ error: 'text is required' })
       if (body.dueAt && !dueAt) return res.status(400).json({ error: 'dueAt must be a valid datetime' })
       if (!labelColor) return res.status(400).json({ error: 'labelColor must be a valid hex color' })
+      if (!status) return res.status(400).json({ error: 'status must be one of waiting, active, done' })
 
       const insertResult = await pool.query(
         `
-          INSERT INTO todos (user_id, text, due_at, location, label_text, label_color, rollover_enabled, position)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
-          RETURNING id, text, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;
+          INSERT INTO todos (user_id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
+          RETURNING id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;
         `,
-        [user.id, text, dueAt, location, labelText, labelColor, rolloverEnabled]
+        [user.id, text, status, statusToDone(status), dueAt, location, labelText, labelColor, rolloverEnabled]
       )
 
       return res.status(201).json({ todo: normalizeTodoRow(insertResult.rows[0]) })
@@ -142,9 +158,25 @@ export default async function handler(req, res) {
       const values = []
       let valueIndex = 1
 
-      if (typeof body.done === 'boolean') {
+      const parsedStatus = parseTodoStatus(body.status)
+      const hasStatus = typeof body.status === 'string'
+      if (hasStatus && !parsedStatus) {
+        return res.status(400).json({ error: 'status must be one of waiting, active, done' })
+      }
+
+      if (hasStatus) {
+        updates.push(`status = $${valueIndex}`)
+        values.push(parsedStatus)
+        valueIndex += 1
+        updates.push(`done = $${valueIndex}`)
+        values.push(statusToDone(parsedStatus))
+        valueIndex += 1
+      } else if (typeof body.done === 'boolean') {
         updates.push(`done = $${valueIndex}`)
         values.push(body.done)
+        valueIndex += 1
+        updates.push(`status = $${valueIndex}`)
+        values.push(body.done ? 'done' : 'active')
         valueIndex += 1
       }
 
@@ -196,7 +228,7 @@ export default async function handler(req, res) {
       const result = await pool.query(
         `UPDATE todos SET ${updates.join(', ')} WHERE id = $${valueIndex} AND user_id = $${
           valueIndex + 1
-        } RETURNING id, text, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;`,
+        } RETURNING id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;`,
         values
       )
 

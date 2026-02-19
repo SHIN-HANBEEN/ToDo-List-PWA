@@ -4,7 +4,7 @@ let pool
 let schemaPromise
 
 function getConnectionString() {
-  // Vercel/Neon 기본 환경 변수를 우선 사용하고, 로컬 개발용으로 DATABASE_URL도 허용.
+  // Prefer Vercel/Neon env vars first, and allow DATABASE_URL for local development.
   return (
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
@@ -14,7 +14,7 @@ function getConnectionString() {
 }
 
 export function getPool() {
-  // 서버리스 런타임 인스턴스 내에서는 풀을 재사용.
+  // Reuse the pool in a warm serverless instance.
   if (pool) return pool
 
   const connectionString = getConnectionString()
@@ -31,13 +31,13 @@ export function getPool() {
 }
 
 export async function ensureSchema() {
-  // 웜 런타임 동안 DDL을 한 번만 실행해 CREATE TABLE 반복 비용을 방지.
+  // Run schema DDL once per warm runtime to avoid repeated CREATE TABLE cost.
   if (schemaPromise) return schemaPromise
 
   schemaPromise = (async () => {
     const client = await getPool().connect()
     try {
-      // users는 계정, sessions는 브라우저 쿠키 토큰을 사용자와 매핑.
+      // users stores account data, sessions maps browser cookie tokens to users.
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id BIGSERIAL PRIMARY KEY,
@@ -54,6 +54,7 @@ export async function ensureSchema() {
           id BIGSERIAL PRIMARY KEY,
           user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
           text TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'active',
           done BOOLEAN NOT NULL DEFAULT FALSE,
           due_at TIMESTAMPTZ,
           location TEXT NOT NULL DEFAULT '',
@@ -121,12 +122,26 @@ export async function ensureSchema() {
         );
       `)
 
-      // 기존 배포본 호환을 위한 안전한 마이그레이션.
+      // Safe migrations for compatibility with already-deployed schemas.
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;')
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS location TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_text TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_color TEXT NOT NULL DEFAULT '#64748b';")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';")
+      await client.query(`
+        UPDATE todos
+        SET status = CASE
+          WHEN done = TRUE THEN 'done'
+          WHEN status IS NULL OR lower(btrim(status)) NOT IN ('waiting', 'active', 'done') THEN 'active'
+          ELSE lower(btrim(status))
+        END;
+      `)
+      await client.query(`
+        UPDATE todos
+        SET done = (status = 'done')
+        WHERE done IS DISTINCT FROM (status = 'done');
+      `)
       await client.query(`
         UPDATE todos
         SET label_color = '#64748b'
@@ -174,7 +189,7 @@ export async function ensureSchema() {
         WHERE user_agent IS NULL;
       `)
 
-      // 자주 사용하는 조회/정렬 패턴 기준 인덱스.
+      // Indexes for frequent query/sort patterns.
       await client.query(
         'CREATE INDEX IF NOT EXISTS idx_todos_position_created ON todos(position, created_at DESC);'
       )
@@ -211,11 +226,19 @@ export async function ensureSchema() {
 }
 
 export function normalizeTodoRow(row) {
-  // Vue 클라이언트가 기대하는 응답 형태로 고정.
+  const rawStatus = typeof row.status === 'string' ? row.status.trim().toLowerCase() : ''
+  const status =
+    rawStatus === 'waiting' || rawStatus === 'active' || rawStatus === 'done'
+      ? rawStatus
+      : row.done
+        ? 'done'
+        : 'active'
+
   return {
     id: Number(row.id),
     text: row.text,
-    done: row.done,
+    status,
+    done: status === 'done',
     dueAt: row.due_at,
     location: row.location || '',
     labelText: row.label_text || '',
@@ -244,3 +267,4 @@ export function normalizeLabelRow(row) {
     createdAt: row.created_at,
   }
 }
+

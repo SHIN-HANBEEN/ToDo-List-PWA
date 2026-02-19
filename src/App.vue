@@ -140,6 +140,7 @@ const messages = {
     all: '전체',
     status: '상태',
     searchPlaceholder: '할 일을 검색하세요',
+    waiting: '대기',
     active: '진행중',
     done: '완료',
     loading: '불러오는 중...',
@@ -229,6 +230,7 @@ const messages = {
     all: 'All',
     status: 'Status',
     searchPlaceholder: 'Search tasks',
+    waiting: 'Waiting',
     active: 'Active',
     done: 'Done',
     loading: 'Loading...',
@@ -318,6 +320,7 @@ const messages = {
     all: '全部',
     status: '状态',
     searchPlaceholder: '搜索任务',
+    waiting: '待处理',
     active: '进行中',
     done: '已完成',
     loading: '加载中...',
@@ -407,6 +410,7 @@ const messages = {
     all: 'すべて',
     status: 'ステータス',
     searchPlaceholder: 'タスクを検索',
+    waiting: '待機',
     active: '進行中',
     done: '完了',
     loading: '読み込み中...',
@@ -596,6 +600,12 @@ const errorMessages = {
     zh: '没有可更新的有效字段。',
     ja: '更新できる有効な項目がありません。',
   },
+  'status must be one of waiting, active, done': {
+    ko: '상태는 대기, 진행중, 완료 중 하나여야 합니다.',
+    en: 'Status must be one of waiting, active, done.',
+    zh: '状态必须是 waiting、active、done 之一。',
+    ja: 'ステータスは waiting / active / done のいずれかである必要があります。',
+  },
   'todo not found': {
     ko: '할 일을 찾을 수 없습니다.',
     en: 'Todo not found.',
@@ -635,12 +645,42 @@ const rolloverTooltipMessages = {
   zh: 'If a schedule is not finished on time, it automatically rolls over to the next day.',
   ja: 'If a schedule is not finished on time, it automatically rolls over to the next day.',
 }
+const TODO_STATUS_WAITING = 'waiting'
+const TODO_STATUS_ACTIVE = 'active'
+const TODO_STATUS_DONE = 'done'
+
+function normalizeTodoStatus(rawStatus, fallbackDone = false) {
+  const normalized = typeof rawStatus === 'string' ? rawStatus.trim().toLowerCase() : ''
+  if (normalized === TODO_STATUS_WAITING) return TODO_STATUS_WAITING
+  if (normalized === TODO_STATUS_ACTIVE) return TODO_STATUS_ACTIVE
+  if (normalized === TODO_STATUS_DONE) return TODO_STATUS_DONE
+  return fallbackDone ? TODO_STATUS_DONE : TODO_STATUS_ACTIVE
+}
+
+function getTodoStatus(todo) {
+  return normalizeTodoStatus(todo?.status, Boolean(todo?.done))
+}
+
+function isTodoDone(todo) {
+  return getTodoStatus(todo) === TODO_STATUS_DONE
+}
+
+function applyTodoStatusShape(todo) {
+  const status = getTodoStatus(todo)
+  return {
+    ...todo,
+    status,
+    done: status === TODO_STATUS_DONE,
+  }
+}
+
 const isAuthenticated = computed(() => Boolean(user.value))
 const isDark = computed(() => theme.value === 'dark')
 const filteredTodos = computed(() => {
   let subset = todos.value
-  if (filter.value === 'active') subset = subset.filter((todo) => !todo.done)
-  if (filter.value === 'done') subset = subset.filter((todo) => todo.done)
+  if (filter.value === TODO_STATUS_WAITING) subset = subset.filter((todo) => getTodoStatus(todo) === TODO_STATUS_WAITING)
+  if (filter.value === TODO_STATUS_ACTIVE) subset = subset.filter((todo) => getTodoStatus(todo) === TODO_STATUS_ACTIVE)
+  if (filter.value === TODO_STATUS_DONE) subset = subset.filter((todo) => getTodoStatus(todo) === TODO_STATUS_DONE)
 
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return subset
@@ -662,7 +702,12 @@ const draggableTodos = computed({
       return
     }
 
-    const shouldInclude = filter.value === 'active' ? (todo) => !todo.done : (todo) => todo.done
+    const shouldInclude =
+      filter.value === TODO_STATUS_WAITING
+        ? (todo) => getTodoStatus(todo) === TODO_STATUS_WAITING
+        : filter.value === TODO_STATUS_ACTIVE
+          ? (todo) => getTodoStatus(todo) === TODO_STATUS_ACTIVE
+          : (todo) => getTodoStatus(todo) === TODO_STATUS_DONE
     const byId = new Map(todos.value.map((todo) => [todo.id, todo]))
     const reorderedIds = reorderedSubset.map((todo) => todo.id)
     let cursor = 0
@@ -675,8 +720,8 @@ const draggableTodos = computed({
     })
   },
 })
-const remainingCount = computed(() => todos.value.filter((todo) => !todo.done).length)
-const doneCount = computed(() => todos.value.filter((todo) => todo.done).length)
+const remainingCount = computed(() => todos.value.filter((todo) => !isTodoDone(todo)).length)
+const doneCount = computed(() => todos.value.filter((todo) => isTodoDone(todo)).length)
 const completionPercent = computed(() => {
   const total = todos.value.length
   if (total <= 0) return 0
@@ -684,10 +729,10 @@ const completionPercent = computed(() => {
 })
 const todayTodoCount = computed(() => {
   const todayKey = toDateKey(new Date())
-  return todos.value.filter((todo) => !todo.done && todo.dueAt && toDateKey(todo.dueAt) === todayKey).length
+  return todos.value.filter((todo) => !isTodoDone(todo) && todo.dueAt && toDateKey(todo.dueAt) === todayKey).length
 })
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
-const todosWithoutDueCount = computed(() => todos.value.filter((todo) => !todo.dueAt).length)
+const todosWithoutDueCount = computed(() => filteredTodos.value.filter((todo) => !todo.dueAt).length)
 const calendarMonthLabel = computed(() => {
   const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
   return new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: 'long' }).format(calendarMonthAnchor.value)
@@ -701,7 +746,7 @@ const calendarWeekdayLabels = computed(() => {
 })
 const todosByDate = computed(() => {
   const grouped = new Map()
-  for (const todo of todos.value) {
+  for (const todo of filteredTodos.value) {
     if (!todo.dueAt) continue
     const key = toDateKey(todo.dueAt)
     if (!key) continue
@@ -1079,7 +1124,7 @@ function getLabelDotStyleByColor(color) {
 
 function getDetailStateDotStyle(todo) {
   const color = normalizeLabelColor(todo?.labelColor, '#94a3b8')
-  if (todo?.done) {
+  if (isTodoDone(todo)) {
     return {
       borderColor: color,
       backgroundColor: color,
@@ -1605,7 +1650,7 @@ async function loadTodos() {
   errorMessage.value = ''
   try {
     const payload = await apiRequest('/api/todos')
-    todos.value = payload.todos || []
+    todos.value = (payload.todos || []).map(applyTodoStatusShape)
     for (const todo of todos.value) {
       if (typeof commentDrafts.value[todo.id] !== 'string') commentDrafts.value[todo.id] = ''
     }
@@ -1675,9 +1720,10 @@ async function addTodo() {
         labelText: selectedLabel?.name || '',
         labelColor: normalizeLabelColor(selectedLabel?.color),
         rolloverEnabled: newRolloverEnabled.value,
+        status: TODO_STATUS_ACTIVE,
       }),
     })
-    todos.value.unshift(payload.todo)
+    todos.value.unshift(applyTodoStatusShape(payload.todo))
     commentDrafts.value[payload.todo.id] = ''
     newTask.value = ''
     newDueAt.value = ''
@@ -1692,25 +1738,30 @@ async function addTodo() {
   }
 }
 
-async function setTodoDone(todo, done) {
-  const previous = todo.done
-  todo.done = done
+async function setTodoStatus(todo, status) {
+  const nextStatus = normalizeTodoStatus(status)
+  const previousStatus = getTodoStatus(todo)
+  if (previousStatus === nextStatus) return
+
+  todo.status = nextStatus
+  todo.done = nextStatus === TODO_STATUS_DONE
   errorMessage.value = ''
   try {
     await apiRequest('/api/todos', {
       method: 'PATCH',
-      body: JSON.stringify({ id: todo.id, done }),
+      body: JSON.stringify({ id: todo.id, status: nextStatus }),
     })
   } catch (error) {
-    todo.done = previous
+    todo.status = previousStatus
+    todo.done = previousStatus === TODO_STATUS_DONE
     errorMessage.value = translateError(error.message)
   }
 }
 
 function onTodoStatusChange(todo, value) {
-  const nextDone = value === 'done'
-  if (Boolean(todo.done) === nextDone) return
-  void setTodoDone(todo, nextDone)
+  const nextStatus = normalizeTodoStatus(value)
+  if (getTodoStatus(todo) === nextStatus) return
+  void setTodoStatus(todo, nextStatus)
 }
 
 async function deleteTodo(id) {
@@ -2184,29 +2235,81 @@ function formatTime(value) {
 
             <p v-if="loading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
 
-            <template v-if="viewMode === 'list'">
-              <div class="todo-search-row">
-                <div class="todo-searchbar">
-                  <Search class="todo-search-icon" />
-                  <Input
-                    v-model="searchQuery"
-                    type="text"
-                    class="todo-search-input border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                    :placeholder="t('searchPlaceholder')"
-                    autocomplete="off"
-                  />
-                </div>
-                <Button
-                  class="todo-add-task-btn"
-                  variant="ghost"
-                  @click="openAddTodo"
-                  :aria-label="t('addSchedule')"
-                >
-                  <Plus class="h-5 w-5" />
-                  {{ t('addSchedule') }}
-                </Button>
+            <div class="todo-search-row">
+              <div class="todo-searchbar">
+                <Search class="todo-search-icon" />
+                <Input
+                  v-model="searchQuery"
+                  type="text"
+                  class="todo-search-input border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  :placeholder="t('searchPlaceholder')"
+                  autocomplete="off"
+                />
               </div>
+              <Button
+                class="todo-add-task-btn"
+                variant="ghost"
+                @click="openAddTodo"
+                :aria-label="t('addSchedule')"
+              >
+                <Plus class="h-5 w-5" />
+                {{ t('addSchedule') }}
+              </Button>
+            </div>
 
+            <section class="todo-summary-panel">
+              <div class="todo-summary-head">
+                <span>{{ t('done') }} ({{ doneCount }})</span>
+                <span>{{ t('remaining', { count: remainingCount }) }}</span>
+              </div>
+              <div class="todo-progress-row">
+                <span>{{ doneCount }} / {{ todos.length }} {{ t('done') }}</span>
+                <div class="todo-progress-track">
+                  <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
+                </div>
+              </div>
+            </section>
+
+            <nav class="todo-bottom-tabs">
+              <Button
+                size="sm"
+                class="todo-tab-btn"
+                :variant="filter === 'all' ? 'default' : 'ghost'"
+                @click="filter = 'all'"
+                :disabled="busy"
+              >
+                {{ t('all') }}
+              </Button>
+              <Button
+                size="sm"
+                class="todo-tab-btn"
+                :variant="filter === 'waiting' ? 'default' : 'ghost'"
+                @click="filter = 'waiting'"
+                :disabled="busy"
+              >
+                {{ t('waiting') }}
+              </Button>
+              <Button
+                size="sm"
+                class="todo-tab-btn"
+                :variant="filter === 'active' ? 'default' : 'ghost'"
+                @click="filter = 'active'"
+                :disabled="busy"
+              >
+                {{ t('active') }}
+              </Button>
+              <Button
+                size="sm"
+                class="todo-tab-btn"
+                :variant="filter === 'done' ? 'default' : 'ghost'"
+                @click="filter = 'done'"
+                :disabled="busy"
+              >
+                {{ t('done') }}
+              </Button>
+            </nav>
+
+            <template v-if="viewMode === 'list'">
               <draggable
                 v-model="draggableTodos"
                 tag="ul"
@@ -2230,19 +2333,20 @@ function formatTime(value) {
                     <div class="todo-item-main">
                       <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
                       <Select
-                        :model-value="todo.done ? 'done' : 'active'"
+                        :model-value="getTodoStatus(todo)"
                         @update:model-value="(value) => onTodoStatusChange(todo, value)"
                       >
                         <SelectTrigger class="h-8 w-[110px] shrink-0 text-xs sm:text-sm" :aria-label="t('status')">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="waiting">{{ t('waiting') }}</SelectItem>
                           <SelectItem value="active">{{ t('active') }}</SelectItem>
                           <SelectItem value="done">{{ t('done') }}</SelectItem>
                         </SelectContent>
                       </Select>
                       <div class="min-w-0 space-y-1">
-                        <span class="block break-words" :class="{ 'text-muted-foreground line-through': todo.done }">
+                        <span class="block break-words" :class="{ 'text-muted-foreground line-through': isTodoDone(todo) }">
                           {{ todo.text }}
                         </span>
                         <span v-if="todo.labelText" class="todo-label-badge" :style="getLabelBadgeStyle(todo)">
@@ -2272,49 +2376,6 @@ function formatTime(value) {
               <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
                 {{ t('noItems') }}
               </p>
-
-              <section class="todo-summary-panel">
-                <div class="todo-summary-head">
-                  <span>{{ t('done') }} ({{ doneCount }})</span>
-                  <span>{{ t('remaining', { count: remainingCount }) }}</span>
-                </div>
-                <div class="todo-progress-row">
-                  <span>{{ doneCount }} / {{ todos.length }} {{ t('done') }}</span>
-                  <div class="todo-progress-track">
-                    <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
-                  </div>
-                </div>
-              </section>
-
-              <nav class="todo-bottom-tabs">
-                <Button
-                  size="sm"
-                  class="todo-tab-btn"
-                  :variant="filter === 'all' ? 'default' : 'ghost'"
-                  @click="filter = 'all'"
-                  :disabled="busy"
-                >
-                  {{ t('all') }}
-                </Button>
-                <Button
-                  size="sm"
-                  class="todo-tab-btn"
-                  :variant="filter === 'active' ? 'default' : 'ghost'"
-                  @click="filter = 'active'"
-                  :disabled="busy"
-                >
-                  {{ t('active') }}
-                </Button>
-                <Button
-                  size="sm"
-                  class="todo-tab-btn"
-                  :variant="filter === 'done' ? 'default' : 'ghost'"
-                  @click="filter = 'done'"
-                  :disabled="busy"
-                >
-                  {{ t('done') }}
-                </Button>
-              </nav>
             </template>
 
             <section v-else class="todo-calendar-shell">
@@ -2342,7 +2403,7 @@ function formatTime(value) {
                       <button
                         type="button"
                         class="calendar-item"
-                        :class="{ 'calendar-item--done': todo.done }"
+                        :class="{ 'calendar-item--done': isTodoDone(todo) }"
                         :style="getCalendarItemStyle(todo)"
                         @click="openDetail(todo.id)"
                       >
@@ -2851,11 +2912,11 @@ function formatTime(value) {
           <header class="detail-header">
             <div class="detail-title-wrap">
               <span class="detail-state-dot" :style="getDetailStateDotStyle(detailTodo)">
-                <Check v-if="detailTodo.done" class="h-3 w-3" />
+                <Check v-if="isTodoDone(detailTodo)" class="h-3 w-3" />
               </span>
               <div class="detail-title-copy">
                 <h2>{{ detailTodo.text }}</h2>
-                <p class="detail-title-sub">{{ detailTodo.done ? t('done') : t('active') }}</p>
+                <p class="detail-title-sub">{{ t(getTodoStatus(detailTodo)) }}</p>
               </div>
             </div>
 
