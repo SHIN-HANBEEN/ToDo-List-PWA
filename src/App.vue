@@ -1811,6 +1811,22 @@ async function setTodoStatus(todo, status) {
       method: 'PATCH',
       body: JSON.stringify({ id: todo.id, status: nextStatus }),
     })
+
+    if (previousStatus !== TODO_STATUS_DONE && nextStatus === TODO_STATUS_DONE) {
+      const previousOrder = [...todos.value]
+      const moved = moveTodoToBottom(todo.id)
+      if (moved) {
+        try {
+          await apiRequest('/api/todos', {
+            method: 'PATCH',
+            body: JSON.stringify({ order: todos.value.map((item) => item.id) }),
+          })
+        } catch (orderError) {
+          todos.value = previousOrder
+          errorMessage.value = translateError(orderError.message)
+        }
+      }
+    }
   } catch (error) {
     todo.status = previousStatus
     todo.done = previousStatus === TODO_STATUS_DONE
@@ -1822,6 +1838,16 @@ function onTodoStatusChange(todo, value) {
   const nextStatus = normalizeTodoStatus(value)
   if (getTodoStatus(todo) === nextStatus) return
   void setTodoStatus(todo, nextStatus)
+}
+
+function moveTodoToBottom(todoId) {
+  const index = todos.value.findIndex((item) => item.id === todoId)
+  if (index < 0 || index >= todos.value.length - 1) return false
+  const next = [...todos.value]
+  const [target] = next.splice(index, 1)
+  next.push(target)
+  todos.value = next
+  return true
 }
 
 async function deleteTodo(id) {
@@ -3012,7 +3038,7 @@ function formatTime(value) {
               <span class="detail-state-dot" :style="getDetailStateDotStyle(detailTodo)">
                 <Check v-if="isTodoDone(detailTodo)" class="h-3 w-3" />
               </span>
-              <div class="detail-title-copy">
+              <div v-if="!detailEditMode" class="detail-title-copy">
                 <h2>{{ getTodoTitle(detailTodo) }}</h2>
                 <p class="detail-title-sub">{{ t(getTodoStatus(detailTodo)) }}</p>
               </div>
