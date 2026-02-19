@@ -20,6 +20,19 @@ function parseLabelColor(value) {
   return trimmed.toLowerCase()
 }
 
+function parseTodoTitle(value) {
+  return String(value || '')
+    .trim()
+    .slice(0, 120)
+}
+
+function parseTodoContent(value) {
+  if (value === null || value === undefined) return ''
+  return String(value)
+    .trim()
+    .slice(0, 4000)
+}
+
 const TODO_STATUSES = new Set(['waiting', 'active', 'done'])
 
 function parseTodoStatus(value) {
@@ -59,7 +72,7 @@ export default async function handler(req, res) {
       // todo/comment를 분리 조회 후 메모리에서 중첩 구조로 조합.
       const todosResult = await pool.query(
         `
-          SELECT id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at
+          SELECT id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at
           FROM todos
           WHERE user_id = $1
           ORDER BY position ASC, created_at DESC;
@@ -98,7 +111,9 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       // 새 TODO는 최소 position으로 넣어 목록 상단에 보이게 처리.
       const body = parseBody(req)
-      const text = String(body.text || '').trim()
+      const titleSource = Object.prototype.hasOwnProperty.call(body, 'title') ? body.title : body.text
+      const title = parseTodoTitle(titleSource)
+      const content = parseTodoContent(body.content)
       const dueAt = parseDueAt(body.dueAt)
       const location = String(body.location || '').trim().slice(0, 160)
       const labelText = String(body.labelText || '').trim().slice(0, 32)
@@ -107,18 +122,18 @@ export default async function handler(req, res) {
       const rolloverEnabled = Boolean(body.rolloverEnabled)
       const hasStatus = Object.prototype.hasOwnProperty.call(body, 'status')
       const status = hasStatus ? parseTodoStatus(body.status) : 'active'
-      if (!text) return res.status(400).json({ error: 'text is required' })
+      if (!title) return res.status(400).json({ error: 'title is required' })
       if (body.dueAt && !dueAt) return res.status(400).json({ error: 'dueAt must be a valid datetime' })
       if (!labelColor) return res.status(400).json({ error: 'labelColor must be a valid hex color' })
       if (!status) return res.status(400).json({ error: 'status must be one of waiting, active, done' })
 
       const insertResult = await pool.query(
         `
-          INSERT INTO todos (user_id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
-          RETURNING id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;
+          INSERT INTO todos (user_id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
+          RETURNING id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;
         `,
-        [user.id, text, status, statusToDone(status), dueAt, location, labelText, labelColor, rolloverEnabled]
+        [user.id, title, content, title, status, statusToDone(status), dueAt, location, labelText, labelColor, rolloverEnabled]
       )
 
       return res.status(201).json({ todo: normalizeTodoRow(insertResult.rows[0]) })
@@ -180,11 +195,29 @@ export default async function handler(req, res) {
         valueIndex += 1
       }
 
-      if (typeof body.text === 'string') {
-        const text = body.text.trim()
-        if (!text) return res.status(400).json({ error: 'text must not be empty' })
+      if (typeof body.title === 'string') {
+        const title = parseTodoTitle(body.title)
+        if (!title) return res.status(400).json({ error: 'title must not be empty' })
+        updates.push(`title = $${valueIndex}`)
+        values.push(title)
+        valueIndex += 1
         updates.push(`text = $${valueIndex}`)
-        values.push(text)
+        values.push(title)
+        valueIndex += 1
+      } else if (typeof body.text === 'string') {
+        const title = parseTodoTitle(body.text)
+        if (!title) return res.status(400).json({ error: 'title must not be empty' })
+        updates.push(`title = $${valueIndex}`)
+        values.push(title)
+        valueIndex += 1
+        updates.push(`text = $${valueIndex}`)
+        values.push(title)
+        valueIndex += 1
+      }
+
+      if (typeof body.content === 'string') {
+        updates.push(`content = $${valueIndex}`)
+        values.push(parseTodoContent(body.content))
         valueIndex += 1
       }
 
@@ -228,7 +261,7 @@ export default async function handler(req, res) {
       const result = await pool.query(
         `UPDATE todos SET ${updates.join(', ')} WHERE id = $${valueIndex} AND user_id = $${
           valueIndex + 1
-        } RETURNING id, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;`,
+        } RETURNING id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;`,
         values
       )
 

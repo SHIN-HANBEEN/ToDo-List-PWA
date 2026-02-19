@@ -53,6 +53,8 @@ export async function ensureSchema() {
         CREATE TABLE IF NOT EXISTS todos (
           id BIGSERIAL PRIMARY KEY,
           user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL DEFAULT '',
+          content TEXT NOT NULL DEFAULT '',
           text TEXT NOT NULL,
           status TEXT NOT NULL DEFAULT 'active',
           done BOOLEAN NOT NULL DEFAULT FALSE,
@@ -128,6 +130,23 @@ export async function ensureSchema() {
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS location TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_text TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_color TEXT NOT NULL DEFAULT '#64748b';")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';")
+      await client.query(`
+        UPDATE todos
+        SET title = COALESCE(NULLIF(btrim(title), ''), NULLIF(btrim(text), ''), 'Untitled')
+        WHERE title IS NULL OR btrim(title) = '';
+      `)
+      await client.query(`
+        UPDATE todos
+        SET content = ''
+        WHERE content IS NULL;
+      `)
+      await client.query(`
+        UPDATE todos
+        SET text = title
+        WHERE text IS DISTINCT FROM title;
+      `)
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';")
       await client.query(`
         UPDATE todos
@@ -227,6 +246,8 @@ export async function ensureSchema() {
 
 export function normalizeTodoRow(row) {
   const rawStatus = typeof row.status === 'string' ? row.status.trim().toLowerCase() : ''
+  const title = String(row.title || '').trim() || String(row.text || '').trim()
+  const content = typeof row.content === 'string' ? row.content : ''
   const status =
     rawStatus === 'waiting' || rawStatus === 'active' || rawStatus === 'done'
       ? rawStatus
@@ -236,7 +257,9 @@ export function normalizeTodoRow(row) {
 
   return {
     id: Number(row.id),
-    text: row.text,
+    title,
+    content,
+    text: title,
     status,
     done: status === 'done',
     dueAt: row.due_at,

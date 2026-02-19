@@ -765,6 +765,31 @@ body.modal-open-lock {
   color: hsl(var(--muted-foreground));
 }
 
+.detail-description-panel {
+  display: grid;
+  gap: 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--muted) / 0.2);
+  padding: 10px;
+}
+
+.detail-description-label {
+  margin: 0;
+  font-size: 0.72rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.detail-description-body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: hsl(var(--foreground));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .detail-toolbar {
   display: inline-flex;
   align-items: center;

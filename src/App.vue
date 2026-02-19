@@ -26,7 +26,8 @@ const theme = ref('light')
 const viewMode = ref('list')
 const WEB_PUSH_PUBLIC_KEY = String(import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY || '').trim()
 const calendarMonthAnchor = ref(startOfMonth(new Date()))
-const newTask = ref('')
+const newTodoTitle = ref('')
+const newTodoContent = ref('')
 const newDueAt = ref('')
 const newLocation = ref('')
 const LABEL_NONE_VALUE = '__none__'
@@ -64,6 +65,8 @@ const mobileRolloverTooltipTriggerRef = ref(null)
 const settingsRolloverTooltipTriggerRef = ref(null)
 const detailTodoId = ref(null)
 const detailEditMode = ref(false)
+const detailTitleDraft = ref('')
+const detailContentDraft = ref('')
 const detailDueAtDraft = ref('')
 const detailLocationDraft = ref('')
 const detailTodoLabelId = ref(LABEL_NONE_VALUE)
@@ -119,6 +122,10 @@ const messages = {
     listView: '리스트',
     calendarView: '캘린더',
     addTask: '추가',
+    todoTitle: '제목',
+    todoTitlePlaceholder: 'TODO 제목을 입력하세요',
+    todoContent: '내용',
+    todoContentPlaceholder: 'TODO 내용을 입력하세요',
     taskPlaceholder: '할 일을 입력하세요',
     dueAt: '마감일시',
     dueAtPlaceholder: '마감일시 선택',
@@ -209,6 +216,10 @@ const messages = {
     listView: 'List',
     calendarView: 'Calendar',
     addTask: 'Add',
+    todoTitle: 'Title',
+    todoTitlePlaceholder: 'Enter TODO title',
+    todoContent: 'Content',
+    todoContentPlaceholder: 'Enter TODO content',
     taskPlaceholder: 'Add a task',
     dueAt: 'Due date/time',
     dueAtPlaceholder: 'Choose due date/time',
@@ -299,6 +310,10 @@ const messages = {
     listView: '列表',
     calendarView: '日历',
     addTask: '添加',
+    todoTitle: '标题',
+    todoTitlePlaceholder: '请输入 TODO 标题',
+    todoContent: '内容',
+    todoContentPlaceholder: '请输入 TODO 内容',
     taskPlaceholder: '输入待办事项',
     dueAt: '截止日期时间',
     dueAtPlaceholder: '选择截止日期时间',
@@ -389,6 +404,10 @@ const messages = {
     listView: 'リスト',
     calendarView: 'カレンダー',
     addTask: '追加',
+    todoTitle: 'タイトル',
+    todoTitlePlaceholder: 'TODOタイトルを入力',
+    todoContent: '内容',
+    todoContentPlaceholder: 'TODO内容を入力',
     taskPlaceholder: 'タスクを入力',
     dueAt: '締切日時',
     dueAtPlaceholder: '締切日時を選択',
@@ -546,6 +565,12 @@ const errorMessages = {
     zh: '请输入内容。',
     ja: '内容を入力してください。',
   },
+  'title is required': {
+    ko: '제목을 입력하세요.',
+    en: 'Title is required.',
+    zh: '请输入标题。',
+    ja: 'タイトルを入力してください。',
+  },
   'dueAt must be a valid datetime': {
     ko: '올바른 마감일시를 입력하세요.',
     en: 'Please provide a valid due date/time.',
@@ -593,6 +618,12 @@ const errorMessages = {
     en: 'Text must not be empty.',
     zh: '内容不能为空。',
     ja: '空の内容は保存できません。',
+  },
+  'title must not be empty': {
+    ko: '제목은 비워둘 수 없습니다.',
+    en: 'Title must not be empty.',
+    zh: '标题不能为空。',
+    ja: 'タイトルは空にできません。',
   },
   'no valid fields to update': {
     ko: '수정할 항목이 없습니다.',
@@ -665,10 +696,32 @@ function isTodoDone(todo) {
   return getTodoStatus(todo) === TODO_STATUS_DONE
 }
 
+function getTodoTitle(todo) {
+  const title = String(todo?.title || '').trim()
+  if (title) return title
+  return String(todo?.text || '').trim()
+}
+
+function getTodoContent(todo) {
+  return String(todo?.content || '').trim()
+}
+
+function truncateText(value, maxChars) {
+  const text = String(value || '').trim()
+  const chars = Array.from(text)
+  if (chars.length <= maxChars) return text
+  return `${chars.slice(0, maxChars).join('')}...`
+}
+
 function applyTodoStatusShape(todo) {
   const status = getTodoStatus(todo)
+  const title = getTodoTitle(todo)
+  const content = getTodoContent(todo)
   return {
     ...todo,
+    title,
+    content,
+    text: title,
     status,
     done: status === TODO_STATUS_DONE,
   }
@@ -686,10 +739,11 @@ const filteredTodos = computed(() => {
   if (!query) return subset
 
   return subset.filter((todo) => {
-    const text = String(todo.text || '').toLowerCase()
+    const title = String(getTodoTitle(todo) || '').toLowerCase()
+    const content = String(getTodoContent(todo) || '').toLowerCase()
     const location = String(todo.location || '').toLowerCase()
     const label = String(todo.labelText || '').toLowerCase()
-    return text.includes(query) || location.includes(query) || label.includes(query)
+    return title.includes(query) || content.includes(query) || location.includes(query) || label.includes(query)
   })
 })
 const draggableTodos = computed({
@@ -1615,7 +1669,8 @@ async function logout() {
     commentDrafts.value = {}
     detailTodoId.value = null
     detailTodoLabelId.value = LABEL_NONE_VALUE
-    newTask.value = ''
+    newTodoTitle.value = ''
+    newTodoContent.value = ''
     newDueAt.value = ''
     newLocation.value = ''
     newTodoLabelId.value = LABEL_NONE_VALUE
@@ -1696,8 +1751,12 @@ async function onDragEnd(event) {
 }
 
 async function addTodo() {
-  const text = newTask.value.trim()
-  if (!text || busy.value) return
+  const title = newTodoTitle.value.trim()
+  const content = newTodoContent.value.trim()
+  if (!title || busy.value) {
+    if (!title) errorMessage.value = translateError('title is required')
+    return
+  }
   const selectedLabel = selectedLabelForNewTodo.value
   let dueAt = null
   if (newDueAt.value) {
@@ -1714,7 +1773,8 @@ async function addTodo() {
     const payload = await apiRequest('/api/todos', {
       method: 'POST',
       body: JSON.stringify({
-        text,
+        title,
+        content,
         dueAt,
         location: newLocation.value.trim(),
         labelText: selectedLabel?.name || '',
@@ -1725,7 +1785,8 @@ async function addTodo() {
     })
     todos.value.unshift(applyTodoStatusShape(payload.todo))
     commentDrafts.value[payload.todo.id] = ''
-    newTask.value = ''
+    newTodoTitle.value = ''
+    newTodoContent.value = ''
     newDueAt.value = ''
     newLocation.value = ''
     newTodoLabelId.value = LABEL_NONE_VALUE
@@ -1831,6 +1892,8 @@ async function startDetailEdit() {
     await loadLabels()
   }
   detailEditMode.value = true
+  detailTitleDraft.value = getTodoTitle(target)
+  detailContentDraft.value = getTodoContent(target)
   detailDueAtDraft.value = target.dueAt || ''
   detailLocationDraft.value = target.location || ''
   detailTodoLabelId.value = findDetailLabelId(target)
@@ -1840,6 +1903,8 @@ async function startDetailEdit() {
 function cancelDetailEdit() {
   detailEditMode.value = false
   const target = detailTodo.value
+  detailTitleDraft.value = getTodoTitle(target)
+  detailContentDraft.value = getTodoContent(target)
   detailDueAtDraft.value = target?.dueAt || ''
   detailLocationDraft.value = target?.location || ''
   detailTodoLabelId.value = findDetailLabelId(target)
@@ -1849,12 +1914,20 @@ function cancelDetailEdit() {
 async function saveDetailEdit() {
   const target = detailTodo.value
   if (!target || busy.value) return
+  const nextTitle = detailTitleDraft.value.trim()
+  if (!nextTitle) {
+    errorMessage.value = translateError('title must not be empty')
+    return
+  }
+  const nextContent = detailContentDraft.value.trim()
   const selectedLabel = selectedLabelForDetailTodo.value
   const nextLabelText = selectedLabel?.name || ''
   const nextLabelColor = normalizeLabelColor(selectedLabel?.color)
   busy.value = true
   errorMessage.value = ''
   const previous = {
+    title: getTodoTitle(target),
+    content: getTodoContent(target),
     dueAt: target.dueAt || '',
     location: target.location || '',
     labelText: target.labelText || '',
@@ -1862,6 +1935,9 @@ async function saveDetailEdit() {
     rolloverEnabled: Boolean(target.rolloverEnabled),
   }
 
+  target.title = nextTitle
+  target.text = nextTitle
+  target.content = nextContent
   target.dueAt = detailDueAtDraft.value || null
   target.location = detailLocationDraft.value.trim()
   target.labelText = nextLabelText
@@ -1873,6 +1949,8 @@ async function saveDetailEdit() {
       method: 'PATCH',
       body: JSON.stringify({
         id: target.id,
+        title: nextTitle,
+        content: nextContent,
         dueAt: detailDueAtDraft.value || null,
         location: detailLocationDraft.value,
         labelText: nextLabelText,
@@ -1882,6 +1960,9 @@ async function saveDetailEdit() {
     })
     detailEditMode.value = false
   } catch (error) {
+    target.title = previous.title
+    target.text = previous.title
+    target.content = previous.content
     target.dueAt = previous.dueAt || null
     target.location = previous.location
     target.labelText = previous.labelText
@@ -1939,6 +2020,8 @@ function openDetail(todoId) {
   detailTodoId.value = todoId
   if (typeof commentDrafts.value[todoId] !== 'string') commentDrafts.value[todoId] = ''
   detailEditMode.value = false
+  detailTitleDraft.value = getTodoTitle(target)
+  detailContentDraft.value = getTodoContent(target)
   detailDueAtDraft.value = target?.dueAt || ''
   detailLocationDraft.value = target?.location || ''
   detailTodoLabelId.value = findDetailLabelId(target)
@@ -2107,6 +2190,8 @@ function closeAddTodo() {
 function closeDetail() {
   detailTodoId.value = null
   detailEditMode.value = false
+  detailTitleDraft.value = ''
+  detailContentDraft.value = ''
   detailTodoLabelId.value = LABEL_NONE_VALUE
   editingCommentId.value = null
   commentEditDraft.value = ''
@@ -2346,8 +2431,12 @@ function formatTime(value) {
                         </SelectContent>
                       </Select>
                       <div class="min-w-0 space-y-1">
-                        <span class="block break-words" :class="{ 'text-muted-foreground line-through': isTodoDone(todo) }">
-                          {{ todo.text }}
+                        <span
+                          class="block break-words"
+                          :class="{ 'text-muted-foreground line-through': isTodoDone(todo) }"
+                          :title="getTodoTitle(todo)"
+                        >
+                          {{ truncateText(getTodoTitle(todo), 14) }}
                         </span>
                         <span v-if="todo.labelText" class="todo-label-badge" :style="getLabelBadgeStyle(todo)">
                           <span class="todo-label-dot" :style="getLabelDotStyle(todo)" />
@@ -2409,7 +2498,7 @@ function formatTime(value) {
                       >
                         <span class="calendar-item-main">
                           <span v-if="todo.labelText" class="todo-label-dot" :style="getLabelDotStyle(todo)" />
-                          <span class="truncate">{{ todo.text }}</span>
+                          <span :title="getTodoTitle(todo)">{{ truncateText(getTodoTitle(todo), 7) }}</span>
                         </span>
                         <small class="calendar-item-time">{{ formatTime(todo.dueAt) }}</small>
                         <small v-if="todo.labelText" class="calendar-item-label">{{ todo.labelText }}</small>
@@ -2756,11 +2845,24 @@ function formatTime(value) {
         </header>
 
         <form class="space-y-2" @submit.prevent="addTodo">
-          <Textarea
-            v-model="newTask"
-            class="w-full"
-            :placeholder="t('taskPlaceholder')"
-          />
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('todoTitle') }}</p>
+            <Input
+              v-model="newTodoTitle"
+              class="w-full"
+              type="text"
+              :placeholder="t('todoTitlePlaceholder')"
+              autocomplete="off"
+            />
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('todoContent') }}</p>
+            <Textarea
+              v-model="newTodoContent"
+              class="w-full min-h-[120px]"
+              :placeholder="t('todoContentPlaceholder')"
+            />
+          </div>
           <div class="grid gap-2 md:grid-cols-2">
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
@@ -2915,7 +3017,7 @@ function formatTime(value) {
                 <Check v-if="isTodoDone(detailTodo)" class="h-3 w-3" />
               </span>
               <div class="detail-title-copy">
-                <h2>{{ detailTodo.text }}</h2>
+                <h2>{{ getTodoTitle(detailTodo) }}</h2>
                 <p class="detail-title-sub">{{ t(getTodoStatus(detailTodo)) }}</p>
               </div>
             </div>
@@ -2955,9 +3057,26 @@ function formatTime(value) {
             </div>
           </header>
 
+          <section v-if="!detailEditMode" class="detail-description-panel">
+            <p class="detail-description-label">{{ t('todoContent') }}</p>
+            <p class="detail-description-body">{{ getTodoContent(detailTodo) || '-' }}</p>
+          </section>
+
           <template v-if="detailEditMode">
             <div class="detail-edit-panel">
               <p class="text-sm font-medium">{{ t('editTodoMeta') }}</p>
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('todoTitle') }}</p>
+                <Input v-model="detailTitleDraft" type="text" :placeholder="t('todoTitlePlaceholder')" />
+              </div>
+              <div class="space-y-1">
+                <p class="text-xs text-muted-foreground">{{ t('todoContent') }}</p>
+                <Textarea
+                  v-model="detailContentDraft"
+                  class="w-full min-h-[120px]"
+                  :placeholder="t('todoContentPlaceholder')"
+                />
+              </div>
               <div class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
                 <DateTimePicker
