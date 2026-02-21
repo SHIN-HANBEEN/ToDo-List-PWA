@@ -1491,7 +1491,8 @@ body.modal-open-lock {
   }
 
   .calendar-item {
-    padding: 4px 5px;
+    padding: 2px 2px;
+    font-size: 10px;
   }
 
   .label-select-row {
