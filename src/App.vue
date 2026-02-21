@@ -2324,7 +2324,7 @@ function formatTodoItemDue(value) {
       <Card
         class="w-full max-w-none rounded-none border-0 bg-transparent shadow-none"
       >
-        <CardContent :class="isAuthenticated ? 'space-y-4 px-3 pb-3 pt-3' : 'auth-card-content'">
+        <CardContent :class="isAuthenticated ? 'todo-card-content space-y-4 px-3 pb-3 pt-3' : 'auth-card-content'">
         <section
           v-if="!isAuthenticated"
           class="auth-centered mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"

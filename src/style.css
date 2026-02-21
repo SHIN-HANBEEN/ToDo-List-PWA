@@ -1349,12 +1349,17 @@ body.modal-open-lock {
 @media (max-width: 640px) {
   .page {
     display: block;
-    padding: max(18px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
-      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    padding: max(18px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
   }
 
   .page--auth {
     padding: 0;
+  }
+
+  .todo-card-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 
   .todo-layout {
@@ -1467,6 +1472,13 @@ body.modal-open-lock {
 
   .calendar-toolbar button:last-child {
     grid-column: 1 / -1;
+  }
+
+  .todo-calendar-shell {
+    background: var(--app-surface);
+    border: 0;
+    border-radius: 0;
+    padding: 0;
   }
 
   .calendar-grid {
