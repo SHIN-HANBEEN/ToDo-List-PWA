@@ -347,6 +347,38 @@ body.modal-open-lock {
   cursor: pointer;
 }
 
+.todo-item-state-trigger {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-top: 1px;
+  cursor: pointer;
+  box-shadow: none;
+  justify-content: center;
+}
+
+.todo-item-state-trigger > svg {
+  display: none;
+}
+
+.todo-item-state-content {
+  min-width: auto;
+}
+
+.todo-item-state-option {
+  min-width: 36px;
+  justify-content: center;
+  padding: 6px;
+  padding-right: 6px;
+}
+
+.todo-item-state-option > span.absolute.right-2 {
+  display: none;
+}
+
 .todo-item-state-dot {
   width: 18px;
   height: 18px;
@@ -418,6 +450,10 @@ body.modal-open-lock {
   font-size: 0.72rem;
   color: hsl(var(--muted-foreground));
   line-height: 1.2;
+}
+
+.todo-item-meta-label {
+  font-weight: 600;
 }
 
 .todo-item-meta-due {

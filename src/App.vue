@@ -1175,9 +1175,13 @@ function getLabelDotStyleByColor(color) {
   return { backgroundColor: normalizeLabelColor(color) }
 }
 
-function getDetailStateDotStyle(todo) {
+function getDetailStateDotStyle(todo, statusOverride = null) {
   const color = normalizeLabelColor(todo?.labelColor, '#94a3b8')
-  if (isTodoDone(todo)) {
+  const status =
+    typeof statusOverride === 'string'
+      ? normalizeTodoStatus(statusOverride)
+      : getTodoStatus(todo)
+  if (status === TODO_STATUS_DONE) {
     return {
       borderColor: color,
       backgroundColor: color,
@@ -1189,6 +1193,10 @@ function getDetailStateDotStyle(todo) {
     backgroundColor: 'transparent',
     color,
   }
+}
+
+function getTodoItemLabelTextStyle(todo) {
+  return { color: normalizeLabelColor(todo?.labelColor, '#64748b') }
 }
 
 function onNewTodoLabelChange(value) {
@@ -1847,6 +1855,11 @@ function cycleTodoStatus(todo) {
   void setTodoStatus(todo, nextStatus)
 }
 
+function onTodoStatusSelect(todo, value) {
+  if (value !== TODO_STATUS_WAITING && value !== TODO_STATUS_ACTIVE && value !== TODO_STATUS_DONE) return
+  void setTodoStatus(todo, value)
+}
+
 function moveTodoToBottom(todoId) {
   const index = todos.value.findIndex((item) => item.id === todoId)
   if (index < 0 || index >= todos.value.length - 1) return false
@@ -2465,16 +2478,41 @@ function formatTodoItemDue(value) {
                 <template #item="{ element: todo }">
                   <li class="todo-item-row">
                     <div class="todo-item-main">
-                      <button type="button" class="todo-item-state-btn no-drag" :aria-label="t('status')" @click="cycleTodoStatus(todo)">
-                        <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
-                          <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
-                          <span
-                            v-else-if="getTodoStatus(todo) === TODO_STATUS_ACTIVE"
-                            class="todo-item-state-glyph todo-item-state-glyph--dot"
-                          />
-                          <span v-else class="todo-item-state-glyph todo-item-state-glyph--dash" />
-                        </span>
-                      </button>
+                      <Select
+                        :model-value="getTodoStatus(todo)"
+                        @update:model-value="(value) => onTodoStatusSelect(todo, value)"
+                      >
+                        <SelectTrigger class="todo-item-state-trigger no-drag" :aria-label="t('status')">
+                          <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
+                            <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
+                            <span
+                              v-else-if="getTodoStatus(todo) === TODO_STATUS_ACTIVE"
+                              class="todo-item-state-glyph todo-item-state-glyph--dot"
+                            />
+                            <span v-else class="todo-item-state-glyph todo-item-state-glyph--dash" />
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent class="todo-item-state-content" side="bottom" align="start">
+                          <SelectItem :value="TODO_STATUS_WAITING" :text-value="t('waiting')" class="todo-item-state-option no-drag">
+                            <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo, TODO_STATUS_WAITING)" aria-hidden="true">
+                              <span class="todo-item-state-glyph todo-item-state-glyph--dash" />
+                            </span>
+                            <span class="sr-only">{{ t('waiting') }}</span>
+                          </SelectItem>
+                          <SelectItem :value="TODO_STATUS_ACTIVE" :text-value="t('active')" class="todo-item-state-option no-drag">
+                            <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo, TODO_STATUS_ACTIVE)" aria-hidden="true">
+                              <span class="todo-item-state-glyph todo-item-state-glyph--dot" />
+                            </span>
+                            <span class="sr-only">{{ t('active') }}</span>
+                          </SelectItem>
+                          <SelectItem :value="TODO_STATUS_DONE" :text-value="t('done')" class="todo-item-state-option no-drag">
+                            <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo, TODO_STATUS_DONE)" aria-hidden="true">
+                              <Check class="h-3 w-3" />
+                            </span>
+                            <span class="sr-only">{{ t('done') }}</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <div class="todo-item-body">
                         <button
                           type="button"
@@ -2490,7 +2528,13 @@ function formatTodoItemDue(value) {
                         </p>
                         <div class="todo-item-meta">
                           <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTodoItemDue(todo.dueAt) }}</span>
-                          <span v-if="todo.labelText" class="todo-item-meta-text">{{ todo.labelText }}</span>
+                          <span
+                            v-if="todo.labelText"
+                            class="todo-item-meta-text todo-item-meta-label"
+                            :style="getTodoItemLabelTextStyle(todo)"
+                          >
+                            {{ todo.labelText }}
+                          </span>
                           <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
                           <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
                           <span v-if="todo.location" class="todo-item-meta-text todo-item-meta-location">
