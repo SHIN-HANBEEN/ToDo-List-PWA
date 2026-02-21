@@ -642,6 +642,8 @@ body.modal-open-lock {
   list-style: none;
   display: grid;
   gap: 0;
+  align-content: start;
+  grid-auto-rows: min-content;
 }
 
 .calendar-item {
