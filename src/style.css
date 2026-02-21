@@ -483,8 +483,8 @@ body.modal-open-lock {
 }
 
 .todo-summary-head {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
   gap: 10px;
   align-items: center;
   font-weight: 600;
@@ -492,9 +492,8 @@ body.modal-open-lock {
 }
 
 .todo-summary-filter {
-  min-width: 136px;
-  max-width: 230px;
-  flex: 0 0 clamp(136px, 28%, 230px);
+  min-width: 0;
+  width: 100%;
 }
 
 .todo-summary-filter-trigger {
@@ -508,45 +507,38 @@ body.modal-open-lock {
   font-weight: 600;
 }
 
-.todo-summary-stats {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.todo-summary-stat {
-  white-space: nowrap;
-}
-
 .todo-summary-right {
-  margin-left: auto;
   min-width: 0;
-  flex: 1 1 auto;
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: stretch;
 }
 
 .todo-progress-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 10px;
   color: hsl(var(--muted-foreground));
   font-size: 0.86rem;
   min-width: 0;
+  width: 100%;
+}
+
+.todo-progress-row > span {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .todo-progress-track {
-  width: 104px;
+  width: auto;
+  min-width: 72px;
+  flex: 1 1 auto;
   height: 10px;
   border-radius: 999px;
   background: hsl(var(--muted));
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 .todo-progress-fill {
@@ -1445,21 +1437,11 @@ body.modal-open-lock {
   }
 
   .todo-summary-filter {
-    min-width: 114px;
-    max-width: 148px;
-    flex-basis: clamp(114px, 35vw, 148px);
+    min-width: 0;
   }
 
   .todo-summary-right {
-    gap: 7px;
-  }
-
-  .todo-summary-stats {
-    gap: 6px;
-  }
-
-  .todo-summary-stat {
-    font-size: 0.74rem;
+    min-width: 0;
   }
 
   .todo-tab-btn {
@@ -1471,8 +1453,12 @@ body.modal-open-lock {
     gap: 6px;
   }
 
+  .todo-progress-row > span {
+    font-size: 0.72rem;
+  }
+
   .todo-progress-track {
-    width: 74px;
+    min-width: 60px;
   }
 
   .calendar-toolbar {

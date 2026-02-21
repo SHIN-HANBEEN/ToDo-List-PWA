@@ -786,7 +786,6 @@ const draggableTodos = computed({
   },
 })
 const summaryTodos = computed(() => todos.value.filter((todo) => matchesTodoLabelFilter(todo)))
-const remainingCount = computed(() => summaryTodos.value.filter((todo) => !isTodoDone(todo)).length)
 const doneCount = computed(() => summaryTodos.value.filter((todo) => isTodoDone(todo)).length)
 const completionPercent = computed(() => {
   const total = summaryTodos.value.length
@@ -2457,10 +2456,6 @@ function formatTodoItemDue(value) {
                   </Select>
                 </div>
                 <div class="todo-summary-right">
-                  <div class="todo-summary-stats">
-                    <span class="todo-summary-stat">{{ t('done') }} ({{ doneCount }})</span>
-                    <span class="todo-summary-stat">{{ t('remaining', { count: remainingCount }) }}</span>
-                  </div>
                   <div class="todo-progress-row">
                     <span>{{ doneCount }} / {{ summaryTodos.length }} {{ t('done') }}</span>
                     <div class="todo-progress-track">
