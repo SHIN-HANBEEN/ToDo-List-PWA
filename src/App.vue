@@ -31,8 +31,10 @@ const newTodoContent = ref('')
 const newDueAt = ref('')
 const newLocation = ref('')
 const LABEL_NONE_VALUE = '__none__'
+const LABEL_FILTER_ALL_VALUE = '__all__'
 const labels = ref([])
 const newTodoLabelId = ref(LABEL_NONE_VALUE)
+const todoLabelFilterId = ref(LABEL_FILTER_ALL_VALUE)
 const addLabelOpen = ref(false)
 const newLabelName = ref('')
 const newLabelDraftColor = ref('#64748b')
@@ -135,6 +137,7 @@ const messages = {
     labelPlaceholder: '라벨 텍스트',
     labelColor: '라벨 색상',
     labelSelectPrompt: '라벨을 선택해주세요',
+    allLabels: '전체 라벨',
     labelSettings: '라벨 설정',
     labelAdd: '라벨 추가',
     labelSavedList: '저장한 라벨',
@@ -229,6 +232,7 @@ const messages = {
     labelPlaceholder: 'Label text',
     labelColor: 'Label color',
     labelSelectPrompt: 'Please select a label',
+    allLabels: 'All labels',
     labelSettings: 'Label settings',
     labelAdd: 'Add label',
     labelSavedList: 'Saved labels',
@@ -323,6 +327,7 @@ const messages = {
     labelPlaceholder: '标签文本',
     labelColor: '标签颜色',
     labelSelectPrompt: '请选择标签',
+    allLabels: '全部标签',
     labelSettings: '标签设置',
     labelAdd: '添加标签',
     labelSavedList: '已保存的标签',
@@ -417,6 +422,7 @@ const messages = {
     labelPlaceholder: 'ラベルテキスト',
     labelColor: 'ラベル色',
     labelSelectPrompt: 'ラベルを選択してください',
+    allLabels: 'すべてのラベル',
     labelSettings: 'ラベル設定',
     labelAdd: 'ラベル追加',
     labelSavedList: '保存済みラベル',
@@ -696,6 +702,19 @@ function isTodoDone(todo) {
   return getTodoStatus(todo) === TODO_STATUS_DONE
 }
 
+function matchesTodoStatusFilter(todo) {
+  if (filter.value === TODO_STATUS_WAITING) return getTodoStatus(todo) === TODO_STATUS_WAITING
+  if (filter.value === TODO_STATUS_ACTIVE) return getTodoStatus(todo) === TODO_STATUS_ACTIVE
+  if (filter.value === TODO_STATUS_DONE) return getTodoStatus(todo) === TODO_STATUS_DONE
+  return true
+}
+
+function matchesTodoLabelFilter(todo) {
+  const selectedLabel = selectedLabelForTodoFilter.value
+  if (!selectedLabel) return true
+  return String(todo.labelText || '') === String(selectedLabel.name || '')
+}
+
 function getTodoTitle(todo) {
   const title = String(todo?.title || '').trim()
   if (title) return title
@@ -730,10 +749,7 @@ function applyTodoStatusShape(todo) {
 const isAuthenticated = computed(() => Boolean(user.value))
 const isDark = computed(() => theme.value === 'dark')
 const filteredTodos = computed(() => {
-  let subset = todos.value
-  if (filter.value === TODO_STATUS_WAITING) subset = subset.filter((todo) => getTodoStatus(todo) === TODO_STATUS_WAITING)
-  if (filter.value === TODO_STATUS_ACTIVE) subset = subset.filter((todo) => getTodoStatus(todo) === TODO_STATUS_ACTIVE)
-  if (filter.value === TODO_STATUS_DONE) subset = subset.filter((todo) => getTodoStatus(todo) === TODO_STATUS_DONE)
+  let subset = todos.value.filter((todo) => matchesTodoStatusFilter(todo) && matchesTodoLabelFilter(todo))
 
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return subset
@@ -751,17 +767,12 @@ const draggableTodos = computed({
     return filteredTodos.value
   },
   set(reorderedSubset) {
-    if (filter.value === 'all') {
+    if (filter.value === 'all' && !selectedLabelForTodoFilter.value) {
       todos.value = [...reorderedSubset]
       return
     }
 
-    const shouldInclude =
-      filter.value === TODO_STATUS_WAITING
-        ? (todo) => getTodoStatus(todo) === TODO_STATUS_WAITING
-        : filter.value === TODO_STATUS_ACTIVE
-          ? (todo) => getTodoStatus(todo) === TODO_STATUS_ACTIVE
-          : (todo) => getTodoStatus(todo) === TODO_STATUS_DONE
+    const shouldInclude = (todo) => matchesTodoStatusFilter(todo) && matchesTodoLabelFilter(todo)
     const byId = new Map(todos.value.map((todo) => [todo.id, todo]))
     const reorderedIds = reorderedSubset.map((todo) => todo.id)
     let cursor = 0
@@ -774,10 +785,11 @@ const draggableTodos = computed({
     })
   },
 })
-const remainingCount = computed(() => todos.value.filter((todo) => !isTodoDone(todo)).length)
-const doneCount = computed(() => todos.value.filter((todo) => isTodoDone(todo)).length)
+const summaryTodos = computed(() => todos.value.filter((todo) => matchesTodoLabelFilter(todo)))
+const remainingCount = computed(() => summaryTodos.value.filter((todo) => !isTodoDone(todo)).length)
+const doneCount = computed(() => summaryTodos.value.filter((todo) => isTodoDone(todo)).length)
 const completionPercent = computed(() => {
-  const total = todos.value.length
+  const total = summaryTodos.value.length
   if (total <= 0) return 0
   return Math.round((doneCount.value / total) * 100)
 })
@@ -850,6 +862,12 @@ const labelOptions = computed(() =>
 const selectedLabelForNewTodo = computed(() => {
   if (newTodoLabelId.value === LABEL_NONE_VALUE) return null
   const id = Number(newTodoLabelId.value)
+  if (!Number.isFinite(id)) return null
+  return labels.value.find((label) => label.id === id) || null
+})
+const selectedLabelForTodoFilter = computed(() => {
+  if (todoLabelFilterId.value === LABEL_FILTER_ALL_VALUE) return null
+  const id = Number(todoLabelFilterId.value)
   if (!Number.isFinite(id)) return null
   return labels.value.find((label) => label.id === id) || null
 })
@@ -1201,6 +1219,10 @@ function getTodoItemLabelTextStyle(todo) {
 
 function onNewTodoLabelChange(value) {
   newTodoLabelId.value = typeof value === 'string' ? value : LABEL_NONE_VALUE
+}
+
+function onTodoLabelFilterChange(value) {
+  todoLabelFilterId.value = typeof value === 'string' ? value : LABEL_FILTER_ALL_VALUE
 }
 
 function onDetailTodoLabelChange(value) {
@@ -1563,6 +1585,17 @@ watch(
   }
 )
 
+watch(
+  labelOptions,
+  (nextOptions) => {
+    if (todoLabelFilterId.value === LABEL_FILTER_ALL_VALUE) return
+    const currentId = Number(todoLabelFilterId.value)
+    if (!Number.isFinite(currentId) || !nextOptions.some((label) => label.id === currentId)) {
+      todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
+    }
+  }
+)
+
 function setTheme(nextTheme) {
   if (nextTheme !== 'light' && nextTheme !== 'dark') return
   theme.value = nextTheme
@@ -1683,6 +1716,7 @@ async function logout() {
     newDueAt.value = ''
     newLocation.value = ''
     newTodoLabelId.value = LABEL_NONE_VALUE
+    todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
     searchQuery.value = ''
     addLabelOpen.value = false
     newLabelName.value = ''
@@ -2406,11 +2440,29 @@ function formatTodoItemDue(value) {
 
             <section class="todo-summary-panel">
               <div class="todo-summary-head">
-                <span>{{ t('done') }} ({{ doneCount }})</span>
-                <span>{{ t('remaining', { count: remainingCount }) }}</span>
+                <div class="todo-summary-filter">
+                  <Select :model-value="todoLabelFilterId" @update:model-value="onTodoLabelFilterChange">
+                    <SelectTrigger class="todo-summary-filter-trigger">
+                      <SelectValue :placeholder="t('allLabels')" />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      <SelectItem :value="LABEL_FILTER_ALL_VALUE">{{ t('allLabels') }}</SelectItem>
+                      <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
+                        <span class="label-option-item">
+                          <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)"></span>
+                          {{ label.name }}
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div class="todo-summary-stats">
+                  <span class="todo-summary-stat">{{ t('done') }} ({{ doneCount }})</span>
+                  <span class="todo-summary-stat">{{ t('remaining', { count: remainingCount }) }}</span>
+                </div>
               </div>
               <div class="todo-progress-row">
-                <span>{{ doneCount }} / {{ todos.length }} {{ t('done') }}</span>
+                <span>{{ doneCount }} / {{ summaryTodos.length }} {{ t('done') }}</span>
                 <div class="todo-progress-track">
                   <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
                 </div>
