@@ -2456,15 +2456,17 @@ function formatTodoItemDue(value) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div class="todo-summary-stats">
-                  <span class="todo-summary-stat">{{ t('done') }} ({{ doneCount }})</span>
-                  <span class="todo-summary-stat">{{ t('remaining', { count: remainingCount }) }}</span>
-                </div>
-              </div>
-              <div class="todo-progress-row">
-                <span>{{ doneCount }} / {{ summaryTodos.length }} {{ t('done') }}</span>
-                <div class="todo-progress-track">
-                  <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
+                <div class="todo-summary-right">
+                  <div class="todo-summary-stats">
+                    <span class="todo-summary-stat">{{ t('done') }} ({{ doneCount }})</span>
+                    <span class="todo-summary-stat">{{ t('remaining', { count: remainingCount }) }}</span>
+                  </div>
+                  <div class="todo-progress-row">
+                    <span>{{ doneCount }} / {{ summaryTodos.length }} {{ t('done') }}</span>
+                    <div class="todo-progress-track">
+                      <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
