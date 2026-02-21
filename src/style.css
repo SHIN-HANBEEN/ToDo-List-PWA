@@ -1487,7 +1487,8 @@ body.modal-open-lock {
 
   .calendar-cell {
     min-height: 78px;
-    padding: 4px;
+    border: 0;
+    padding: 2px 0;
   }
 
   .calendar-item {
