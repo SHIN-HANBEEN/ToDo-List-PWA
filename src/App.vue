@@ -1181,11 +1181,13 @@ function getDetailStateDotStyle(todo) {
     return {
       borderColor: color,
       backgroundColor: color,
+      color: '#ffffff',
     }
   }
   return {
     borderColor: color,
     backgroundColor: 'transparent',
+    color,
   }
 }
 
@@ -2247,6 +2249,23 @@ function formatTime(value) {
     minute: '2-digit',
   }).format(new Date(value))
 }
+
+function formatMonthDay(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}.${day}`
+}
+
+function formatTodoItemDue(value) {
+  const monthDay = formatMonthDay(value)
+  const time = formatTime(value)
+  if (!monthDay) return time
+  if (!time) return monthDay
+  return `${monthDay} ${time}`
+}
 </script>
 
 <template>
@@ -2449,6 +2468,11 @@ function formatTime(value) {
                       <button type="button" class="todo-item-state-btn no-drag" :aria-label="t('status')" @click="cycleTodoStatus(todo)">
                         <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
                           <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
+                          <span
+                            v-else-if="getTodoStatus(todo) === TODO_STATUS_ACTIVE"
+                            class="todo-item-state-glyph todo-item-state-glyph--dot"
+                          />
+                          <span v-else class="todo-item-state-glyph todo-item-state-glyph--dash" />
                         </span>
                       </button>
                       <div class="todo-item-body">
@@ -2465,7 +2489,7 @@ function formatTime(value) {
                           {{ truncateText(getTodoContent(todo), 54) }}
                         </p>
                         <div class="todo-item-meta">
-                          <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTime(todo.dueAt) }}</span>
+                          <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTodoItemDue(todo.dueAt) }}</span>
                           <span v-if="todo.labelText" class="todo-item-meta-text">{{ todo.labelText }}</span>
                           <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
                           <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>

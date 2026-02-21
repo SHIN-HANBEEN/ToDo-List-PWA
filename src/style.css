@@ -357,6 +357,23 @@ body.modal-open-lock {
   color: #ffffff;
 }
 
+.todo-item-state-glyph {
+  display: block;
+  background: currentColor;
+  border-radius: 999px;
+}
+
+.todo-item-state-glyph--dot {
+  width: 6px;
+  height: 6px;
+}
+
+.todo-item-state-glyph--dash {
+  width: 8px;
+  height: 2px;
+  border-radius: 999px;
+}
+
 .todo-item-title-btn {
   border: 0;
   background: transparent;
@@ -408,6 +425,7 @@ body.modal-open-lock {
   line-height: 1.2;
   font-weight: 600;
   color: #15803d;
+  white-space: nowrap;
 }
 
 .todo-item-meta-location {
