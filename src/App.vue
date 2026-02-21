@@ -1834,9 +1834,14 @@ async function setTodoStatus(todo, status) {
   }
 }
 
-function onTodoStatusChange(todo, value) {
-  const nextStatus = normalizeTodoStatus(value)
-  if (getTodoStatus(todo) === nextStatus) return
+function cycleTodoStatus(todo) {
+  const current = getTodoStatus(todo)
+  const nextStatus =
+    current === TODO_STATUS_WAITING
+      ? TODO_STATUS_ACTIVE
+      : current === TODO_STATUS_ACTIVE
+        ? TODO_STATUS_DONE
+        : TODO_STATUS_WAITING
   void setTodoStatus(todo, nextStatus)
 }
 
@@ -2425,7 +2430,7 @@ function formatTime(value) {
                 tag="ul"
                 class="todo-list todo-list--panel"
                 item-key="id"
-                handle=".drag-handle"
+                handle=".todo-item-drag-space"
                 :animation="180"
                 :delay="140"
                 :delay-on-touch-only="true"
@@ -2441,48 +2446,36 @@ function formatTime(value) {
                 <template #item="{ element: todo }">
                   <li class="todo-item-row">
                     <div class="todo-item-main">
-                      <button type="button" class="drag-handle" aria-label="drag">&#8942;&#8942;</button>
-                      <Select
-                        :model-value="getTodoStatus(todo)"
-                        @update:model-value="(value) => onTodoStatusChange(todo, value)"
-                      >
-                        <SelectTrigger class="h-8 w-[110px] shrink-0 text-xs sm:text-sm" :aria-label="t('status')">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="waiting">{{ t('waiting') }}</SelectItem>
-                          <SelectItem value="active">{{ t('active') }}</SelectItem>
-                          <SelectItem value="done">{{ t('done') }}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div class="min-w-0 space-y-1">
-                        <span
-                          class="block break-words"
-                          :class="{ 'text-muted-foreground line-through': isTodoDone(todo) }"
+                      <button type="button" class="todo-item-state-btn no-drag" :aria-label="t('status')" @click="cycleTodoStatus(todo)">
+                        <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
+                          <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
+                        </span>
+                      </button>
+                      <div class="todo-item-body">
+                        <button
+                          type="button"
+                          class="todo-item-title-btn no-drag"
+                          :class="{ 'todo-item-title-btn--done': isTodoDone(todo) }"
                           :title="getTodoTitle(todo)"
+                          @click="openDetail(todo.id)"
                         >
-                          {{ truncateText(getTodoTitle(todo), 14) }}
-                        </span>
-                        <span v-if="todo.labelText" class="todo-label-badge" :style="getLabelBadgeStyle(todo)">
-                          <span class="todo-label-dot" :style="getLabelDotStyle(todo)" />
-                          {{ todo.labelText }}
-                        </span>
+                          {{ getTodoTitle(todo) }}
+                        </button>
+                        <p v-if="getTodoContent(todo)" class="todo-item-content" :title="getTodoContent(todo)">
+                          {{ truncateText(getTodoContent(todo), 54) }}
+                        </p>
+                        <div class="todo-item-meta">
+                          <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTime(todo.dueAt) }}</span>
+                          <span v-if="todo.labelText" class="todo-item-meta-text">{{ todo.labelText }}</span>
+                          <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
+                          <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
+                          <span v-if="todo.location" class="todo-item-meta-text todo-item-meta-location">
+                            {{ truncateText(todo.location, 16) }}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div class="todo-item-actions">
-                      <Button class="flex-1 sm:flex-none" variant="ghost" size="sm" @click="openDetail(todo.id)">
-                        {{ t('detail') }}
-                      </Button>
-                      <Button class="flex-1 sm:flex-none" variant="destructive" size="sm" @click="deleteTodo(todo.id)">
-                        {{ t('delete') }}
-                      </Button>
-                    </div>
-                    <p class="mt-2 text-xs text-muted-foreground">{{ t('created') }}: {{ formatDateTime(todo.createdAt) }}</p>
-                    <p v-if="todo.dueAt" class="mt-1 text-xs text-muted-foreground">{{ t('due') }}: {{ formatDateTime(todo.dueAt) }}</p>
-                    <p v-if="todo.location" class="mt-1 text-xs text-muted-foreground">{{ t('place') }}: {{ todo.location }}</p>
-                    <p v-if="todo.rolloverEnabled" class="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                      {{ t('rolloverEnabled') }}
-                    </p>
+                    <div class="todo-item-drag-space" aria-hidden="true"></div>
                   </li>
                 </template>
               </draggable>
@@ -3075,6 +3068,17 @@ function formatTime(value) {
                 @click="startDetailEdit"
               >
                 <Pencil class="h-4 w-4" />
+              </Button>
+              <Button
+                v-if="!detailEditMode"
+                variant="ghost"
+                size="sm"
+                class="detail-icon-btn detail-icon-btn--danger"
+                :aria-label="t('delete')"
+                :disabled="busy"
+                @click="deleteTodo(detailTodo.id)"
+              >
+                <Trash2 class="h-4 w-4" />
               </Button>
             </div>
           </header>
