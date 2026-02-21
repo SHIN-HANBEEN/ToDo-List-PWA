@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, Check, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pencil, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
+import { CalendarDays, Check, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -2485,23 +2485,23 @@ function formatTodoItemDue(value) {
                         <SelectTrigger class="todo-item-state-trigger no-drag" :aria-label="t('status')">
                           <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
                             <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
-                            <span
+                            <Play
                               v-else-if="getTodoStatus(todo) === TODO_STATUS_ACTIVE"
-                              class="todo-item-state-glyph todo-item-state-glyph--dot"
+                              class="h-3 w-3 fill-current"
                             />
-                            <span v-else class="todo-item-state-glyph todo-item-state-glyph--dash" />
+                            <Pause v-else class="h-3 w-3" />
                           </span>
                         </SelectTrigger>
                         <SelectContent class="todo-item-state-content" side="bottom" align="start">
                           <SelectItem :value="TODO_STATUS_WAITING" :text-value="t('waiting')" class="todo-item-state-option no-drag">
                             <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo, TODO_STATUS_WAITING)" aria-hidden="true">
-                              <span class="todo-item-state-glyph todo-item-state-glyph--dash" />
+                              <Pause class="h-3 w-3" />
                             </span>
                             <span class="sr-only">{{ t('waiting') }}</span>
                           </SelectItem>
                           <SelectItem :value="TODO_STATUS_ACTIVE" :text-value="t('active')" class="todo-item-state-option no-drag">
                             <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo, TODO_STATUS_ACTIVE)" aria-hidden="true">
-                              <span class="todo-item-state-glyph todo-item-state-glyph--dot" />
+                              <Play class="h-3 w-3 fill-current" />
                             </span>
                             <span class="sr-only">{{ t('active') }}</span>
                           </SelectItem>
@@ -3098,6 +3098,8 @@ function formatTodoItemDue(value) {
             <div class="detail-title-wrap">
               <span class="detail-state-dot" :style="getDetailStateDotStyle(detailTodo)">
                 <Check v-if="isTodoDone(detailTodo)" class="h-3 w-3" />
+                <Play v-else-if="getTodoStatus(detailTodo) === TODO_STATUS_ACTIVE" class="h-3 w-3 fill-current" />
+                <Pause v-else class="h-3 w-3" />
               </span>
               <div v-if="!detailEditMode" class="detail-title-copy">
                 <h2>{{ getTodoTitle(detailTodo) }}</h2>
