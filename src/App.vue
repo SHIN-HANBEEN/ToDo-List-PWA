@@ -2676,9 +2676,9 @@ function formatTodoItemDue(value) {
 
             <section v-else class="todo-calendar-shell">
               <div class="calendar-toolbar">
-                <Button variant="outline" size="sm" @click="moveCalendarMonth(-1)">&#10094;</Button>
+                <Button variant="outline" size="sm" class="calendar-month-nav-btn" @click="moveCalendarMonth(-1)">&#10094;</Button>
                 <p class="calendar-month">{{ calendarMonthLabel }}</p>
-                <Button variant="outline" size="sm" @click="moveCalendarMonth(1)">&#10095;</Button>
+                <Button variant="outline" size="sm" class="calendar-month-nav-btn" @click="moveCalendarMonth(1)">&#10095;</Button>
                 <Button variant="secondary" size="sm" @click="goCalendarToday">{{ t('calendarToday') }}</Button>
               </div>
 

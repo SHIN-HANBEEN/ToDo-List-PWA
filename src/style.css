@@ -611,6 +611,11 @@ body.modal-open-lock {
   align-items: center;
 }
 
+.calendar-month-nav-btn {
+  border: 0;
+  box-shadow: none;
+}
+
 .calendar-month {
   margin: 0;
   text-align: center;
@@ -1535,6 +1540,7 @@ body.modal-open-lock {
     min-height: 78px;
     border: 0;
     border-top: 1px solid hsl(var(--border));
+    border-radius: 0;
     padding: 2px 0;
   }
 
