@@ -68,6 +68,7 @@ const mobileRolloverTooltipTriggerRef = ref(null)
 const settingsRolloverTooltipTriggerRef = ref(null)
 const detailTodoId = ref(null)
 const calendarDayListKey = ref('')
+const calendarNoDueListOpen = ref(false)
 const viewStateHydrating = ref(false)
 const viewStateReady = ref(false)
 const detailEditMode = ref(false)
@@ -821,7 +822,8 @@ const todayTodoCount = computed(() => {
   return todos.value.filter((todo) => !isTodoDone(todo) && todo.dueAt && toDateKey(todo.dueAt) === todayKey).length
 })
 const detailTodo = computed(() => todos.value.find((todo) => todo.id === detailTodoId.value) || null)
-const todosWithoutDueCount = computed(() => filteredTodos.value.filter((todo) => !todo.dueAt).length)
+const todosWithoutDueItems = computed(() => filteredTodos.value.filter((todo) => !todo.dueAt))
+const todosWithoutDueCount = computed(() => todosWithoutDueItems.value.length)
 const calendarMonthLabel = computed(() => {
   const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
   return new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: 'long' }).format(calendarMonthAnchor.value)
@@ -915,6 +917,7 @@ const isAnyModalOpen = computed(() =>
   addTodoOpen.value ||
   addLabelOpen.value ||
   calendarDayListOpen.value ||
+  calendarNoDueListOpen.value ||
   Boolean(detailTodo.value)
 )
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
@@ -1859,6 +1862,7 @@ async function logout() {
     commentDrafts.value = {}
     detailTodoId.value = null
     calendarDayListKey.value = ''
+    calendarNoDueListOpen.value = false
     detailTodoLabelId.value = LABEL_NONE_VALUE
     newTodoTitle.value = ''
     newTodoContent.value = ''
@@ -2264,6 +2268,7 @@ function openCalendarDayList(dateKey) {
   const key = String(dateKey || '')
   if (!key) return
   if ((todosByDate.value.get(key) || []).length === 0) return
+  calendarNoDueListOpen.value = false
   calendarDayListKey.value = key
 }
 
@@ -2273,6 +2278,21 @@ function closeCalendarDayList() {
 
 function openDetailFromCalendarDay(todoId) {
   closeCalendarDayList()
+  openDetail(todoId)
+}
+
+function openCalendarNoDueList() {
+  if (todosWithoutDueItems.value.length === 0) return
+  calendarDayListKey.value = ''
+  calendarNoDueListOpen.value = true
+}
+
+function closeCalendarNoDueList() {
+  calendarNoDueListOpen.value = false
+}
+
+function openDetailFromNoDue(todoId) {
+  closeCalendarNoDueList()
   openDetail(todoId)
 }
 
@@ -2818,7 +2838,14 @@ function formatTodoItemDue(value) {
                 </li>
               </ul>
 
-              <p class="text-xs text-muted-foreground">{{ t('calendarNoDue', { count: todosWithoutDueCount }) }}</p>
+              <button
+                type="button"
+                class="calendar-no-due-trigger text-xs text-muted-foreground"
+                :disabled="todosWithoutDueCount === 0"
+                @click="openCalendarNoDueList"
+              >
+                {{ t('calendarNoDue', { count: todosWithoutDueCount }) }}
+              </button>
             </section>
           </div>
         </template>
@@ -2882,6 +2909,81 @@ function formatTodoItemDue(value) {
                 </p>
                 <div class="todo-item-meta">
                   <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTodoItemDue(todo.dueAt) }}</span>
+                  <span
+                    v-if="todo.labelText"
+                    class="todo-item-meta-text todo-item-meta-label"
+                    :style="getTodoItemLabelTextStyle(todo)"
+                  >
+                    {{ todo.labelText }}
+                  </span>
+                  <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
+                  <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
+                  <span v-if="todo.location" class="todo-item-meta-text todo-item-meta-location">
+                    {{ truncateText(todo.location, 16) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <p v-else class="text-sm text-muted-foreground">{{ t('calendarNoItems') }}</p>
+      </article>
+    </section>
+
+    <section v-if="calendarNoDueListOpen" class="modal-wrap" @click.self="closeCalendarNoDueList">
+      <article class="modal calendar-day-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeCalendarNoDueList"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+        <header class="modal-header">
+          <h2>{{ t('calendarNoDue', { count: todosWithoutDueCount }) }}</h2>
+        </header>
+
+        <ul v-if="todosWithoutDueItems.length > 0" class="todo-list todo-list--panel calendar-day-list-panel">
+          <li
+            v-for="todo in todosWithoutDueItems"
+            :key="todo.id"
+            class="todo-item-row calendar-day-list-item"
+            role="button"
+            tabindex="0"
+            @click="openDetailFromNoDue(todo.id)"
+            @keydown.enter.prevent="openDetailFromNoDue(todo.id)"
+            @keydown.space.prevent="openDetailFromNoDue(todo.id)"
+          >
+            <div class="todo-item-main">
+              <button
+                type="button"
+                class="todo-item-state-btn"
+                :aria-label="t('detail')"
+                @click.stop="openDetailFromNoDue(todo.id)"
+              >
+                <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
+                  <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
+                  <Play v-else-if="getTodoStatus(todo) === TODO_STATUS_ACTIVE" class="h-3 w-3 fill-current" />
+                  <Pause v-else class="h-3 w-3" />
+                </span>
+              </button>
+              <div class="todo-item-body">
+                <button
+                  type="button"
+                  class="todo-item-title-btn"
+                  :class="{ 'todo-item-title-btn--done': isTodoDone(todo) }"
+                  :title="getTodoTitle(todo)"
+                  @click.stop="openDetailFromNoDue(todo.id)"
+                >
+                  {{ getTodoTitle(todo) }}
+                </button>
+                <p v-if="getTodoContent(todo)" class="todo-item-content" :title="getTodoContent(todo)">
+                  {{ truncateText(getTodoContent(todo), 54) }}
+                </p>
+                <div class="todo-item-meta">
                   <span
                     v-if="todo.labelText"
                     class="todo-item-meta-text todo-item-meta-label"

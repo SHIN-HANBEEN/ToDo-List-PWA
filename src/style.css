@@ -763,6 +763,25 @@ body.modal-open-lock {
   text-decoration: underline;
 }
 
+.calendar-no-due-trigger {
+  border: 0;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  padding: 0;
+  justify-self: start;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendar-no-due-trigger:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.calendar-no-due-trigger:disabled {
+  cursor: default;
+  opacity: 0.68;
+}
+
 .calendar-day-modal {
   width: min(720px, 100%);
 }
