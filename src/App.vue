@@ -2536,7 +2536,6 @@ function formatTodoItemDue(value) {
 <template>
   <main class="page" :class="{ 'page--auth': !isAuthenticated }">
     <div
-      :inert="isAnyModalOpen"
       :aria-hidden="isAnyModalOpen ? 'true' : null"
       :class="{ 'app-shell--modal-lock': isAnyModalOpen }"
     >

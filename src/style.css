@@ -114,8 +114,6 @@ body.auth-no-scroll {
 
 html.modal-open-lock,
 body.modal-open-lock {
-  height: 100%;
-  overflow: hidden;
   overscroll-behavior: none;
 }
 
