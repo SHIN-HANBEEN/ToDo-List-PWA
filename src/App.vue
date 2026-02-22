@@ -71,6 +71,7 @@ const calendarDayListKey = ref('')
 const calendarNoDueListOpen = ref(false)
 const viewStateHydrating = ref(false)
 const viewStateReady = ref(false)
+const modalLockScrollY = ref(null)
 const detailEditMode = ref(false)
 const detailTitleDraft = ref('')
 const detailContentDraft = ref('')
@@ -938,10 +939,34 @@ function syncAuthScrollLock() {
 }
 
 function syncModalInteractionLock() {
-  if (typeof document === 'undefined') return
+  if (typeof document === 'undefined' || typeof window === 'undefined') return
   const shouldLock = isAnyModalOpen.value
   document.documentElement.classList.toggle('modal-open-lock', shouldLock)
-  document.body.classList.toggle('modal-open-lock', shouldLock)
+  const body = document.body
+  body.classList.toggle('modal-open-lock', shouldLock)
+
+  if (shouldLock) {
+    if (modalLockScrollY.value === null) {
+      modalLockScrollY.value = window.scrollY || window.pageYOffset || 0
+    }
+    body.style.position = 'fixed'
+    body.style.top = `-${modalLockScrollY.value}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    return
+  }
+
+  const restoreY = modalLockScrollY.value
+  body.style.position = ''
+  body.style.top = ''
+  body.style.left = ''
+  body.style.right = ''
+  body.style.width = ''
+  if (restoreY !== null) {
+    window.scrollTo(0, restoreY)
+  }
+  modalLockScrollY.value = null
 }
 
 function getViewStateStorageKey() {
@@ -1676,7 +1701,13 @@ onBeforeUnmount(() => {
     document.documentElement.classList.remove('modal-open-lock')
     document.body.classList.remove('auth-no-scroll')
     document.body.classList.remove('modal-open-lock')
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.left = ''
+    document.body.style.right = ''
+    document.body.style.width = ''
   }
+  modalLockScrollY.value = null
   window.removeEventListener('resize', handleTooltipViewportChange)
   window.removeEventListener('scroll', handleTooltipViewportChange, true)
 })
