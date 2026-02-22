@@ -613,7 +613,13 @@ body.modal-open-lock {
 
 .calendar-month-nav-btn {
   border: 0;
+  background: transparent !important;
   box-shadow: none;
+}
+
+.calendar-month-nav-btn:hover,
+.calendar-month-nav-btn:focus-visible {
+  background: transparent !important;
 }
 
 .calendar-month {
