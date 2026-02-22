@@ -19,6 +19,7 @@ import {
 const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
 const ROLLOVER_DEFAULT_KEY = 'todo-default-rollover'
+const VIEW_STATE_KEY_PREFIX = 'todo-view-state'
 const PROFILE_IMAGE_MAX_DATA_LENGTH = 2_000_000
 const PROFILE_IMAGE_MAX_UPLOAD_BYTES = 1_200_000
 const locale = ref('ko')
@@ -67,6 +68,8 @@ const mobileRolloverTooltipTriggerRef = ref(null)
 const settingsRolloverTooltipTriggerRef = ref(null)
 const detailTodoId = ref(null)
 const calendarDayListKey = ref('')
+const viewStateHydrating = ref(false)
+const viewStateReady = ref(false)
 const detailEditMode = ref(false)
 const detailTitleDraft = ref('')
 const detailContentDraft = ref('')
@@ -713,6 +716,16 @@ function isTodoDone(todo) {
   return getTodoStatus(todo) === TODO_STATUS_DONE
 }
 
+function normalizeViewMode(value) {
+  return value === 'calendar' ? 'calendar' : 'list'
+}
+
+function normalizeTodoFilter(value) {
+  if (value === 'all') return 'all'
+  if (value === TODO_STATUS_WAITING || value === TODO_STATUS_ACTIVE || value === TODO_STATUS_DONE) return value
+  return 'all'
+}
+
 function matchesTodoStatusFilter(todo) {
   if (filter.value === TODO_STATUS_WAITING) return getTodoStatus(todo) === TODO_STATUS_WAITING
   if (filter.value === TODO_STATUS_ACTIVE) return getTodoStatus(todo) === TODO_STATUS_ACTIVE
@@ -926,6 +939,78 @@ function syncModalInteractionLock() {
   const shouldLock = isAnyModalOpen.value
   document.documentElement.classList.toggle('modal-open-lock', shouldLock)
   document.body.classList.toggle('modal-open-lock', shouldLock)
+}
+
+function getViewStateStorageKey() {
+  const userKeyBase =
+    user.value?.id !== undefined && user.value?.id !== null
+      ? String(user.value.id)
+      : String(user.value?.email || '')
+          .trim()
+          .toLowerCase()
+  if (!userKeyBase) return ''
+  return `${VIEW_STATE_KEY_PREFIX}:${userKeyBase}`
+}
+
+function restoreViewStateForCurrentUser() {
+  if (typeof window === 'undefined') return
+  if (!isAuthenticated.value) return
+  const storageKey = getViewStateStorageKey()
+  if (!storageKey) return
+
+  let parsed = null
+  try {
+    const raw = localStorage.getItem(storageKey)
+    if (!raw) {
+      viewStateReady.value = true
+      return
+    }
+    parsed = JSON.parse(raw)
+  } catch {
+    viewStateReady.value = true
+    return
+  }
+
+  viewStateHydrating.value = true
+  viewMode.value = normalizeViewMode(parsed?.viewMode)
+  filter.value = normalizeTodoFilter(parsed?.filter)
+  const nextLabelFilterId =
+    typeof parsed?.todoLabelFilterId === 'string' ? parsed.todoLabelFilterId : LABEL_FILTER_ALL_VALUE
+  if (nextLabelFilterId === LABEL_FILTER_ALL_VALUE) {
+    todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
+  } else {
+    const numericLabelId = Number(nextLabelFilterId)
+    const exists = Number.isFinite(numericLabelId) && labels.value.some((label) => label.id === numericLabelId)
+    todoLabelFilterId.value = exists ? nextLabelFilterId : LABEL_FILTER_ALL_VALUE
+  }
+  const savedMonth = dateFromKey(parsed?.calendarMonthKey)
+  if (savedMonth) {
+    calendarMonthAnchor.value = startOfMonth(savedMonth)
+  }
+  viewStateReady.value = true
+  viewStateHydrating.value = false
+}
+
+function persistViewStateForCurrentUser() {
+  if (typeof window === 'undefined') return
+  if (!isAuthenticated.value) return
+  if (viewStateHydrating.value || !viewStateReady.value) return
+  const storageKey = getViewStateStorageKey()
+  if (!storageKey) return
+
+  try {
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        viewMode: normalizeViewMode(viewMode.value),
+        filter: normalizeTodoFilter(filter.value),
+        todoLabelFilterId: typeof todoLabelFilterId.value === 'string' ? todoLabelFilterId.value : LABEL_FILTER_ALL_VALUE,
+        calendarMonthKey: toDateKey(calendarMonthAnchor.value),
+      })
+    )
+  } catch {
+    // Ignore storage quota and privacy mode failures.
+  }
 }
 
 async function syncAppBadge() {
@@ -1574,6 +1659,7 @@ onMounted(async () => {
   await loadSessionUser()
   if (user.value) {
     await Promise.all([loadTodos(), loadLabels()])
+    restoreViewStateForCurrentUser()
     await syncPushStatus()
     await syncPushSubscriptionToServer()
   } else {
@@ -1647,6 +1733,13 @@ watch(
     if (!Number.isFinite(currentId) || !nextOptions.some((label) => label.id === currentId)) {
       todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
     }
+  }
+)
+
+watch(
+  [viewMode, filter, todoLabelFilterId, calendarMonthAnchor, isAuthenticated, () => user.value?.id, () => user.value?.email],
+  () => {
+    persistViewStateForCurrentUser()
   }
 )
 
@@ -1733,6 +1826,7 @@ async function submitAuth() {
     authUsername.value = ''
     authPassword.value = ''
     await Promise.all([loadTodos(), loadLabels()])
+    restoreViewStateForCurrentUser()
     await syncPushStatus()
     await syncPushSubscriptionToServer()
   } catch (error) {
@@ -1790,6 +1884,8 @@ async function logout() {
     profileUsernameAvailable.value = null
     resetProfileFileInput()
     notificationEnabled.value = false
+    viewStateReady.value = false
+    viewStateHydrating.value = false
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
