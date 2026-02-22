@@ -686,6 +686,16 @@ const rolloverTooltipMessages = {
 const TODO_STATUS_WAITING = 'waiting'
 const TODO_STATUS_ACTIVE = 'active'
 const TODO_STATUS_DONE = 'done'
+const KOREAN_FIXED_HOLIDAYS = new Set([
+  '01-01',
+  '03-01',
+  '05-05',
+  '06-06',
+  '08-15',
+  '10-03',
+  '10-09',
+  '12-25',
+])
 
 function normalizeTodoStatus(rawStatus, fallbackDone = false) {
   const normalized = typeof rawStatus === 'string' ? rawStatus.trim().toLowerCase() : ''
@@ -836,6 +846,8 @@ const calendarCells = computed(() => {
       day: date.getDate(),
       isCurrentMonth: date.getMonth() === monthStart.getMonth(),
       isToday: key === toDateKey(new Date()),
+      isSunday: date.getDay() === 0,
+      isHoliday: isHolidayDate(date),
       items: todosByDate.value.get(key) || [],
     }
   })
@@ -1157,6 +1169,18 @@ function toDateKey(value) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function toMonthDayKey(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}-${day}`
+}
+
+function isHolidayDate(value) {
+  return KOREAN_FIXED_HOLIDAYS.has(toMonthDayKey(value))
 }
 
 function dateFromKey(key) {
@@ -2669,7 +2693,12 @@ function formatTodoItemDue(value) {
                   class="calendar-cell"
                   :class="{ 'calendar-cell--muted': !cell.isCurrentMonth, 'calendar-cell--today': cell.isToday }"
                 >
-                  <p class="calendar-day">{{ cell.day }}</p>
+                  <p
+                    class="calendar-day"
+                    :class="{ 'calendar-day--sun': cell.isSunday, 'calendar-day--holiday': cell.isHoliday }"
+                  >
+                    {{ cell.day }}
+                  </p>
                   <ul class="calendar-items">
                     <li v-for="todo in cell.items.slice(0, 3)" :key="todo.id">
                       <button

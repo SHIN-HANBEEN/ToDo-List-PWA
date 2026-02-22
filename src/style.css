@@ -668,6 +668,11 @@ body.modal-open-lock {
   font-weight: 600;
 }
 
+.calendar-day--sun,
+.calendar-day--holiday {
+  color: #dc2626;
+}
+
 .calendar-items {
   margin: 0;
   padding: 0;
@@ -1523,13 +1528,18 @@ body.modal-open-lock {
   }
 
   .calendar-grid {
-    gap: 2px;
+    gap: 0;
   }
 
   .calendar-cell {
     min-height: 78px;
     border: 0;
+    border-top: 1px solid hsl(var(--border));
     padding: 2px 0;
+  }
+
+  .calendar-day {
+    text-align: center;
   }
 
   .calendar-item {
