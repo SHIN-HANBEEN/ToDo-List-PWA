@@ -733,6 +733,43 @@ body.modal-open-lock {
   padding: 2px 4px;
 }
 
+.calendar-more-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.calendar-more-btn:hover {
+  text-decoration: underline;
+}
+
+.calendar-day-modal {
+  width: min(720px, 100%);
+}
+
+.calendar-day-list-panel {
+  max-height: min(64vh, 520px);
+  overflow-y: auto;
+}
+
+.calendar-day-list-item {
+  cursor: pointer;
+  padding-right: 12px;
+}
+
+.calendar-day-list-item:hover {
+  background: hsl(var(--muted) / 0.46);
+}
+
+.calendar-day-list-item:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
 .drag-handle {
   border: 0;
   background: transparent;
@@ -1417,6 +1454,10 @@ body.modal-open-lock {
 
   .todo-item-row {
     padding: 10px 28px 10px 10px;
+  }
+
+  .calendar-day-list-item {
+    padding: 10px;
   }
 
   .todo-item-main {

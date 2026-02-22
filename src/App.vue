@@ -66,6 +66,7 @@ const rolloverTooltipRef = ref(null)
 const mobileRolloverTooltipTriggerRef = ref(null)
 const settingsRolloverTooltipTriggerRef = ref(null)
 const detailTodoId = ref(null)
+const calendarDayListKey = ref('')
 const detailEditMode = ref(false)
 const detailTitleDraft = ref('')
 const detailContentDraft = ref('')
@@ -839,6 +840,12 @@ const calendarCells = computed(() => {
     }
   })
 })
+const calendarDayListItems = computed(() => {
+  if (!calendarDayListKey.value) return []
+  return todosByDate.value.get(calendarDayListKey.value) || []
+})
+const calendarDayListOpen = computed(() => Boolean(calendarDayListKey.value))
+const calendarDayListDateLabel = computed(() => formatDateKey(calendarDayListKey.value))
 const currentUserInitial = computed(() => {
   const base = String(user.value?.username || user.value?.email || '').trim()
   if (!base) return '?'
@@ -882,6 +889,7 @@ const isAnyModalOpen = computed(() =>
   settingsOpen.value ||
   addTodoOpen.value ||
   addLabelOpen.value ||
+  calendarDayListOpen.value ||
   Boolean(detailTodo.value)
 )
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
@@ -1149,6 +1157,29 @@ function toDateKey(value) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function dateFromKey(key) {
+  const [yearText, monthText, dayText] = String(key || '').split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  const parsed = new Date(year, month - 1, day)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed
+}
+
+function formatDateKey(key) {
+  const parsed = dateFromKey(key)
+  if (!parsed) return '-'
+  const dateLocale = localeCodeByLanguage[locale.value] || 'en-US'
+  return new Intl.DateTimeFormat(dateLocale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(parsed)
 }
 
 function isValidLabelColor(value) {
@@ -1709,6 +1740,7 @@ async function logout() {
     labels.value = []
     commentDrafts.value = {}
     detailTodoId.value = null
+    calendarDayListKey.value = ''
     detailTodoLabelId.value = LABEL_NONE_VALUE
     newTodoTitle.value = ''
     newTodoContent.value = ''
@@ -2106,6 +2138,22 @@ function openDetail(todoId) {
   detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
   editingCommentId.value = null
   commentEditDraft.value = ''
+}
+
+function openCalendarDayList(dateKey) {
+  const key = String(dateKey || '')
+  if (!key) return
+  if ((todosByDate.value.get(key) || []).length === 0) return
+  calendarDayListKey.value = key
+}
+
+function closeCalendarDayList() {
+  calendarDayListKey.value = ''
+}
+
+function openDetailFromCalendarDay(todoId) {
+  closeCalendarDayList()
+  openDetail(todoId)
 }
 
 async function openSettings() {
@@ -2636,7 +2684,11 @@ function formatTodoItemDue(value) {
                         </span>
                       </button>
                     </li>
-                    <li v-if="cell.items.length > 3" class="calendar-more">+{{ cell.items.length - 3 }}</li>
+                    <li v-if="cell.items.length > 3" class="calendar-more">
+                      <button type="button" class="calendar-more-btn" @click="openCalendarDayList(cell.key)">
+                        +{{ cell.items.length - 3 }}
+                      </button>
+                    </li>
                   </ul>
                 </li>
               </ul>
@@ -2650,6 +2702,82 @@ function formatTodoItemDue(value) {
         </CardContent>
       </Card>
     </div>
+
+    <section v-if="calendarDayListOpen" class="modal-wrap" @click.self="closeCalendarDayList">
+      <article class="modal calendar-day-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeCalendarDayList"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+        <header class="modal-header">
+          <h2>{{ calendarDayListDateLabel }}</h2>
+        </header>
+
+        <ul v-if="calendarDayListItems.length > 0" class="todo-list todo-list--panel calendar-day-list-panel">
+          <li
+            v-for="todo in calendarDayListItems"
+            :key="todo.id"
+            class="todo-item-row calendar-day-list-item"
+            role="button"
+            tabindex="0"
+            @click="openDetailFromCalendarDay(todo.id)"
+            @keydown.enter.prevent="openDetailFromCalendarDay(todo.id)"
+            @keydown.space.prevent="openDetailFromCalendarDay(todo.id)"
+          >
+            <div class="todo-item-main">
+              <button
+                type="button"
+                class="todo-item-state-btn"
+                :aria-label="t('detail')"
+                @click.stop="openDetailFromCalendarDay(todo.id)"
+              >
+                <span class="todo-item-state-dot" :style="getDetailStateDotStyle(todo)">
+                  <Check v-if="isTodoDone(todo)" class="h-3 w-3" />
+                  <Play v-else-if="getTodoStatus(todo) === TODO_STATUS_ACTIVE" class="h-3 w-3 fill-current" />
+                  <Pause v-else class="h-3 w-3" />
+                </span>
+              </button>
+              <div class="todo-item-body">
+                <button
+                  type="button"
+                  class="todo-item-title-btn"
+                  :class="{ 'todo-item-title-btn--done': isTodoDone(todo) }"
+                  :title="getTodoTitle(todo)"
+                  @click.stop="openDetailFromCalendarDay(todo.id)"
+                >
+                  {{ getTodoTitle(todo) }}
+                </button>
+                <p v-if="getTodoContent(todo)" class="todo-item-content" :title="getTodoContent(todo)">
+                  {{ truncateText(getTodoContent(todo), 54) }}
+                </p>
+                <div class="todo-item-meta">
+                  <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTodoItemDue(todo.dueAt) }}</span>
+                  <span
+                    v-if="todo.labelText"
+                    class="todo-item-meta-text todo-item-meta-label"
+                    :style="getTodoItemLabelTextStyle(todo)"
+                  >
+                    {{ todo.labelText }}
+                  </span>
+                  <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
+                  <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
+                  <span v-if="todo.location" class="todo-item-meta-text todo-item-meta-location">
+                    {{ truncateText(todo.location, 16) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <p v-else class="text-sm text-muted-foreground">{{ t('calendarNoItems') }}</p>
+      </article>
+    </section>
 
     <section v-if="profileOpen && isAuthenticated" class="modal-wrap" @click.self="closeProfile">
       <article class="modal profile-modal">
