@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, Check, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -52,6 +52,7 @@ const commentDrafts = ref({})
 const addTodoOpen = ref(false)
 const settingsOpen = ref(false)
 const mobileHeaderOpen = ref(false)
+const mobileMenuDetail = ref('root')
 const profileOpen = ref(false)
 const profileEditMode = ref(false)
 const profileBusy = ref(false)
@@ -201,6 +202,13 @@ const messages = {
     notificationStatusOff: '현재 비활성화됨',
     notificationEnableAction: '켜기',
     notificationDisableAction: '끄기',
+    mobileMenuAlertSettings: '알람 고급설정',
+    mobileMenuAlertSettingsDesc: '푸시 알림 · 리마인더',
+    mobileMenuDisplaySettings: '화면 설정',
+    mobileMenuDisplaySettingsDesc: '언어 · 테마',
+    mobileMenuTodoSettings: '일정 설정',
+    mobileMenuTodoSettingsDesc: '자동 이월',
+    back: '뒤로',
     improvementSend: '개선사항전달',
     improvementReview: '개선사항확인',
     improvementSendTitle: '개선사항전달',
@@ -308,6 +316,13 @@ const messages = {
     notificationStatusOff: 'Currently disabled',
     notificationEnableAction: 'Enable',
     notificationDisableAction: 'Disable',
+    mobileMenuAlertSettings: 'Advanced alerts',
+    mobileMenuAlertSettingsDesc: 'Push notifications · reminders',
+    mobileMenuDisplaySettings: 'Display settings',
+    mobileMenuDisplaySettingsDesc: 'Language · theme',
+    mobileMenuTodoSettings: 'Schedule settings',
+    mobileMenuTodoSettingsDesc: 'Auto rollover',
+    back: 'Back',
     improvementSend: 'Send feedback',
     improvementReview: 'Review feedback',
     improvementSendTitle: 'Send feedback',
@@ -415,6 +430,13 @@ const messages = {
     notificationStatusOff: '当前未启用',
     notificationEnableAction: '开启',
     notificationDisableAction: '关闭',
+    mobileMenuAlertSettings: '通知高级设置',
+    mobileMenuAlertSettingsDesc: '推送通知 · 提醒',
+    mobileMenuDisplaySettings: '界面设置',
+    mobileMenuDisplaySettingsDesc: '语言 · 主题',
+    mobileMenuTodoSettings: '日程设置',
+    mobileMenuTodoSettingsDesc: '自动顺延',
+    back: '返回',
     improvementSend: '提交改进建议',
     improvementReview: '查看改进建议',
     improvementSendTitle: '提交改进建议',
@@ -522,6 +544,13 @@ const messages = {
     notificationStatusOff: '現在無効',
     notificationEnableAction: '有効化',
     notificationDisableAction: '無効化',
+    mobileMenuAlertSettings: '通知の詳細設定',
+    mobileMenuAlertSettingsDesc: 'プッシュ通知・リマインダー',
+    mobileMenuDisplaySettings: '画面設定',
+    mobileMenuDisplaySettingsDesc: '言語・テーマ',
+    mobileMenuTodoSettings: '予定設定',
+    mobileMenuTodoSettingsDesc: '自動繰り越し',
+    back: '戻る',
     improvementSend: '改善要望を送信',
     improvementReview: '改善要望を確認',
     improvementSendTitle: '改善要望を送信',
@@ -996,6 +1025,12 @@ const notificationHelpText = computed(() => {
   if (!isPushConfigured.value) return t('notificationNotConfigured')
   if (notificationPermission.value === 'denied') return t('notificationPermissionDenied')
   return notificationEnabled.value ? t('notificationStatusOn') : t('notificationStatusOff')
+})
+const mobileMenuDetailTitle = computed(() => {
+  if (mobileMenuDetail.value === 'notifications') return t('mobileMenuAlertSettings')
+  if (mobileMenuDetail.value === 'display') return t('mobileMenuDisplaySettings')
+  if (mobileMenuDetail.value === 'todo') return t('mobileMenuTodoSettings')
+  return t('appTitle')
 })
 
 function syncAuthScrollLock() {
@@ -2420,12 +2455,23 @@ function openMobileHeader() {
   closeRolloverTooltip()
   profileOpen.value = false
   profileEditMode.value = false
+  mobileMenuDetail.value = 'root'
   mobileHeaderOpen.value = true
 }
 
 function closeMobileHeader() {
   closeRolloverTooltip()
+  mobileMenuDetail.value = 'root'
   mobileHeaderOpen.value = false
+}
+
+function openMobileMenuDetail(nextDetail) {
+  if (nextDetail !== 'notifications' && nextDetail !== 'display' && nextDetail !== 'todo') return
+  mobileMenuDetail.value = nextDetail
+}
+
+function backToMobileMenuRoot() {
+  mobileMenuDetail.value = 'root'
 }
 
 function resetImprovementSendDraft() {
@@ -3316,107 +3362,177 @@ function formatTodoItemDue(value) {
         >
           <X class="h-4 w-4" />
         </Button>
-        <header class="modal-header">
-          <h2>{{ t('appTitle') }}</h2>
+        <header class="modal-header mobile-menu-header">
+          <div class="mobile-menu-header-main">
+            <Button
+              v-if="mobileMenuDetail !== 'root'"
+              variant="ghost"
+              size="sm"
+              class="mobile-menu-back-btn"
+              :aria-label="t('back')"
+              @click="backToMobileMenuRoot"
+            >
+              <ChevronLeft class="h-4 w-4" />
+            </Button>
+            <h2>{{ mobileMenuDetailTitle }}</h2>
+          </div>
         </header>
 
-        <div class="grid min-h-[380px] gap-3 text-xs text-muted-foreground">
-          <div class="space-y-1">
-            <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
-            <div class="inline-flex w-full rounded-lg border bg-background p-1">
-              <Button class="flex-1 text-sm" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
-                <Sun class="mr-1 h-4 w-4" />
-                {{ t('lightMode') }}
+        <div class="mobile-menu-shell text-xs text-muted-foreground">
+          <template v-if="mobileMenuDetail === 'root'">
+            <div class="mobile-menu-category-list">
+              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('notifications')">
+                <div>
+                  <p class="mobile-menu-category-title">{{ t('mobileMenuAlertSettings') }}</p>
+                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuAlertSettingsDesc') }}</p>
+                </div>
+                <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('display')">
+                <div>
+                  <p class="mobile-menu-category-title">{{ t('mobileMenuDisplaySettings') }}</p>
+                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuDisplaySettingsDesc') }}</p>
+                </div>
+                <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('todo')">
+                <div>
+                  <p class="mobile-menu-category-title">{{ t('mobileMenuTodoSettings') }}</p>
+                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuTodoSettingsDesc') }}</p>
+                </div>
+                <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <div class="mobile-menu-actions">
+              <Button
+                v-if="isAuthenticated"
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
+                @click="openImprovementSend"
+              >
+                {{ t('improvementSend') }}
               </Button>
-              <Button class="flex-1 text-sm" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
-                <Moon class="mr-1 h-4 w-4" />
-                {{ t('darkMode') }}
+
+              <Button
+                v-if="isAuthenticated && isAdminUser"
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
+                @click="openImprovementReview"
+              >
+                {{ t('improvementReview') }}
               </Button>
             </div>
-          </div>
 
-          <div class="space-y-1">
-            <p class="text-sm text-muted-foreground">{{ t('language') }}</p>
-            <Select :model-value="locale" @update:model-value="setLocale">
-              <SelectTrigger class="w-full text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
-                  {{ option.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <Button
+              v-if="isAuthenticated"
+              variant="ghost"
+              size="sm"
+              class="mt-auto ml-auto justify-center gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
+              @click="logoutFromMobile"
+              :disabled="authBusy"
+            >
+              <LogOut class="h-4 w-4" />
+              {{ t('logout') }}
+            </Button>
+          </template>
 
-          <div class="space-y-1">
-            <div class="flex items-center gap-1.5">
-              <p class="text-sm text-muted-foreground">{{ rolloverSettingLabel }}</p>
-              <div class="relative">
+          <template v-else-if="mobileMenuDetail === 'display'">
+            <div class="grid min-h-[300px] gap-3">
+              <div class="space-y-1">
+                <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
+                <div class="inline-flex w-full rounded-lg border bg-background p-1">
+                  <Button class="flex-1 text-sm" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
+                    <Sun class="mr-1 h-4 w-4" />
+                    {{ t('lightMode') }}
+                  </Button>
+                  <Button class="flex-1 text-sm" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
+                    <Moon class="mr-1 h-4 w-4" />
+                    {{ t('darkMode') }}
+                  </Button>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <p class="text-sm text-muted-foreground">{{ t('language') }}</p>
+                <Select :model-value="locale" @update:model-value="setLocale">
+                  <SelectTrigger class="w-full text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="mobileMenuDetail === 'notifications'">
+            <div class="grid min-h-[300px] gap-3">
+              <p class="text-sm text-muted-foreground">{{ t('notificationReminder30m') }}</p>
+              <p class="text-xs text-muted-foreground">{{ notificationHelpText }}</p>
+              <div class="inline-flex w-full rounded-lg border bg-background p-1">
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  ref="mobileRolloverTooltipTriggerRef"
-                  class="h-7 w-7 rounded-full p-0 text-muted-foreground"
-                  :aria-label="rolloverTooltipText"
-                  @click.stop="toggleRolloverTooltip('mobile')"
+                  class="flex-1 text-sm"
+                  :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !isPushConfigured || notificationPermission === 'denied'"
+                  @click="enableReminderNotifications"
                 >
-                  <CircleHelp class="h-4 w-4" />
+                  {{ t('notificationEnableAction') }}
                 </Button>
-                <div
-                  v-if="rolloverTooltipOpen && rolloverTooltipContext === 'mobile'"
-                  ref="rolloverTooltipRef"
-                  :style="rolloverTooltipStyle"
-                  class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
+                <Button
+                  class="flex-1 text-sm"
+                  variant="ghost"
+                  :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !notificationEnabled"
+                  @click="disableReminderNotifications"
                 >
-                  {{ rolloverTooltipText }}
+                  {{ t('notificationDisableAction') }}
+                </Button>
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="mobileMenuDetail === 'todo'">
+            <div class="grid min-h-[300px] gap-3">
+              <div class="space-y-1">
+                <div class="flex items-center gap-1.5">
+                  <p class="text-sm text-muted-foreground">{{ rolloverSettingLabel }}</p>
+                  <div class="relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      class="h-7 w-7 rounded-full p-0 text-muted-foreground"
+                      :aria-label="rolloverTooltipText"
+                      @click.stop="toggleRolloverTooltip('settings')"
+                    >
+                      <CircleHelp class="h-4 w-4" />
+                    </Button>
+                    <div
+                      v-if="rolloverTooltipOpen && rolloverTooltipContext === 'settings'"
+                      ref="rolloverTooltipRef"
+                      :style="rolloverTooltipStyle"
+                      class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
+                    >
+                      {{ rolloverTooltipText }}
+                    </div>
+                  </div>
+                </div>
+                <div class="inline-flex w-full rounded-lg border bg-background p-1">
+                  <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
+                    true
+                  </Button>
+                  <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
+                    false
+                  </Button>
                 </div>
               </div>
             </div>
-            <div class="inline-flex w-full rounded-lg border bg-background p-1">
-              <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
-                true
-              </Button>
-              <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
-                false
-              </Button>
-            </div>
-          </div>
-
-          <Button
-            v-if="isAuthenticated"
-            type="button"
-            variant="ghost"
-            size="sm"
-            class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
-            @click="openImprovementSend"
-          >
-            {{ t('improvementSend') }}
-          </Button>
-
-          <Button
-            v-if="isAuthenticated && isAdminUser"
-            type="button"
-            variant="ghost"
-            size="sm"
-            class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
-            @click="openImprovementReview"
-          >
-            {{ t('improvementReview') }}
-          </Button>
-
-          <Button
-            v-if="isAuthenticated"
-            variant="ghost"
-            size="sm"
-            class="mt-auto ml-auto justify-center gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
-            @click="logoutFromMobile"
-            :disabled="authBusy"
-          >
-            <LogOut class="h-4 w-4" />
-            {{ t('logout') }}
-          </Button>
+          </template>
         </div>
       </article>
     </section>
