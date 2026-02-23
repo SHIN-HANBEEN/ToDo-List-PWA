@@ -41,6 +41,9 @@ npx vercel env pull .env.local
 - `DELETE /api/todos?done=true`
 - `POST /api/comments`
 - `DELETE /api/comments?id=...`
+- `POST /api/improvements`
+- `GET /api/improvements` (admin only)
+- `DELETE /api/improvements?id=...` (admin only)
 - `GET /api/notifications/subscriptions`
 - `POST /api/notifications/subscriptions`
 - `DELETE /api/notifications/subscriptions`

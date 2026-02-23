@@ -124,6 +124,16 @@ export async function ensureSchema() {
         );
       `)
 
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS improvement_requests (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `)
+
       // Safe migrations for compatibility with already-deployed schemas.
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
       await client.query('ALTER TABLE todos ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;')
@@ -224,6 +234,12 @@ export async function ensureSchema() {
       await client.query('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_last_seen ON push_subscriptions(last_seen_at DESC);')
       await client.query('CREATE INDEX IF NOT EXISTS idx_todo_reminder_logs_todo_sent ON todo_reminder_logs(todo_id, sent_at DESC);')
       await client.query('CREATE INDEX IF NOT EXISTS idx_todo_reminder_logs_user_sent ON todo_reminder_logs(user_id, sent_at DESC);')
+      await client.query(
+        'CREATE INDEX IF NOT EXISTS idx_improvement_requests_created ON improvement_requests(created_at DESC);'
+      )
+      await client.query(
+        'CREATE INDEX IF NOT EXISTS idx_improvement_requests_user_created ON improvement_requests(user_id, created_at DESC);'
+      )
 
       await client.query(`
         INSERT INTO labels (user_id, name, color)
@@ -288,6 +304,18 @@ export function normalizeLabelRow(row) {
     name: row.name,
     color: row.color || '#64748b',
     createdAt: row.created_at,
+  }
+}
+
+export function normalizeImprovementRequestRow(row) {
+  return {
+    id: Number(row.id),
+    userId: Number(row.user_id),
+    title: String(row.title || ''),
+    content: String(row.content || ''),
+    createdAt: row.created_at,
+    reporterEmail: String(row.reporter_email || ''),
+    reporterUsername: String(row.reporter_username || ''),
   }
 }
 

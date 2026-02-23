@@ -20,6 +20,7 @@ const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
 const ROLLOVER_DEFAULT_KEY = 'todo-default-rollover'
 const VIEW_STATE_KEY_PREFIX = 'todo-view-state'
+const ADMIN_EMAIL = 'shb080101@gmail.com'
 const PROFILE_IMAGE_MAX_DATA_LENGTH = 2_000_000
 const PROFILE_IMAGE_MAX_UPLOAD_BYTES = 1_200_000
 const locale = ref('ko')
@@ -69,6 +70,14 @@ const settingsRolloverTooltipTriggerRef = ref(null)
 const detailTodoId = ref(null)
 const calendarDayListKey = ref('')
 const calendarNoDueListOpen = ref(false)
+const improvementSendOpen = ref(false)
+const improvementReviewOpen = ref(false)
+const improvementTitleDraft = ref('')
+const improvementContentDraft = ref('')
+const improvementSubmitBusy = ref(false)
+const improvementList = ref([])
+const improvementListLoading = ref(false)
+const improvementDeleteBusyId = ref(null)
 const viewStateHydrating = ref(false)
 const viewStateReady = ref(false)
 const modalLockScrollY = ref(null)
@@ -192,6 +201,18 @@ const messages = {
     notificationStatusOff: '현재 비활성화됨',
     notificationEnableAction: '켜기',
     notificationDisableAction: '끄기',
+    improvementSend: '개선사항전달',
+    improvementReview: '개선사항확인',
+    improvementSendTitle: '개선사항전달',
+    improvementReviewTitle: '개선사항확인',
+    improvementTitleLabel: '제목',
+    improvementTitlePlaceholder: '개선사항 제목을 입력하세요',
+    improvementContentLabel: '내용',
+    improvementContentPlaceholder: '개선사항 내용을 입력하세요',
+    improvementSubmit: '전송',
+    improvementEmpty: '전달된 개선사항이 없습니다.',
+    improvementReporter: '작성자',
+    improvementSubmittedAt: '등록일시',
   },
   en: {
     appTitle: 'Todogram',
@@ -287,6 +308,18 @@ const messages = {
     notificationStatusOff: 'Currently disabled',
     notificationEnableAction: 'Enable',
     notificationDisableAction: 'Disable',
+    improvementSend: 'Send feedback',
+    improvementReview: 'Review feedback',
+    improvementSendTitle: 'Send feedback',
+    improvementReviewTitle: 'Review feedback',
+    improvementTitleLabel: 'Title',
+    improvementTitlePlaceholder: 'Enter feedback title',
+    improvementContentLabel: 'Content',
+    improvementContentPlaceholder: 'Enter feedback details',
+    improvementSubmit: 'Submit',
+    improvementEmpty: 'No feedback has been submitted.',
+    improvementReporter: 'Reporter',
+    improvementSubmittedAt: 'Submitted at',
   },
   zh: {
     appTitle: 'Todogram',
@@ -382,6 +415,18 @@ const messages = {
     notificationStatusOff: '当前未启用',
     notificationEnableAction: '开启',
     notificationDisableAction: '关闭',
+    improvementSend: '提交改进建议',
+    improvementReview: '查看改进建议',
+    improvementSendTitle: '提交改进建议',
+    improvementReviewTitle: '查看改进建议',
+    improvementTitleLabel: '标题',
+    improvementTitlePlaceholder: '请输入改进建议标题',
+    improvementContentLabel: '内容',
+    improvementContentPlaceholder: '请输入改进建议内容',
+    improvementSubmit: '提交',
+    improvementEmpty: '暂无改进建议。',
+    improvementReporter: '提交者',
+    improvementSubmittedAt: '提交时间',
   },
   ja: {
     appTitle: 'Todogram',
@@ -477,10 +522,23 @@ const messages = {
     notificationStatusOff: '現在無効',
     notificationEnableAction: '有効化',
     notificationDisableAction: '無効化',
+    improvementSend: '改善要望を送信',
+    improvementReview: '改善要望を確認',
+    improvementSendTitle: '改善要望を送信',
+    improvementReviewTitle: '改善要望を確認',
+    improvementTitleLabel: 'タイトル',
+    improvementTitlePlaceholder: '改善要望のタイトルを入力',
+    improvementContentLabel: '内容',
+    improvementContentPlaceholder: '改善要望の内容を入力',
+    improvementSubmit: '送信',
+    improvementEmpty: '送信された改善要望はありません。',
+    improvementReporter: '投稿者',
+    improvementSubmittedAt: '投稿日時',
   },
 }
 const errorMessages = {
   Unauthorized: { ko: '로그인이 필요합니다.', en: 'Login required.', zh: '需要登录。', ja: 'ログインが必要です。' },
+  Forbidden: { ko: '접근 권한이 없습니다.', en: 'Forbidden.', zh: '没有访问权限。', ja: 'アクセス権限がありません。' },
   'forbidden': {
     ko: '접근 권한이 없습니다.',
     en: 'Forbidden.',
@@ -661,6 +719,12 @@ const errorMessages = {
     zh: '未找到评论。',
     ja: 'コメントが見つかりません。',
   },
+  'improvement request not found': {
+    ko: '개선사항을 찾을 수 없습니다.',
+    en: 'Improvement request not found.',
+    zh: '未找到改进建议。',
+    ja: '改善要望が見つかりません。',
+  },
 }
 const localeCodeByLanguage = {
   ko: 'ko-KR',
@@ -773,6 +837,7 @@ function applyTodoStatusShape(todo) {
 }
 
 const isAuthenticated = computed(() => Boolean(user.value))
+const isAdminUser = computed(() => String(user.value?.email || '').trim().toLowerCase() === ADMIN_EMAIL)
 const isDark = computed(() => theme.value === 'dark')
 const filteredTodos = computed(() => {
   let subset = todos.value.filter((todo) => matchesTodoStatusFilter(todo) && matchesTodoLabelFilter(todo))
@@ -919,6 +984,8 @@ const isAnyModalOpen = computed(() =>
   addLabelOpen.value ||
   calendarDayListOpen.value ||
   calendarNoDueListOpen.value ||
+  improvementSendOpen.value ||
+  improvementReviewOpen.value ||
   Boolean(detailTodo.value)
 )
 const rolloverSettingLabel = computed(() => rolloverSettingLabels[locale.value] || rolloverSettingLabels.en)
@@ -1894,6 +1961,12 @@ async function logout() {
     detailTodoId.value = null
     calendarDayListKey.value = ''
     calendarNoDueListOpen.value = false
+    improvementSendOpen.value = false
+    improvementReviewOpen.value = false
+    resetImprovementSendDraft()
+    improvementList.value = []
+    improvementListLoading.value = false
+    improvementDeleteBusyId.value = null
     detailTodoLabelId.value = LABEL_NONE_VALUE
     newTodoTitle.value = ''
     newTodoContent.value = ''
@@ -2353,6 +2426,100 @@ function openMobileHeader() {
 function closeMobileHeader() {
   closeRolloverTooltip()
   mobileHeaderOpen.value = false
+}
+
+function resetImprovementSendDraft() {
+  improvementTitleDraft.value = ''
+  improvementContentDraft.value = ''
+  improvementSubmitBusy.value = false
+}
+
+function closeImprovementSend() {
+  improvementSendOpen.value = false
+  resetImprovementSendDraft()
+}
+
+function openImprovementSend() {
+  if (!isAuthenticated.value) return
+  closeMobileHeader()
+  closeRolloverTooltip()
+  improvementReviewOpen.value = false
+  errorMessage.value = ''
+  resetImprovementSendDraft()
+  improvementSendOpen.value = true
+}
+
+async function submitImprovementRequest() {
+  if (!isAuthenticated.value || improvementSubmitBusy.value) return
+  const title = String(improvementTitleDraft.value || '').trim()
+  const content = String(improvementContentDraft.value || '').trim()
+  if (!title) {
+    errorMessage.value = translateError('title is required')
+    return
+  }
+  if (!content) {
+    errorMessage.value = translateError('text is required')
+    return
+  }
+
+  improvementSubmitBusy.value = true
+  errorMessage.value = ''
+  try {
+    await apiRequest('/api/improvements', {
+      method: 'POST',
+      body: JSON.stringify({ title, content }),
+    })
+    closeImprovementSend()
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
+  } finally {
+    improvementSubmitBusy.value = false
+  }
+}
+
+async function loadImprovementRequests() {
+  if (!isAuthenticated.value || !isAdminUser.value) return
+  improvementListLoading.value = true
+  try {
+    const payload = await apiRequest('/api/improvements')
+    improvementList.value = payload.improvements || []
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
+    improvementList.value = []
+  } finally {
+    improvementListLoading.value = false
+  }
+}
+
+function closeImprovementReview() {
+  improvementReviewOpen.value = false
+  improvementDeleteBusyId.value = null
+}
+
+async function openImprovementReview() {
+  if (!isAuthenticated.value || !isAdminUser.value) return
+  closeMobileHeader()
+  closeRolloverTooltip()
+  improvementSendOpen.value = false
+  errorMessage.value = ''
+  improvementReviewOpen.value = true
+  await loadImprovementRequests()
+}
+
+async function deleteImprovementRequest(id) {
+  if (!isAuthenticated.value || !isAdminUser.value) return
+  const numericId = Number(id)
+  if (!Number.isFinite(numericId)) return
+  improvementDeleteBusyId.value = numericId
+  errorMessage.value = ''
+  try {
+    await apiRequest(`/api/improvements?id=${numericId}`, { method: 'DELETE' })
+    improvementList.value = improvementList.value.filter((item) => Number(item.id) !== numericId)
+  } catch (error) {
+    errorMessage.value = translateError(error.message)
+  } finally {
+    improvementDeleteBusyId.value = null
+  }
 }
 
 async function logoutFromMobile() {
@@ -3219,6 +3386,28 @@ function formatTodoItemDue(value) {
 
           <Button
             v-if="isAuthenticated"
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
+            @click="openImprovementSend"
+          >
+            {{ t('improvementSend') }}
+          </Button>
+
+          <Button
+            v-if="isAuthenticated && isAdminUser"
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
+            @click="openImprovementReview"
+          >
+            {{ t('improvementReview') }}
+          </Button>
+
+          <Button
+            v-if="isAuthenticated"
             variant="ghost"
             size="sm"
             class="mt-auto ml-auto justify-center gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
@@ -3231,6 +3420,96 @@ function formatTodoItemDue(value) {
         </div>
       </article>
     </section>
+
+    <section v-if="improvementSendOpen && isAuthenticated" class="modal-wrap" @click.self="closeImprovementSend">
+      <article class="modal settings-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeImprovementSend"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+        <header class="modal-header">
+          <h2>{{ t('improvementSendTitle') }}</h2>
+        </header>
+
+        <div class="grid gap-3">
+          <div class="grid gap-1">
+            <p class="text-sm text-muted-foreground">{{ t('improvementTitleLabel') }}</p>
+            <Input
+              v-model="improvementTitleDraft"
+              type="text"
+              maxlength="120"
+              :placeholder="t('improvementTitlePlaceholder')"
+            />
+          </div>
+          <div class="grid gap-1">
+            <p class="text-sm text-muted-foreground">{{ t('improvementContentLabel') }}</p>
+            <Textarea
+              v-model="improvementContentDraft"
+              rows="7"
+              maxlength="4000"
+              :placeholder="t('improvementContentPlaceholder')"
+            />
+          </div>
+          <div class="improvement-modal-actions">
+            <Button type="button" variant="ghost" @click="closeImprovementSend">
+              {{ t('cancel') }}
+            </Button>
+            <Button type="button" :disabled="improvementSubmitBusy" @click="submitImprovementRequest">
+              {{ t('improvementSubmit') }}
+            </Button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section v-if="improvementReviewOpen && isAuthenticated && isAdminUser" class="modal-wrap" @click.self="closeImprovementReview">
+      <article class="modal settings-modal improvement-review-modal">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="modal-close"
+          @click="closeImprovementReview"
+          :aria-label="t('close')"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+        <header class="modal-header">
+          <h2>{{ t('improvementReviewTitle') }}</h2>
+        </header>
+
+        <p v-if="improvementListLoading" class="text-sm text-muted-foreground">{{ t('loading') }}</p>
+        <ul v-else-if="improvementList.length > 0" class="improvement-review-list">
+          <li v-for="item in improvementList" :key="item.id" class="improvement-review-item">
+            <div class="improvement-review-top">
+              <p class="improvement-review-title">{{ item.title }}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="todo-top-icon-btn"
+                :disabled="improvementDeleteBusyId === item.id"
+                @click="deleteImprovementRequest(item.id)"
+                :aria-label="t('delete')"
+              >
+                <Trash2 class="h-4 w-4" />
+              </Button>
+            </div>
+            <p class="improvement-review-content">{{ item.content }}</p>
+            <div class="improvement-review-meta">
+              <small>{{ t('improvementReporter') }}: {{ item.reporterUsername || item.reporterEmail }}</small>
+              <small>{{ t('improvementSubmittedAt') }}: {{ formatDateTime(item.createdAt) }}</small>
+            </div>
+          </li>
+        </ul>
+        <p v-else class="text-sm text-muted-foreground">{{ t('improvementEmpty') }}</p>
+      </article>
+    </section>
+
     <section v-if="settingsOpen" class="modal-wrap" @click.self="closeSettings">
       <article class="modal modal--allow-overflow settings-modal">
         <Button
