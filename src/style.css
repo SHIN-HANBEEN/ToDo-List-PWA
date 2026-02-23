@@ -1212,6 +1212,10 @@ body.modal-open-lock {
   gap: 4px;
 }
 
+.mobile-menu-header-icon {
+  color: hsl(var(--foreground));
+}
+
 .mobile-menu-back-btn {
   width: 30px;
   height: 30px;

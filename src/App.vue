@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Settings2, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -208,6 +208,8 @@ const messages = {
     mobileMenuDisplaySettingsDesc: '언어 · 테마',
     mobileMenuTodoSettings: '일정 설정',
     mobileMenuTodoSettingsDesc: '자동 이월',
+    mobileMenuCustomerCenter: '고객센터',
+    mobileMenuCustomerCenterDesc: '개선사항전달 · 개선사항확인',
     back: '뒤로',
     improvementSend: '개선사항전달',
     improvementReview: '개선사항확인',
@@ -322,6 +324,8 @@ const messages = {
     mobileMenuDisplaySettingsDesc: 'Language · theme',
     mobileMenuTodoSettings: 'Schedule settings',
     mobileMenuTodoSettingsDesc: 'Auto rollover',
+    mobileMenuCustomerCenter: 'Support center',
+    mobileMenuCustomerCenterDesc: 'Send feedback · Review feedback',
     back: 'Back',
     improvementSend: 'Send feedback',
     improvementReview: 'Review feedback',
@@ -436,6 +440,8 @@ const messages = {
     mobileMenuDisplaySettingsDesc: '语言 · 主题',
     mobileMenuTodoSettings: '日程设置',
     mobileMenuTodoSettingsDesc: '自动顺延',
+    mobileMenuCustomerCenter: '客服中心',
+    mobileMenuCustomerCenterDesc: '提交改进建议 · 查看改进建议',
     back: '返回',
     improvementSend: '提交改进建议',
     improvementReview: '查看改进建议',
@@ -550,6 +556,8 @@ const messages = {
     mobileMenuDisplaySettingsDesc: '言語・テーマ',
     mobileMenuTodoSettings: '予定設定',
     mobileMenuTodoSettingsDesc: '自動繰り越し',
+    mobileMenuCustomerCenter: 'カスタマーセンター',
+    mobileMenuCustomerCenterDesc: '改善要望送信・確認',
     back: '戻る',
     improvementSend: '改善要望を送信',
     improvementReview: '改善要望を確認',
@@ -1030,6 +1038,7 @@ const mobileMenuDetailTitle = computed(() => {
   if (mobileMenuDetail.value === 'notifications') return t('mobileMenuAlertSettings')
   if (mobileMenuDetail.value === 'display') return t('mobileMenuDisplaySettings')
   if (mobileMenuDetail.value === 'todo') return t('mobileMenuTodoSettings')
+  if (mobileMenuDetail.value === 'support') return t('mobileMenuCustomerCenter')
   return t('appTitle')
 })
 
@@ -2466,7 +2475,7 @@ function closeMobileHeader() {
 }
 
 function openMobileMenuDetail(nextDetail) {
-  if (nextDetail !== 'notifications' && nextDetail !== 'display' && nextDetail !== 'todo') return
+  if (nextDetail !== 'notifications' && nextDetail !== 'display' && nextDetail !== 'todo' && nextDetail !== 'support') return
   mobileMenuDetail.value = nextDetail
 }
 
@@ -3374,7 +3383,8 @@ function formatTodoItemDue(value) {
             >
               <ChevronLeft class="h-4 w-4" />
             </Button>
-            <h2>{{ mobileMenuDetailTitle }}</h2>
+            <Settings2 v-if="mobileMenuDetail === 'root'" class="mobile-menu-header-icon h-5 w-5" />
+            <h2 v-else>{{ mobileMenuDetailTitle }}</h2>
           </div>
         </header>
 
@@ -3402,30 +3412,13 @@ function formatTodoItemDue(value) {
                 </div>
                 <ChevronRight class="h-4 w-4 text-muted-foreground" />
               </button>
-            </div>
-
-            <div class="mobile-menu-actions">
-              <Button
-                v-if="isAuthenticated"
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
-                @click="openImprovementSend"
-              >
-                {{ t('improvementSend') }}
-              </Button>
-
-              <Button
-                v-if="isAuthenticated && isAdminUser"
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
-                @click="openImprovementReview"
-              >
-                {{ t('improvementReview') }}
-              </Button>
+              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('support')">
+                <div>
+                  <p class="mobile-menu-category-title">{{ t('mobileMenuCustomerCenter') }}</p>
+                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuCustomerCenterDesc') }}</p>
+                </div>
+                <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
 
             <Button
@@ -3530,6 +3523,34 @@ function formatTodoItemDue(value) {
                     false
                   </Button>
                 </div>
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="mobileMenuDetail === 'support'">
+            <div class="grid min-h-[300px] gap-3">
+              <div class="mobile-menu-actions">
+                <Button
+                  v-if="isAuthenticated"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
+                  @click="openImprovementSend"
+                >
+                  {{ t('improvementSend') }}
+                </Button>
+
+                <Button
+                  v-if="isAuthenticated && isAdminUser"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="justify-start gap-2 rounded-md border-0 bg-muted/30 px-3 text-left shadow-none"
+                  @click="openImprovementReview"
+                >
+                  {{ t('improvementReview') }}
+                </Button>
               </div>
             </div>
           </template>
