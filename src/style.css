@@ -316,7 +316,7 @@ body.modal-open-lock {
 .todo-item-row {
   border-bottom: 1px solid hsl(var(--border));
   position: relative;
-  padding: 12px 32px 12px 12px;
+  padding: 12px;
 }
 
 .todo-list--panel > li:last-child {
@@ -404,6 +404,16 @@ body.modal-open-lock {
   white-space: nowrap;
 }
 
+.todo-list--draggable .todo-item-title-btn {
+  cursor: grab;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.todo-list--draggable .todo-item-title-btn:active {
+  cursor: grabbing;
+}
+
 .todo-item-title-btn--done {
   color: hsl(var(--muted-foreground));
   text-decoration: line-through;
@@ -450,21 +460,6 @@ body.modal-open-lock {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 88px;
-}
-
-.todo-item-drag-space {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 24px;
-  height: 100%;
-  cursor: grab;
-  background: transparent;
-  touch-action: none;
-}
-
-.todo-item-drag-space:active {
-  cursor: grabbing;
 }
 
 .detail-icon-btn--danger {
@@ -1608,7 +1603,7 @@ body.modal-open-lock {
   }
 
   .todo-item-row {
-    padding: 10px 28px 10px 10px;
+    padding: 10px;
   }
 
   .calendar-day-list-item {
@@ -1626,10 +1621,6 @@ body.modal-open-lock {
 
   .todo-item-meta {
     gap: 6px;
-  }
-
-  .todo-item-drag-space {
-    width: 20px;
   }
 
   .todo-bottom-tabs {

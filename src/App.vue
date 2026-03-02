@@ -95,6 +95,7 @@ const commentEditTextareaRef = ref(null)
 const loading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
+const suppressTodoTitleClick = ref(false)
 const user = ref(null)
 const authMode = ref('login')
 const authEmail = ref('')
@@ -106,6 +107,7 @@ const notificationBusy = ref(false)
 const notificationSupported = ref(false)
 const notificationEnabled = ref(false)
 const notificationPermission = ref('default')
+let suppressTodoTitleClickTimer = null
 
 const messages = {
   ko: {
@@ -1807,6 +1809,10 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (suppressTodoTitleClickTimer) {
+    clearTimeout(suppressTodoTitleClickTimer)
+    suppressTodoTitleClickTimer = null
+  }
   if (typeof document !== 'undefined') {
     document.documentElement.classList.remove('auth-no-scroll')
     document.documentElement.classList.remove('modal-open-lock')
@@ -2091,9 +2097,23 @@ async function persistOrder() {
 
 async function onDragEnd(event) {
   if (!event) return
+  suppressTodoTitleClickTemporarily()
   if (event.oldIndex === event.newIndex) return
   if (busy.value) return
   await persistOrder()
+}
+
+function onDragStart() {
+  suppressTodoTitleClickTemporarily(260)
+}
+
+function suppressTodoTitleClickTemporarily(duration = 180) {
+  suppressTodoTitleClick.value = true
+  if (suppressTodoTitleClickTimer) clearTimeout(suppressTodoTitleClickTimer)
+  suppressTodoTitleClickTimer = setTimeout(() => {
+    suppressTodoTitleClick.value = false
+    suppressTodoTitleClickTimer = null
+  }, duration)
 }
 
 async function addTodo() {
@@ -2410,6 +2430,11 @@ function openDetail(todoId) {
   detailRolloverDraft.value = Boolean(target?.rolloverEnabled)
   editingCommentId.value = null
   commentEditDraft.value = ''
+}
+
+function onTodoTitleClick(todoId) {
+  if (suppressTodoTitleClick.value) return
+  openDetail(todoId)
 }
 
 function openCalendarDayList(dateKey) {
@@ -2949,9 +2974,9 @@ function formatTodoItemDue(value) {
               <draggable
                 v-model="draggableTodos"
                 tag="ul"
-                class="todo-list todo-list--panel"
+                class="todo-list todo-list--panel todo-list--draggable"
                 item-key="id"
-                handle=".todo-item-drag-space"
+                handle=".todo-item-title-btn"
                 :animation="180"
                 :delay="140"
                 :delay-on-touch-only="true"
@@ -2962,6 +2987,7 @@ function formatTodoItemDue(value) {
                 :disabled="busy || searchQuery.trim().length > 0"
                 ghost-class="drag-ghost"
                 chosen-class="drag-chosen"
+                @start="onDragStart"
                 @end="onDragEnd"
               >
                 <template #item="{ element: todo }">
@@ -3005,10 +3031,10 @@ function formatTodoItemDue(value) {
                       <div class="todo-item-body">
                         <button
                           type="button"
-                          class="todo-item-title-btn no-drag"
+                          class="todo-item-title-btn"
                           :class="{ 'todo-item-title-btn--done': isTodoDone(todo) }"
                           :title="getTodoTitle(todo)"
-                          @click="openDetail(todo.id)"
+                          @click="onTodoTitleClick(todo.id)"
                         >
                           {{ getTodoTitle(todo) }}
                         </button>
@@ -3032,7 +3058,6 @@ function formatTodoItemDue(value) {
                         </div>
                       </div>
                     </div>
-                    <div class="todo-item-drag-space" aria-hidden="true"></div>
                   </li>
                 </template>
               </draggable>
