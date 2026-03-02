@@ -1155,6 +1155,11 @@ body.modal-open-lock {
   z-index: 80;
 }
 
+.mobile-menu-wrap {
+  background: rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(10px);
+}
+
 .modal {
   width: min(620px, 100%);
   background: hsl(var(--card));
@@ -1207,73 +1212,178 @@ body.modal-open-lock {
 }
 
 .mobile-menu-header {
-  padding-right: 44px;
+  padding: 28px 28px 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .mobile-menu-header-main {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
 }
 
-.mobile-menu-header-icon {
-  color: hsl(var(--foreground));
+.mobile-menu-header-copy h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.18rem;
+  letter-spacing: -0.02em;
+}
+
+.mobile-menu-header-copy p {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 0.83rem;
+  line-height: 1.45;
 }
 
 .mobile-menu-back-btn {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 0;
+  margin-top: 1px;
+}
+
+.mobile-menu-close-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  background: #ffffff;
+  flex-shrink: 0;
+  box-shadow: none;
 }
 
 .mobile-menu-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 28px 20px;
+}
+
+.mobile-menu-sections {
   display: grid;
-  min-height: 380px;
+  gap: 16px;
+}
+
+.mobile-menu-section {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-menu-section-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.mobile-menu-card-list {
+  display: grid;
   gap: 10px;
 }
 
-.mobile-menu-category-list {
-  display: grid;
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  overflow: hidden;
-  background: hsl(var(--muted) / 0.2);
-}
-
-.mobile-menu-category-item {
+.mobile-menu-card-item {
+  min-height: 74px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 12px;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid hsl(var(--border));
+  padding: 14px 14px;
   text-align: left;
+  border: 1px solid #ebeff4;
+  border-radius: 20px;
+  background: #f8fafc;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.mobile-menu-category-item:last-child {
-  border-bottom: 0;
+.mobile-menu-card-item:hover {
+  border-color: #d6dde6;
+  box-shadow: 0 10px 24px -16px rgba(15, 23, 42, 0.45);
 }
 
-.mobile-menu-category-title {
+.mobile-menu-card-item:active {
+  transform: translateY(1px);
+}
+
+.mobile-menu-card-copy {
+  min-width: 0;
+}
+
+.mobile-menu-card-title {
   margin: 0;
-  color: hsl(var(--foreground));
-  font-size: 0.97rem;
+  color: #111827;
+  font-size: 0.96rem;
   font-weight: 700;
 }
 
-.mobile-menu-category-subtitle {
-  margin: 5px 0 0;
-  color: hsl(var(--muted-foreground));
-  font-size: 0.78rem;
+.mobile-menu-card-subtitle {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.mobile-menu-card-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-menu-card-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 0.69rem;
+  font-weight: 700;
+  color: #15803d;
+  border: 1px solid #86efac;
+  background: #f0fdf4;
 }
 
 .mobile-menu-actions {
   display: grid;
   gap: 8px;
+}
+
+.mobile-menu-footer {
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.mobile-menu-logout-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  border: 1px solid #ef4444;
+  background: #ffffff;
+  color: #b91c1c;
+}
+
+.mobile-menu-modal {
+  width: min(620px, 100%);
+  border-radius: 28px;
+  border: 1px solid #ebeff4;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 0 16px;
+  gap: 0;
+  max-height: min(90vh, 780px);
 }
 
 .profile-modal {
@@ -1723,6 +1833,28 @@ body.modal-open-lock {
   .modal-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .mobile-menu-modal {
+    padding: 0 0 14px;
+    border-radius: 24px;
+  }
+
+  .mobile-menu-header {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 20px 18px 0;
+    gap: 10px;
+  }
+
+  .mobile-menu-shell {
+    padding: 14px 18px 16px;
+    gap: 14px;
+  }
+
+  .mobile-menu-card-item {
+    min-height: 72px;
+    border-radius: 18px;
   }
 
   .detail-modal {

@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Settings2, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -221,6 +221,14 @@ const messages = {
     mobileMenuDisplaySettingsDesc: '언어 · 테마',
     mobileMenuTodoSettings: '일정 설정',
     mobileMenuTodoSettingsDesc: '자동 이월 · 기본 상태',
+    mobileMenuHeaderIntro: '앱 환경과 알림, 일정 동작을 관리합니다.',
+    mobileMenuSectionGeneral: '일반',
+    mobileMenuSectionSupport: '지원',
+    mobileMenuChipOn: '켜짐',
+    mobileMenuChipOff: '꺼짐',
+    mobileMenuChipAuto: '자동',
+    mobileMenuChipManual: '수동',
+    mobileMenuChipHelp: '도움말',
     newTodoDefaultStatus: '새 일정 기본 상태',
     mobileMenuCustomerCenter: '고객센터',
     mobileMenuCustomerCenterDesc: '개선사항전달 · 개선사항확인',
@@ -341,6 +349,14 @@ const messages = {
     mobileMenuDisplaySettingsDesc: 'Language · theme',
     mobileMenuTodoSettings: 'Schedule settings',
     mobileMenuTodoSettingsDesc: 'Auto rollover · default status',
+    mobileMenuHeaderIntro: 'Manage app preferences, alerts, and schedule behavior.',
+    mobileMenuSectionGeneral: 'General',
+    mobileMenuSectionSupport: 'Support',
+    mobileMenuChipOn: 'On',
+    mobileMenuChipOff: 'Off',
+    mobileMenuChipAuto: 'Auto',
+    mobileMenuChipManual: 'Manual',
+    mobileMenuChipHelp: 'Help',
     newTodoDefaultStatus: 'Default status for new schedules',
     mobileMenuCustomerCenter: 'Support center',
     mobileMenuCustomerCenterDesc: 'Send feedback · Review feedback',
@@ -461,6 +477,14 @@ const messages = {
     mobileMenuDisplaySettingsDesc: '语言 · 主题',
     mobileMenuTodoSettings: '日程设置',
     mobileMenuTodoSettingsDesc: '自动顺延 · 默认状态',
+    mobileMenuHeaderIntro: '管理应用偏好、提醒和日程行为。',
+    mobileMenuSectionGeneral: '常规',
+    mobileMenuSectionSupport: '支持',
+    mobileMenuChipOn: '开启',
+    mobileMenuChipOff: '关闭',
+    mobileMenuChipAuto: '自动',
+    mobileMenuChipManual: '手动',
+    mobileMenuChipHelp: '帮助',
     newTodoDefaultStatus: '新日程默认状态',
     mobileMenuCustomerCenter: '客服中心',
     mobileMenuCustomerCenterDesc: '提交改进建议 · 查看改进建议',
@@ -581,6 +605,14 @@ const messages = {
     mobileMenuDisplaySettingsDesc: '言語・テーマ',
     mobileMenuTodoSettings: '予定設定',
     mobileMenuTodoSettingsDesc: '自動繰り越し・デフォルト状態',
+    mobileMenuHeaderIntro: 'アプリ設定、通知、予定動作を管理します。',
+    mobileMenuSectionGeneral: '一般',
+    mobileMenuSectionSupport: 'サポート',
+    mobileMenuChipOn: 'オン',
+    mobileMenuChipOff: 'オフ',
+    mobileMenuChipAuto: '自動',
+    mobileMenuChipManual: '手動',
+    mobileMenuChipHelp: 'ヘルプ',
     newTodoDefaultStatus: '新しい予定のデフォルト状態',
     mobileMenuCustomerCenter: 'カスタマーセンター',
     mobileMenuCustomerCenterDesc: '改善要望送信・確認',
@@ -1071,8 +1103,18 @@ const mobileMenuDetailTitle = computed(() => {
   if (mobileMenuDetail.value === 'display') return t('mobileMenuDisplaySettings')
   if (mobileMenuDetail.value === 'todo') return t('mobileMenuTodoSettings')
   if (mobileMenuDetail.value === 'support') return t('mobileMenuCustomerCenter')
-  return t('appTitle')
+  return t('settingsTitle')
 })
+const mobileMenuHeaderDescription = computed(() => {
+  if (mobileMenuDetail.value === 'notifications') return t('mobileMenuAlertSettingsDesc')
+  if (mobileMenuDetail.value === 'display') return t('mobileMenuDisplaySettingsDesc')
+  if (mobileMenuDetail.value === 'todo') return t('mobileMenuTodoSettingsDesc')
+  if (mobileMenuDetail.value === 'support') return t('mobileMenuCustomerCenterDesc')
+  return t('mobileMenuHeaderIntro')
+})
+const mobileMenuNotificationChip = computed(() => (notificationEnabled.value ? t('mobileMenuChipOn') : t('mobileMenuChipOff')))
+const mobileMenuDisplayChip = computed(() => (isDark.value ? t('darkMode') : t('lightMode')))
+const mobileMenuTodoChip = computed(() => (defaultRolloverEnabled.value ? t('mobileMenuChipAuto') : t('mobileMenuChipManual')))
 
 function syncAuthScrollLock() {
   if (typeof document === 'undefined') return
@@ -3502,17 +3544,8 @@ function formatTodoItemDue(value) {
       </Card>
     </section>
 
-    <section v-if="mobileHeaderOpen" class="modal-wrap" @click.self="closeMobileHeader">
+    <section v-if="mobileHeaderOpen" class="modal-wrap mobile-menu-wrap" @click.self="closeMobileHeader">
       <article class="modal modal--allow-overflow settings-modal mobile-menu-modal">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="modal-close"
-          @click="closeMobileHeader"
-          :aria-label="t('close')"
-        >
-          <X class="h-4 w-4" />
-        </Button>
         <header class="modal-header mobile-menu-header">
           <div class="mobile-menu-header-main">
             <Button
@@ -3525,55 +3558,90 @@ function formatTodoItemDue(value) {
             >
               <ChevronLeft class="h-4 w-4" />
             </Button>
-            <Settings2 v-if="mobileMenuDetail === 'root'" class="mobile-menu-header-icon h-5 w-5" />
-            <h2 v-else>{{ mobileMenuDetailTitle }}</h2>
+            <div class="mobile-menu-header-copy">
+              <h2>{{ mobileMenuDetailTitle }}</h2>
+              <p>{{ mobileMenuHeaderDescription }}</p>
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="mobile-menu-close-btn"
+            @click="closeMobileHeader"
+            :aria-label="t('close')"
+          >
+            <X class="h-4 w-4" />
+          </Button>
         </header>
 
         <div class="mobile-menu-shell text-xs text-muted-foreground">
           <template v-if="mobileMenuDetail === 'root'">
-            <div class="mobile-menu-category-list">
-              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('notifications')">
-                <div>
-                  <p class="mobile-menu-category-title">{{ t('mobileMenuAlertSettings') }}</p>
-                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuAlertSettingsDesc') }}</p>
+            <div class="mobile-menu-sections">
+              <section class="mobile-menu-section">
+                <p class="mobile-menu-section-label">{{ t('mobileMenuSectionGeneral') }}</p>
+                <div class="mobile-menu-card-list">
+                  <button type="button" class="mobile-menu-card-item" @click="openMobileMenuDetail('notifications')">
+                    <div class="mobile-menu-card-copy">
+                      <p class="mobile-menu-card-title">{{ t('mobileMenuAlertSettings') }}</p>
+                      <p class="mobile-menu-card-subtitle">{{ t('mobileMenuAlertSettingsDesc') }}</p>
+                    </div>
+                    <div class="mobile-menu-card-side">
+                      <span class="mobile-menu-card-chip">{{ mobileMenuNotificationChip }}</span>
+                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                    </div>
+                  </button>
+                  <button type="button" class="mobile-menu-card-item" @click="openMobileMenuDetail('display')">
+                    <div class="mobile-menu-card-copy">
+                      <p class="mobile-menu-card-title">{{ t('mobileMenuDisplaySettings') }}</p>
+                      <p class="mobile-menu-card-subtitle">{{ t('mobileMenuDisplaySettingsDesc') }}</p>
+                    </div>
+                    <div class="mobile-menu-card-side">
+                      <span class="mobile-menu-card-chip">{{ mobileMenuDisplayChip }}</span>
+                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                    </div>
+                  </button>
+                  <button type="button" class="mobile-menu-card-item" @click="openMobileMenuDetail('todo')">
+                    <div class="mobile-menu-card-copy">
+                      <p class="mobile-menu-card-title">{{ t('mobileMenuTodoSettings') }}</p>
+                      <p class="mobile-menu-card-subtitle">{{ t('mobileMenuTodoSettingsDesc') }}</p>
+                    </div>
+                    <div class="mobile-menu-card-side">
+                      <span class="mobile-menu-card-chip">{{ mobileMenuTodoChip }}</span>
+                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                    </div>
+                  </button>
                 </div>
-                <ChevronRight class="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('display')">
-                <div>
-                  <p class="mobile-menu-category-title">{{ t('mobileMenuDisplaySettings') }}</p>
-                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuDisplaySettingsDesc') }}</p>
+              </section>
+
+              <section class="mobile-menu-section">
+                <p class="mobile-menu-section-label">{{ t('mobileMenuSectionSupport') }}</p>
+                <div class="mobile-menu-card-list">
+                  <button type="button" class="mobile-menu-card-item" @click="openMobileMenuDetail('support')">
+                    <div class="mobile-menu-card-copy">
+                      <p class="mobile-menu-card-title">{{ t('mobileMenuCustomerCenter') }}</p>
+                      <p class="mobile-menu-card-subtitle">{{ t('mobileMenuCustomerCenterDesc') }}</p>
+                    </div>
+                    <div class="mobile-menu-card-side">
+                      <span class="mobile-menu-card-chip">{{ t('mobileMenuChipHelp') }}</span>
+                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                    </div>
+                  </button>
                 </div>
-                <ChevronRight class="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('todo')">
-                <div>
-                  <p class="mobile-menu-category-title">{{ t('mobileMenuTodoSettings') }}</p>
-                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuTodoSettingsDesc') }}</p>
-                </div>
-                <ChevronRight class="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button type="button" class="mobile-menu-category-item" @click="openMobileMenuDetail('support')">
-                <div>
-                  <p class="mobile-menu-category-title">{{ t('mobileMenuCustomerCenter') }}</p>
-                  <p class="mobile-menu-category-subtitle">{{ t('mobileMenuCustomerCenterDesc') }}</p>
-                </div>
-                <ChevronRight class="h-4 w-4 text-muted-foreground" />
-              </button>
+              </section>
             </div>
 
-            <Button
-              v-if="isAuthenticated"
-              variant="ghost"
-              size="sm"
-              class="mt-auto ml-auto justify-center gap-2 rounded-full border-0 bg-muted/40 px-3 shadow-none"
-              @click="logoutFromMobile"
-              :disabled="authBusy"
-            >
-              <LogOut class="h-4 w-4" />
-              {{ t('logout') }}
-            </Button>
+            <footer class="mobile-menu-footer" v-if="isAuthenticated">
+              <Button
+                variant="ghost"
+                size="sm"
+                class="mobile-menu-logout-btn"
+                @click="logoutFromMobile"
+                :disabled="authBusy"
+              >
+                <LogOut class="h-4 w-4" />
+                {{ t('logout') }}
+              </Button>
+            </footer>
           </template>
 
           <template v-else-if="mobileMenuDetail === 'display'">
