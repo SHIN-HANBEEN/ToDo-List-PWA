@@ -19,6 +19,7 @@ import {
 const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
 const ROLLOVER_DEFAULT_KEY = 'todo-default-rollover'
+const NEW_TODO_STATUS_DEFAULT_KEY = 'todo-default-new-status'
 const VIEW_STATE_KEY_PREFIX = 'todo-view-state'
 const ADMIN_EMAIL = 'shb080101@gmail.com'
 const PROFILE_IMAGE_MAX_DATA_LENGTH = 2_000_000
@@ -45,6 +46,7 @@ const editLabelName = ref('')
 const editLabelColor = ref('#64748b')
 const defaultRolloverEnabled = ref(true)
 const newRolloverEnabled = ref(true)
+const defaultNewTodoStatus = ref('waiting')
 const filter = ref('all')
 const searchQuery = ref('')
 const todos = ref([])
@@ -209,7 +211,8 @@ const messages = {
     mobileMenuDisplaySettings: '화면 설정',
     mobileMenuDisplaySettingsDesc: '언어 · 테마',
     mobileMenuTodoSettings: '일정 설정',
-    mobileMenuTodoSettingsDesc: '자동 이월',
+    mobileMenuTodoSettingsDesc: '자동 이월 · 기본 상태',
+    newTodoDefaultStatus: '새 일정 기본 상태',
     mobileMenuCustomerCenter: '고객센터',
     mobileMenuCustomerCenterDesc: '개선사항전달 · 개선사항확인',
     back: '뒤로',
@@ -325,7 +328,8 @@ const messages = {
     mobileMenuDisplaySettings: 'Display settings',
     mobileMenuDisplaySettingsDesc: 'Language · theme',
     mobileMenuTodoSettings: 'Schedule settings',
-    mobileMenuTodoSettingsDesc: 'Auto rollover',
+    mobileMenuTodoSettingsDesc: 'Auto rollover · default status',
+    newTodoDefaultStatus: 'Default status for new schedules',
     mobileMenuCustomerCenter: 'Support center',
     mobileMenuCustomerCenterDesc: 'Send feedback · Review feedback',
     back: 'Back',
@@ -441,7 +445,8 @@ const messages = {
     mobileMenuDisplaySettings: '界面设置',
     mobileMenuDisplaySettingsDesc: '语言 · 主题',
     mobileMenuTodoSettings: '日程设置',
-    mobileMenuTodoSettingsDesc: '自动顺延',
+    mobileMenuTodoSettingsDesc: '自动顺延 · 默认状态',
+    newTodoDefaultStatus: '新日程默认状态',
     mobileMenuCustomerCenter: '客服中心',
     mobileMenuCustomerCenterDesc: '提交改进建议 · 查看改进建议',
     back: '返回',
@@ -557,7 +562,8 @@ const messages = {
     mobileMenuDisplaySettings: '画面設定',
     mobileMenuDisplaySettingsDesc: '言語・テーマ',
     mobileMenuTodoSettings: '予定設定',
-    mobileMenuTodoSettingsDesc: '自動繰り越し',
+    mobileMenuTodoSettingsDesc: '自動繰り越し・デフォルト状態',
+    newTodoDefaultStatus: '新しい予定のデフォルト状態',
     mobileMenuCustomerCenter: 'カスタマーセンター',
     mobileMenuCustomerCenterDesc: '改善要望送信・確認',
     back: '戻る',
@@ -829,6 +835,11 @@ function normalizeTodoFilter(value) {
   if (value === 'all') return 'all'
   if (value === TODO_STATUS_WAITING || value === TODO_STATUS_ACTIVE || value === TODO_STATUS_DONE) return value
   return 'all'
+}
+
+function normalizeNewTodoDefaultStatus(value) {
+  if (value === TODO_STATUS_ACTIVE) return TODO_STATUS_ACTIVE
+  return TODO_STATUS_WAITING
 }
 
 function matchesTodoStatusFilter(todo) {
@@ -1796,6 +1807,10 @@ onMounted(async () => {
     localStorage.setItem(ROLLOVER_DEFAULT_KEY, 'true')
   }
   newRolloverEnabled.value = defaultRolloverEnabled.value
+  const savedNewTodoStatusDefault = localStorage.getItem(NEW_TODO_STATUS_DEFAULT_KEY)
+  const normalizedDefaultStatus = normalizeNewTodoDefaultStatus(savedNewTodoStatusDefault)
+  defaultNewTodoStatus.value = normalizedDefaultStatus
+  localStorage.setItem(NEW_TODO_STATUS_DEFAULT_KEY, normalizedDefaultStatus)
 
   await loadSessionUser()
   if (user.value) {
@@ -1919,6 +1934,12 @@ function setDefaultRollover(nextValue) {
   if (!addTodoOpen.value) {
     newRolloverEnabled.value = defaultRolloverEnabled.value
   }
+}
+
+function setDefaultNewTodoStatus(nextStatus) {
+  const normalized = normalizeNewTodoDefaultStatus(nextStatus)
+  defaultNewTodoStatus.value = normalized
+  localStorage.setItem(NEW_TODO_STATUS_DEFAULT_KEY, normalized)
 }
 
 function translateError(message) {
@@ -2146,7 +2167,7 @@ async function addTodo() {
         labelText: selectedLabel?.name || '',
         labelColor: normalizeLabelColor(selectedLabel?.color),
         rolloverEnabled: newRolloverEnabled.value,
-        status: TODO_STATUS_WAITING,
+        status: defaultNewTodoStatus.value,
       }),
     })
     todos.value.unshift(applyTodoStatusShape(payload.todo))
@@ -3546,6 +3567,25 @@ function formatTodoItemDue(value) {
                   </Button>
                   <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
                     false
+                  </Button>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <p class="text-sm text-muted-foreground">{{ t('newTodoDefaultStatus') }}</p>
+                <div class="inline-flex w-full rounded-lg border bg-background p-1">
+                  <Button
+                    class="flex-1 text-sm"
+                    :variant="defaultNewTodoStatus === TODO_STATUS_WAITING ? 'default' : 'ghost'"
+                    @click="setDefaultNewTodoStatus(TODO_STATUS_WAITING)"
+                  >
+                    {{ t('waiting') }}
+                  </Button>
+                  <Button
+                    class="flex-1 text-sm"
+                    :variant="defaultNewTodoStatus === TODO_STATUS_ACTIVE ? 'default' : 'ghost'"
+                    @click="setDefaultNewTodoStatus(TODO_STATUS_ACTIVE)"
+                  >
+                    {{ t('active') }}
                   </Button>
                 </div>
               </div>
