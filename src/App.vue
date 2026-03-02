@@ -2146,7 +2146,7 @@ async function addTodo() {
         labelText: selectedLabel?.name || '',
         labelColor: normalizeLabelColor(selectedLabel?.color),
         rolloverEnabled: newRolloverEnabled.value,
-        status: TODO_STATUS_ACTIVE,
+        status: TODO_STATUS_WAITING,
       }),
     })
     todos.value.unshift(applyTodoStatusShape(payload.todo))

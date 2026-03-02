@@ -121,7 +121,7 @@ export default async function handler(req, res) {
       const labelColor = labelText ? parsedLabelColor : '#64748b'
       const rolloverEnabled = Boolean(body.rolloverEnabled)
       const hasStatus = Object.prototype.hasOwnProperty.call(body, 'status')
-      const status = hasStatus ? parseTodoStatus(body.status) : 'active'
+      const status = hasStatus ? parseTodoStatus(body.status) : 'waiting'
       if (!title) return res.status(400).json({ error: 'title is required' })
       if (body.dueAt && !dueAt) return res.status(400).json({ error: 'dueAt must be a valid datetime' })
       if (!labelColor) return res.status(400).json({ error: 'labelColor must be a valid hex color' })
