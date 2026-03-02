@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import {
   Select,
@@ -56,6 +56,11 @@ const settingsOpen = ref(false)
 const mobileHeaderOpen = ref(false)
 const mobileMenuDetail = ref('root')
 const profileOpen = ref(false)
+const confirmDialogOpen = ref(false)
+const confirmDialogTitle = ref('')
+const confirmDialogMessage = ref('')
+const confirmDialogConfirmLabel = ref('')
+const confirmDialogCancelLabel = ref('')
 const profileEditMode = ref(false)
 const profileBusy = ref(false)
 const profileUsernameDraft = ref('')
@@ -110,6 +115,7 @@ const notificationSupported = ref(false)
 const notificationEnabled = ref(false)
 const notificationPermission = ref('default')
 let suppressTodoTitleClickTimer = null
+let confirmDialogResolver = null
 
 const messages = {
   ko: {
@@ -192,6 +198,7 @@ const messages = {
     remove: '삭제',
     confirmDeleteTodo: '이 일정을 삭제하시겠습니까?',
     confirmDeleteComment: '이 댓글을 삭제하시겠습니까?',
+    confirmDeleteTitle: '삭제 확인',
     noComments: '댓글이 없습니다.',
     calendarToday: '오늘',
     calendarNoItems: '해당 날짜 일정이 없습니다.',
@@ -311,6 +318,7 @@ const messages = {
     remove: 'Remove',
     confirmDeleteTodo: 'Delete this schedule?',
     confirmDeleteComment: 'Delete this comment?',
+    confirmDeleteTitle: 'Confirm deletion',
     noComments: 'No comments yet.',
     calendarToday: 'Today',
     calendarNoItems: 'No schedule on this date.',
@@ -430,6 +438,7 @@ const messages = {
     remove: '删除',
     confirmDeleteTodo: '要删除此日程吗？',
     confirmDeleteComment: '要删除此评论吗？',
+    confirmDeleteTitle: '删除确认',
     noComments: '暂无评论。',
     calendarToday: '今天',
     calendarNoItems: '该日期没有日程。',
@@ -549,6 +558,7 @@ const messages = {
     remove: '削除',
     confirmDeleteTodo: 'この予定を削除しますか？',
     confirmDeleteComment: 'このコメントを削除しますか？',
+    confirmDeleteTitle: '削除の確認',
     noComments: 'コメントはありません。',
     calendarToday: '今日',
     calendarNoItems: 'この日付の予定はありません。',
@@ -1036,6 +1046,7 @@ const selectedLabelForDetailTodo = computed(() => {
 })
 const isAnyModalOpen = computed(() =>
   profileOpen.value ||
+  confirmDialogOpen.value ||
   mobileHeaderOpen.value ||
   settingsOpen.value ||
   addTodoOpen.value ||
@@ -1832,6 +1843,10 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (confirmDialogResolver) {
+    confirmDialogResolver(false)
+    confirmDialogResolver = null
+  }
   if (suppressTodoTitleClickTimer) {
     clearTimeout(suppressTodoTitleClickTimer)
     suppressTodoTitleClickTimer = null
@@ -1948,6 +1963,41 @@ function setDefaultNewTodoStatus(nextStatus) {
   const normalized = normalizeNewTodoDefaultStatus(nextStatus)
   defaultNewTodoStatus.value = normalized
   localStorage.setItem(NEW_TODO_STATUS_DEFAULT_KEY, normalized)
+}
+
+function requestConfirmDialog({ title, message, confirmLabel, cancelLabel }) {
+  return new Promise((resolve) => {
+    if (confirmDialogResolver) {
+      confirmDialogResolver(false)
+      confirmDialogResolver = null
+    }
+    confirmDialogTitle.value = String(title || '')
+    confirmDialogMessage.value = String(message || '')
+    confirmDialogConfirmLabel.value = String(confirmLabel || t('delete'))
+    confirmDialogCancelLabel.value = String(cancelLabel || t('cancel'))
+    confirmDialogOpen.value = true
+    confirmDialogResolver = resolve
+  })
+}
+
+function resolveConfirmDialog(confirmed) {
+  confirmDialogOpen.value = false
+  confirmDialogTitle.value = ''
+  confirmDialogMessage.value = ''
+  confirmDialogConfirmLabel.value = ''
+  confirmDialogCancelLabel.value = ''
+  if (!confirmDialogResolver) return
+  const resolver = confirmDialogResolver
+  confirmDialogResolver = null
+  resolver(Boolean(confirmed))
+}
+
+function onConfirmDialogConfirm() {
+  resolveConfirmDialog(true)
+}
+
+function onConfirmDialogCancel() {
+  resolveConfirmDialog(false)
 }
 
 function translateError(message) {
@@ -2258,7 +2308,13 @@ function moveTodoToBottom(todoId) {
 
 async function deleteTodo(id) {
   if (busy.value) return
-  if (typeof window !== 'undefined' && !window.confirm(t('confirmDeleteTodo'))) return
+  const confirmed = await requestConfirmDialog({
+    title: t('confirmDeleteTitle'),
+    message: t('confirmDeleteTodo'),
+    confirmLabel: t('delete'),
+    cancelLabel: t('cancel'),
+  })
+  if (!confirmed) return
   busy.value = true
   errorMessage.value = ''
   const previous = [...todos.value]
@@ -2298,7 +2354,13 @@ async function addComment(todoId) {
 
 async function deleteComment(todoId, commentId) {
   if (busy.value) return
-  if (typeof window !== 'undefined' && !window.confirm(t('confirmDeleteComment'))) return
+  const confirmed = await requestConfirmDialog({
+    title: t('confirmDeleteTitle'),
+    message: t('confirmDeleteComment'),
+    confirmLabel: t('delete'),
+    cancelLabel: t('cancel'),
+  })
+  if (!confirmed) return
   busy.value = true
   errorMessage.value = ''
   const target = todos.value.find((todo) => todo.id === todoId)
@@ -3414,6 +3476,30 @@ function formatTodoItemDue(value) {
           </Button>
         </div>
       </article>
+    </section>
+
+    <section v-if="confirmDialogOpen" class="modal-wrap" @click.self="onConfirmDialogCancel">
+      <Card class="w-full max-w-sm border border-border/70 bg-background/95 shadow-[0_24px_80px_-32px_rgba(2,6,23,0.72)] backdrop-blur">
+        <CardHeader class="space-y-3 pb-2">
+          <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+            <Trash2 class="h-5 w-5" />
+          </div>
+          <div class="space-y-1">
+            <CardTitle class="text-base tracking-tight">{{ confirmDialogTitle }}</CardTitle>
+            <CardDescription class="text-sm leading-relaxed text-muted-foreground">
+              {{ confirmDialogMessage }}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent class="flex items-center justify-end gap-2 pt-0">
+          <Button variant="outline" @click="onConfirmDialogCancel">
+            {{ confirmDialogCancelLabel }}
+          </Button>
+          <Button variant="destructive" @click="onConfirmDialogConfirm">
+            {{ confirmDialogConfirmLabel }}
+          </Button>
+        </CardContent>
+      </Card>
     </section>
 
     <section v-if="mobileHeaderOpen" class="modal-wrap" @click.self="closeMobileHeader">
