@@ -4107,11 +4107,38 @@ function formatTodoItemDue(value) {
 
           <header class="detail-header">
             <div class="detail-title-wrap">
-              <span class="detail-state-dot" :style="getDetailStateDotStyle(detailTodo)">
-                <Check v-if="isTodoDone(detailTodo)" class="h-3 w-3" />
-                <Play v-else-if="getTodoStatus(detailTodo) === TODO_STATUS_ACTIVE" class="h-3 w-3 fill-current" />
-                <Pause v-else class="h-3 w-3" />
-              </span>
+              <Select
+                :model-value="getTodoStatus(detailTodo)"
+                @update:model-value="(value) => onTodoStatusSelect(detailTodo, value)"
+              >
+                <SelectTrigger class="todo-item-state-trigger detail-state-trigger" :aria-label="t('status')">
+                  <span class="todo-item-state-dot" :style="getDetailStateDotStyle(detailTodo)">
+                    <Check v-if="isTodoDone(detailTodo)" class="h-3 w-3" />
+                    <Play v-else-if="getTodoStatus(detailTodo) === TODO_STATUS_ACTIVE" class="h-3 w-3 fill-current" />
+                    <Pause v-else class="h-3 w-3" />
+                  </span>
+                </SelectTrigger>
+                <SelectContent class="todo-item-state-content" side="bottom" align="start">
+                  <SelectItem :value="TODO_STATUS_WAITING" :text-value="t('waiting')" class="todo-item-state-option">
+                    <span class="todo-item-state-dot" :style="getDetailStateDotStyle(detailTodo, TODO_STATUS_WAITING)" aria-hidden="true">
+                      <Pause class="h-3 w-3" />
+                    </span>
+                    <span class="sr-only">{{ t('waiting') }}</span>
+                  </SelectItem>
+                  <SelectItem :value="TODO_STATUS_ACTIVE" :text-value="t('active')" class="todo-item-state-option">
+                    <span class="todo-item-state-dot" :style="getDetailStateDotStyle(detailTodo, TODO_STATUS_ACTIVE)" aria-hidden="true">
+                      <Play class="h-3 w-3 fill-current" />
+                    </span>
+                    <span class="sr-only">{{ t('active') }}</span>
+                  </SelectItem>
+                  <SelectItem :value="TODO_STATUS_DONE" :text-value="t('done')" class="todo-item-state-option">
+                    <span class="todo-item-state-dot" :style="getDetailStateDotStyle(detailTodo, TODO_STATUS_DONE)" aria-hidden="true">
+                      <Check class="h-3 w-3" />
+                    </span>
+                    <span class="sr-only">{{ t('done') }}</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <div v-if="!detailEditMode" class="detail-title-copy">
                 <h2>{{ getTodoTitle(detailTodo) }}</h2>
                 <p class="detail-title-sub">{{ t(getTodoStatus(detailTodo)) }}</p>

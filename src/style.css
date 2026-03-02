@@ -968,6 +968,11 @@ body.modal-open-lock {
   min-width: 0;
 }
 
+.detail-state-trigger {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
 .detail-state-dot {
   width: 18px;
   height: 18px;
