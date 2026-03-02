@@ -190,6 +190,8 @@ const messages = {
     commentEditPlaceholder: '댓글 수정',
     comment: '댓글',
     remove: '삭제',
+    confirmDeleteTodo: '이 일정을 삭제하시겠습니까?',
+    confirmDeleteComment: '이 댓글을 삭제하시겠습니까?',
     noComments: '댓글이 없습니다.',
     calendarToday: '오늘',
     calendarNoItems: '해당 날짜 일정이 없습니다.',
@@ -307,6 +309,8 @@ const messages = {
     commentEditPlaceholder: 'Edit comment',
     comment: 'Comment',
     remove: 'Remove',
+    confirmDeleteTodo: 'Delete this schedule?',
+    confirmDeleteComment: 'Delete this comment?',
     noComments: 'No comments yet.',
     calendarToday: 'Today',
     calendarNoItems: 'No schedule on this date.',
@@ -424,6 +428,8 @@ const messages = {
     commentEditPlaceholder: '编辑评论',
     comment: '评论',
     remove: '删除',
+    confirmDeleteTodo: '要删除此日程吗？',
+    confirmDeleteComment: '要删除此评论吗？',
     noComments: '暂无评论。',
     calendarToday: '今天',
     calendarNoItems: '该日期没有日程。',
@@ -541,6 +547,8 @@ const messages = {
     commentEditPlaceholder: 'コメントを編集',
     comment: 'コメント',
     remove: '削除',
+    confirmDeleteTodo: 'この予定を削除しますか？',
+    confirmDeleteComment: 'このコメントを削除しますか？',
     noComments: 'コメントはありません。',
     calendarToday: '今日',
     calendarNoItems: 'この日付の予定はありません。',
@@ -2250,6 +2258,7 @@ function moveTodoToBottom(todoId) {
 
 async function deleteTodo(id) {
   if (busy.value) return
+  if (typeof window !== 'undefined' && !window.confirm(t('confirmDeleteTodo'))) return
   busy.value = true
   errorMessage.value = ''
   const previous = [...todos.value]
@@ -2289,6 +2298,7 @@ async function addComment(todoId) {
 
 async function deleteComment(todoId, commentId) {
   if (busy.value) return
+  if (typeof window !== 'undefined' && !window.confirm(t('confirmDeleteComment'))) return
   busy.value = true
   errorMessage.value = ''
   const target = todos.value.find((todo) => todo.id === todoId)
