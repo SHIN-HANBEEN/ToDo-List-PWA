@@ -3478,7 +3478,7 @@ function formatTodoItemDue(value) {
       </article>
     </section>
 
-    <section v-if="confirmDialogOpen" class="modal-wrap" @click.self="onConfirmDialogCancel">
+    <section v-if="confirmDialogOpen" class="modal-wrap modal-wrap--confirm" @click.self="onConfirmDialogCancel">
       <Card class="w-full max-w-sm border border-border/70 bg-background/95 shadow-[0_24px_80px_-32px_rgba(2,6,23,0.72)] backdrop-blur">
         <CardHeader class="space-y-3 pb-2">
           <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">

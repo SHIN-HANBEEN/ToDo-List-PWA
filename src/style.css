@@ -1146,6 +1146,10 @@ body.modal-open-lock {
   padding: 16px;
 }
 
+.modal-wrap--confirm {
+  z-index: 80;
+}
+
 .modal {
   width: min(620px, 100%);
   background: hsl(var(--card));
