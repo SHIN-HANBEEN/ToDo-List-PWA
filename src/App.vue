@@ -140,6 +140,14 @@ const messages = {
     usernameTaken: '이미 사용 중인 유저 네임입니다.',
     addSchedule: '일정 추가',
     addScheduleTitle: '새 일정 추가',
+    addTodoIntro: '핵심 정보만 먼저 입력하고, 나머지 설정은 가볍게 선택할 수 있게 정리한 구조예요.',
+    addTodoBasicInfo: '기본 정보',
+    addTodoScheduleInfo: '일정',
+    addTodoTitleExample: '예: 결제 화면 QA 마무리',
+    addTodoMemoPlaceholder: '필요한 링크, 체크할 항목, 진행 메모를 적어두세요.',
+    addTodoLocationExample: '예: 강남 오피스 / Zoom',
+    addTodoFooterHint: '변경 사항은 추가 버튼을 누르면 저장됩니다.',
+    labelManageAction: '관리',
     guest: '비로그인',
     login: '로그인',
     signup: '회원가입',
@@ -282,6 +290,14 @@ const messages = {
     usernameTaken: 'This username is already taken.',
     addSchedule: 'Add schedule',
     addScheduleTitle: 'Add new schedule',
+    addTodoIntro: 'Start with the essentials, then quickly choose the rest of the settings.',
+    addTodoBasicInfo: 'Basic info',
+    addTodoScheduleInfo: 'Schedule',
+    addTodoTitleExample: 'Ex: Finish payment screen QA',
+    addTodoMemoPlaceholder: 'Add useful links, check items, and progress notes.',
+    addTodoLocationExample: 'Ex: Gangnam office / Zoom',
+    addTodoFooterHint: 'Changes are saved when you press Add schedule.',
+    labelManageAction: 'Manage',
     guest: 'Guest',
     login: 'Login',
     signup: 'Sign up',
@@ -424,6 +440,14 @@ const messages = {
     usernameTaken: '该用户名已被使用。',
     addSchedule: '添加日程',
     addScheduleTitle: '添加新日程',
+    addTodoIntro: '先输入核心信息，其余设置可轻量完成。',
+    addTodoBasicInfo: '基本信息',
+    addTodoScheduleInfo: '日程',
+    addTodoTitleExample: '例如：完成支付页面 QA',
+    addTodoMemoPlaceholder: '记录链接、检查项和进度备注。',
+    addTodoLocationExample: '例如：江南办公室 / Zoom',
+    addTodoFooterHint: '点击添加按钮后将保存变更。',
+    labelManageAction: '管理',
     guest: '访客',
     login: '登录',
     signup: '注册',
@@ -566,6 +590,14 @@ const messages = {
     usernameTaken: 'このユーザー名はすでに使われています。',
     addSchedule: '予定追加',
     addScheduleTitle: '新しい予定を追加',
+    addTodoIntro: 'まず必要な情報を入力し、残りの設定は手早く選べます。',
+    addTodoBasicInfo: '基本情報',
+    addTodoScheduleInfo: '予定',
+    addTodoTitleExample: '例: 決済画面 QA 仕上げ',
+    addTodoMemoPlaceholder: '必要なリンク、確認項目、進捗メモを残してください。',
+    addTodoLocationExample: '例: 江南オフィス / Zoom',
+    addTodoFooterHint: '追加ボタンを押すと変更内容が保存されます。',
+    labelManageAction: '管理',
     guest: 'ゲスト',
     login: 'ログイン',
     signup: '新規登録',
@@ -4270,64 +4302,78 @@ function formatTodoItemDue(value) {
     </section>
 
     <section v-if="addTodoOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddTodo">
-      <article class="modal settings-modal">
+      <article class="modal add-todo-modal">
         <Button
           variant="ghost"
           size="sm"
-          class="modal-close"
+          class="modal-close add-todo-close-btn"
           @click="closeAddTodo"
           :aria-label="t('close')"
         >
           <X class="h-4 w-4" />
         </Button>
-        <header class="modal-header">
+        <header class="modal-header add-todo-header">
           <h2>{{ t('addScheduleTitle') }}</h2>
+          <p>{{ t('addTodoIntro') }}</p>
         </header>
 
-        <form class="space-y-2" @submit.prevent="addTodo">
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('todoTitle') }}</p>
-            <Input
-              v-model="newTodoTitle"
-              class="w-full"
-              type="text"
-              :placeholder="t('todoTitlePlaceholder')"
-              autocomplete="off"
-            />
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('todoContent') }}</p>
-            <Textarea
-              v-model="newTodoContent"
-              class="w-full min-h-[120px]"
-              :placeholder="t('todoContentPlaceholder')"
-            />
-          </div>
-          <div class="grid gap-2 md:grid-cols-2">
-            <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('dueAt') }}</p>
-              <DateTimePicker
-                v-model="newDueAt"
-                :locale="localeCodeByLanguage[locale] || 'en-US'"
-                :placeholder="t('dueAtPlaceholder')"
-                :clear-label="t('pickerClear')"
-                :done-label="t('pickerDone')"
-              />
-            </div>
-            <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('location') }}</p>
+        <form class="add-todo-form" @submit.prevent="addTodo">
+          <section class="add-todo-card">
+            <p class="add-todo-card-title">{{ t('addTodoBasicInfo') }}</p>
+            <div class="add-todo-field">
+              <p class="add-todo-field-label">{{ t('todoTitle') }}</p>
               <Input
-                v-model="newLocation"
-                class="w-full"
+                v-model="newTodoTitle"
+                class="w-full add-todo-input"
                 type="text"
-                :placeholder="t('locationPlaceholder')"
+                :placeholder="t('addTodoTitleExample')"
                 autocomplete="off"
               />
             </div>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
-            <div v-if="labelOptions.length > 0" class="label-select-row">
+            <div class="add-todo-field">
+              <p class="add-todo-field-label">{{ t('todoContent') }}</p>
+              <Textarea
+                v-model="newTodoContent"
+                class="w-full min-h-[156px] add-todo-textarea"
+                :placeholder="t('addTodoMemoPlaceholder')"
+              />
+            </div>
+          </section>
+
+          <section class="add-todo-grid">
+            <div class="add-todo-card add-todo-card--compact">
+              <p class="add-todo-card-title">{{ t('addTodoScheduleInfo') }}</p>
+              <div class="add-todo-field">
+                <DateTimePicker
+                  v-model="newDueAt"
+                  class="add-todo-date-picker"
+                  :locale="localeCodeByLanguage[locale] || 'en-US'"
+                  :placeholder="t('dueAtPlaceholder')"
+                  :clear-label="t('pickerClear')"
+                  :done-label="t('pickerDone')"
+                />
+              </div>
+            </div>
+            <div class="add-todo-card add-todo-card--compact">
+              <p class="add-todo-card-title">{{ t('location') }}</p>
+              <div class="add-todo-field">
+                <Input
+                  v-model="newLocation"
+                  class="w-full add-todo-input"
+                  type="text"
+                  :placeholder="t('addTodoLocationExample')"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section class="add-todo-card">
+            <div class="add-todo-card-head">
+              <p class="add-todo-card-title">{{ t('label') }}</p>
+              <Button type="button" variant="outline" class="add-todo-label-manage-btn" @click="openAddLabel">{{ t('labelManageAction') }}</Button>
+            </div>
+            <div v-if="labelOptions.length > 0" class="add-todo-label-body">
               <div ref="newTodoLabelMenuRef" class="label-multi-select">
                 <button
                   ref="newTodoLabelTriggerRef"
@@ -4376,18 +4422,44 @@ function formatTodoItemDue(value) {
                   <p v-else class="label-multi-select-empty">{{ t('labelNoSearchResults') }}</p>
                 </div>
               </div>
-              <Button type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
+              <div v-if="newTodoLabelIds.length > 0" class="add-todo-selected-chips">
+                <span
+                  v-for="label in selectedLabelsForNewTodo"
+                  :key="`chip-${label.id}`"
+                  class="add-todo-selected-chip"
+                  :style="{ borderColor: normalizeLabelColor(label.color), color: normalizeLabelColor(label.color), backgroundColor: hexToRgba(label.color, 0.14) }"
+                >
+                  <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
+                  {{ label.name }}
+                </span>
+              </div>
             </div>
             <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
-          </div>
-          <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
-            <input v-model="newRolloverEnabled" type="checkbox" class="mt-1" />
-            <span class="space-y-0.5">
-              <span class="block font-medium">{{ t('rolloverOption') }}</span>
-              <span class="block text-xs text-muted-foreground">{{ t('rolloverHint') }}</span>
-            </span>
-          </label>
-          <Button class="w-full" type="submit" :disabled="busy">{{ t('addTask') }}</Button>
+          </section>
+
+          <section class="add-todo-card add-todo-card--toggle">
+            <div class="add-todo-toggle-copy">
+              <p class="add-todo-toggle-title">{{ t('rolloverOption') }}</p>
+              <p class="add-todo-toggle-sub">{{ t('rolloverHint') }}</p>
+            </div>
+            <button
+              type="button"
+              class="settings-switch"
+              :class="{ 'settings-switch--on': newRolloverEnabled }"
+              :aria-pressed="newRolloverEnabled ? 'true' : 'false'"
+              @click="newRolloverEnabled = !newRolloverEnabled"
+            >
+              <span class="settings-switch-thumb"></span>
+            </button>
+          </section>
+
+          <footer class="add-todo-footer">
+            <p class="add-todo-footer-note">{{ t('addTodoFooterHint') }}</p>
+            <div class="add-todo-footer-actions">
+              <Button type="button" variant="outline" class="add-todo-cancel-btn" @click="closeAddTodo">{{ t('cancel') }}</Button>
+              <Button type="submit" class="add-todo-submit-btn" :disabled="busy">{{ t('addSchedule') }}</Button>
+            </div>
+          </footer>
         </form>
       </article>
     </section>
