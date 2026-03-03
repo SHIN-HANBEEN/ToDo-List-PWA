@@ -376,10 +376,23 @@ function clearValue() {
 
 .picker-day-btn:hover {
   background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.picker-day-btn:focus-visible {
+  outline: none;
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.45);
 }
 
 .picker-day-btn--muted {
   opacity: 0.45;
+}
+
+.picker-day-btn--muted:hover,
+.picker-day-btn--muted:focus-visible {
+  opacity: 1;
 }
 
 .picker-day-btn--today {
@@ -387,6 +400,13 @@ function clearValue() {
 }
 
 .picker-day-btn--selected {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  opacity: 1;
+}
+
+.picker-day-btn--selected:hover,
+.picker-day-btn--selected:focus-visible {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
 }
