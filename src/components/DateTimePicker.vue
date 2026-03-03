@@ -31,6 +31,10 @@ const props = defineProps({
     type: String,
     default: 'Done',
   },
+  defaultOffsetMinutes: {
+    type: Number,
+    default: 0,
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -41,11 +45,10 @@ const open = ref(false)
 const popoverStyle = ref({})
 
 const selectedDate = ref(parseDate(props.modelValue))
-const selectedHour = ref(selectedDate.value ? selectedDate.value.getHours() : new Date().getHours())
-const selectedMinute = ref(
-  selectedDate.value ? selectedDate.value.getMinutes() : roundMinute(new Date().getMinutes())
-)
-const viewMonth = ref(startOfMonth(selectedDate.value || new Date()))
+const defaultSeedDate = createDefaultSeedDate()
+const selectedHour = ref(selectedDate.value ? selectedDate.value.getHours() : defaultSeedDate.getHours())
+const selectedMinute = ref(selectedDate.value ? selectedDate.value.getMinutes() : defaultSeedDate.getMinutes())
+const viewMonth = ref(startOfMonth(selectedDate.value || defaultSeedDate))
 
 watch(open, async (isOpen) => {
   if (isOpen) {
@@ -77,7 +80,23 @@ watch(
       selectedHour.value = parsed.getHours()
       selectedMinute.value = parsed.getMinutes()
       viewMonth.value = startOfMonth(parsed)
+      return
     }
+    const seed = createDefaultSeedDate()
+    selectedHour.value = seed.getHours()
+    selectedMinute.value = seed.getMinutes()
+    viewMonth.value = startOfMonth(seed)
+  }
+)
+
+watch(
+  () => props.defaultOffsetMinutes,
+  () => {
+    if (props.modelValue) return
+    const seed = createDefaultSeedDate()
+    selectedHour.value = seed.getHours()
+    selectedMinute.value = seed.getMinutes()
+    viewMonth.value = startOfMonth(seed)
   }
 )
 
@@ -156,6 +175,25 @@ function toDateKey(value) {
 
 function roundMinute(value) {
   return Math.min(55, Math.max(0, Math.floor(value / 5) * 5))
+}
+
+function roundMinuteUp(value) {
+  const bounded = Math.max(0, Number(value) || 0)
+  const rounded = Math.ceil(bounded / 5) * 5
+  return rounded >= 60 ? 0 : rounded
+}
+
+function createDefaultSeedDate() {
+  const seed = new Date()
+  const offset = Math.max(0, Number(props.defaultOffsetMinutes) || 0)
+  seed.setSeconds(0, 0)
+  seed.setMinutes(seed.getMinutes() + offset)
+  const roundedMinute = roundMinuteUp(seed.getMinutes())
+  if (roundedMinute === 0 && seed.getMinutes() !== 0) {
+    seed.setHours(seed.getHours() + 1)
+  }
+  seed.setMinutes(roundedMinute)
+  return seed
 }
 
 function moveMonth(offset) {

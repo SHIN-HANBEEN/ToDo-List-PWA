@@ -20,6 +20,7 @@ const LANGUAGE_KEY = 'todo-language'
 const THEME_KEY = 'todo-theme'
 const ROLLOVER_DEFAULT_KEY = 'todo-default-rollover'
 const NEW_TODO_STATUS_DEFAULT_KEY = 'todo-default-new-status'
+const NEW_TODO_DUE_OFFSET_MINUTES_KEY = 'todo-default-due-offset-minutes'
 const VIEW_STATE_KEY_PREFIX = 'todo-view-state'
 const ADMIN_EMAIL = 'shb080101@gmail.com'
 const PROFILE_IMAGE_MAX_DATA_LENGTH = 2_000_000
@@ -53,6 +54,7 @@ const editLabelColor = ref('#64748b')
 const defaultRolloverEnabled = ref(true)
 const newRolloverEnabled = ref(true)
 const defaultNewTodoStatus = ref('waiting')
+const defaultNewTodoDueOffsetMinutes = ref(10)
 const filter = ref('all')
 const searchQuery = ref('')
 const todos = ref([])
@@ -171,6 +173,10 @@ const messages = {
     taskPlaceholder: '할 일을 입력하세요',
     dueAt: '마감일시',
     dueAtPlaceholder: '마감일시 선택',
+    newTodoDueDefault: '새 일정 기본 마감 시간',
+    newTodoDueDefaultHint: '새 일정을 열 때 현재 시각 기준 기본 마감 시간을 자동으로 채웁니다.',
+    dueOffsetNow: '현재 시각',
+    dueOffsetMinutes: '{minutes}분 뒤',
     pickerClear: '지우기',
     pickerDone: '확인',
     label: '라벨',
@@ -321,6 +327,10 @@ const messages = {
     taskPlaceholder: 'Add a task',
     dueAt: 'Due date/time',
     dueAtPlaceholder: 'Choose due date/time',
+    newTodoDueDefault: 'Default due time for new schedule',
+    newTodoDueDefaultHint: 'Pre-fills due time relative to now when opening Add schedule.',
+    dueOffsetNow: 'Current time',
+    dueOffsetMinutes: '{minutes} min later',
     pickerClear: 'Clear',
     pickerDone: 'Done',
     label: 'Label',
@@ -471,6 +481,10 @@ const messages = {
     taskPlaceholder: '输入待办事项',
     dueAt: '截止日期时间',
     dueAtPlaceholder: '选择截止日期时间',
+    newTodoDueDefault: '新日程默认截止时间',
+    newTodoDueDefaultHint: '打开新增日程时，将按当前时间自动填充默认截止时间。',
+    dueOffsetNow: '当前时间',
+    dueOffsetMinutes: '{minutes} 分钟后',
     pickerClear: '清除',
     pickerDone: '完成',
     label: '标签',
@@ -621,6 +635,10 @@ const messages = {
     taskPlaceholder: 'タスクを入力',
     dueAt: '締切日時',
     dueAtPlaceholder: '締切日時を選択',
+    newTodoDueDefault: '新しい予定のデフォルト締切時刻',
+    newTodoDueDefaultHint: '予定追加を開くと、現在時刻基準で締切時刻を自動入力します。',
+    dueOffsetNow: '現在時刻',
+    dueOffsetMinutes: '{minutes}分後',
     pickerClear: 'クリア',
     pickerDone: '完了',
     label: 'ラベル',
@@ -944,6 +962,7 @@ const rolloverTooltipMessages = {
 const TODO_STATUS_WAITING = 'waiting'
 const TODO_STATUS_ACTIVE = 'active'
 const TODO_STATUS_DONE = 'done'
+const NEW_TODO_DUE_OFFSET_OPTIONS = [0, 5, 10, 15, 30, 45, 60]
 const LABEL_COLOR_RECOMMENDATION_COUNT = 10
 const LABEL_COLOR_POOL = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
@@ -991,6 +1010,29 @@ function normalizeTodoFilter(value) {
 function normalizeNewTodoDefaultStatus(value) {
   if (value === TODO_STATUS_ACTIVE) return TODO_STATUS_ACTIVE
   return TODO_STATUS_WAITING
+}
+
+function normalizeNewTodoDueOffsetMinutes(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 10
+  const asInt = Math.round(numeric)
+  if (NEW_TODO_DUE_OFFSET_OPTIONS.includes(asInt)) return asInt
+  return 10
+}
+
+function roundMinutesUpToStep(value, step = 5) {
+  if (!Number.isFinite(value)) return 0
+  return Math.ceil(value / step) * step
+}
+
+function createDefaultDueAtIso(offsetMinutes) {
+  const safeOffset = Math.max(0, Number(offsetMinutes) || 0)
+  const base = new Date()
+  base.setSeconds(0, 0)
+  base.setMinutes(base.getMinutes() + safeOffset)
+  const roundedMinutes = roundMinutesUpToStep(base.getMinutes(), 5)
+  base.setMinutes(roundedMinutes)
+  return base.toISOString()
 }
 
 function matchesTodoStatusFilter(todo) {
@@ -1210,6 +1252,12 @@ const labelOptions = computed(() =>
   [...labels.value].sort((a, b) =>
     String(a.name || '').localeCompare(String(b.name || ''), localeCodeByLanguage[locale.value] || 'en-US')
   )
+)
+const newTodoDueOffsetOptions = computed(() =>
+  NEW_TODO_DUE_OFFSET_OPTIONS.map((minutes) => ({
+    value: String(minutes),
+    label: minutes === 0 ? t('dueOffsetNow') : t('dueOffsetMinutes', { minutes }),
+  }))
 )
 const selectedLabelsForNewTodo = computed(() => {
   if (!Array.isArray(newTodoLabelIds.value) || newTodoLabelIds.value.length === 0) return []
@@ -2154,6 +2202,10 @@ onMounted(async () => {
   const normalizedDefaultStatus = normalizeNewTodoDefaultStatus(savedNewTodoStatusDefault)
   defaultNewTodoStatus.value = normalizedDefaultStatus
   localStorage.setItem(NEW_TODO_STATUS_DEFAULT_KEY, normalizedDefaultStatus)
+  const savedDefaultDueOffset = localStorage.getItem(NEW_TODO_DUE_OFFSET_MINUTES_KEY)
+  const normalizedDefaultDueOffset = normalizeNewTodoDueOffsetMinutes(savedDefaultDueOffset)
+  defaultNewTodoDueOffsetMinutes.value = normalizedDefaultDueOffset
+  localStorage.setItem(NEW_TODO_DUE_OFFSET_MINUTES_KEY, String(normalizedDefaultDueOffset))
 
   await loadSessionUser()
   if (user.value) {
@@ -2304,6 +2356,12 @@ function setDefaultNewTodoStatus(nextStatus) {
   const normalized = normalizeNewTodoDefaultStatus(nextStatus)
   defaultNewTodoStatus.value = normalized
   localStorage.setItem(NEW_TODO_STATUS_DEFAULT_KEY, normalized)
+}
+
+function setDefaultNewTodoDueOffsetMinutes(nextValue) {
+  const normalized = normalizeNewTodoDueOffsetMinutes(nextValue)
+  defaultNewTodoDueOffsetMinutes.value = normalized
+  localStorage.setItem(NEW_TODO_DUE_OFFSET_MINUTES_KEY, String(normalized))
 }
 
 function requestConfirmDialog({ title, message, confirmLabel, cancelLabel }) {
@@ -3177,6 +3235,7 @@ function openAddTodo() {
   if (!isAuthenticated.value) return
   errorMessage.value = ''
   newRolloverEnabled.value = defaultRolloverEnabled.value
+  newDueAt.value = createDefaultDueAtIso(defaultNewTodoDueOffsetMinutes.value)
   closeNewTodoLabelMenu()
   if (labels.value.length === 0) {
     void loadLabels()
@@ -4062,6 +4121,22 @@ function formatTodoItemDue(value) {
                   </Button>
                 </div>
               </article>
+              <article class="settings-detail-card settings-detail-card--stack">
+                <div class="settings-detail-card-main">
+                  <p class="settings-detail-card-title">{{ t('newTodoDueDefault') }}</p>
+                  <p class="settings-detail-card-sub">{{ t('newTodoDueDefaultHint') }}</p>
+                </div>
+                <Select :model-value="String(defaultNewTodoDueOffsetMinutes)" @update:model-value="setDefaultNewTodoDueOffsetMinutes">
+                  <SelectTrigger class="w-full text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="option in newTodoDueOffsetOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </article>
               <p class="settings-detail-meta">{{ t('mobileMenuAutoSaveHint') }}</p>
             </div>
           </template>
@@ -4231,6 +4306,23 @@ function formatTodoItemDue(value) {
           </div>
 
           <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
+            <div class="grid gap-1">
+              <p class="text-sm text-muted-foreground sm:text-base">{{ t('newTodoDueDefault') }}</p>
+              <p class="text-xs text-muted-foreground">{{ t('newTodoDueDefaultHint') }}</p>
+            </div>
+            <Select :model-value="String(defaultNewTodoDueOffsetMinutes)" @update:model-value="setDefaultNewTodoDueOffsetMinutes">
+              <SelectTrigger class="w-full text-sm sm:text-base">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in newTodoDueOffsetOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
             <div class="flex items-center gap-1.5">
               <p class="text-sm text-muted-foreground sm:text-base">{{ rolloverSettingLabel }}</p>
               <div class="relative">
@@ -4347,6 +4439,7 @@ function formatTodoItemDue(value) {
                 <DateTimePicker
                   v-model="newDueAt"
                   class="add-todo-date-picker"
+                  :default-offset-minutes="defaultNewTodoDueOffsetMinutes"
                   :locale="localeCodeByLanguage[locale] || 'en-US'"
                   :placeholder="t('dueAtPlaceholder')"
                   :clear-label="t('pickerClear')"
