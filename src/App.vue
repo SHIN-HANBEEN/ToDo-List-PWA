@@ -215,7 +215,7 @@ const messages = {
     notificationStatusOff: '현재 비활성화됨',
     notificationEnableAction: '켜기',
     notificationDisableAction: '끄기',
-    mobileMenuAlertSettings: '알람 고급설정',
+    mobileMenuAlertSettings: '알림 설정',
     mobileMenuAlertSettingsDesc: '푸시 알림 · 리마인더',
     mobileMenuDisplaySettings: '화면 설정',
     mobileMenuDisplaySettingsDesc: '언어 · 테마',
@@ -229,6 +229,14 @@ const messages = {
     mobileMenuChipAuto: '자동',
     mobileMenuChipManual: '수동',
     mobileMenuChipHelp: '도움말',
+    mobileMenuStartReminder: '시작 전 알림',
+    mobileMenuStartReminderDesc: '일정 시작 전에 푸시 알림을 보냅니다.',
+    mobileMenuReminderTiming: '알림 시점',
+    mobileMenuReminderTimingValue: '30분 전',
+    mobileMenuRolloverTitle: '완료되지 않은 일정 자동 이월',
+    mobileMenuRolloverDesc: '하루가 지나도 완료되지 않은 일정을 다음 날로 이동합니다.',
+    mobileMenuDefaultStatusDesc: '새로 만드는 일정에 기본으로 적용됩니다.',
+    mobileMenuAutoSaveHint: '변경 시 자동 저장됩니다.',
     newTodoDefaultStatus: '새 일정 기본 상태',
     mobileMenuCustomerCenter: '고객센터',
     mobileMenuCustomerCenterDesc: '개선사항전달 · 개선사항확인',
@@ -343,7 +351,7 @@ const messages = {
     notificationStatusOff: 'Currently disabled',
     notificationEnableAction: 'Enable',
     notificationDisableAction: 'Disable',
-    mobileMenuAlertSettings: 'Advanced alerts',
+    mobileMenuAlertSettings: 'Notification settings',
     mobileMenuAlertSettingsDesc: 'Push notifications · reminders',
     mobileMenuDisplaySettings: 'Display settings',
     mobileMenuDisplaySettingsDesc: 'Language · theme',
@@ -357,6 +365,14 @@ const messages = {
     mobileMenuChipAuto: 'Auto',
     mobileMenuChipManual: 'Manual',
     mobileMenuChipHelp: 'Help',
+    mobileMenuStartReminder: 'Reminder before start',
+    mobileMenuStartReminderDesc: 'Send a push reminder before the schedule starts.',
+    mobileMenuReminderTiming: 'Reminder timing',
+    mobileMenuReminderTimingValue: '30 min before',
+    mobileMenuRolloverTitle: 'Auto rollover unfinished schedules',
+    mobileMenuRolloverDesc: 'Moves unfinished schedules to the next day.',
+    mobileMenuDefaultStatusDesc: 'Applied by default when creating a new schedule.',
+    mobileMenuAutoSaveHint: 'Changes are saved automatically.',
     newTodoDefaultStatus: 'Default status for new schedules',
     mobileMenuCustomerCenter: 'Support center',
     mobileMenuCustomerCenterDesc: 'Send feedback · Review feedback',
@@ -471,7 +487,7 @@ const messages = {
     notificationStatusOff: '当前未启用',
     notificationEnableAction: '开启',
     notificationDisableAction: '关闭',
-    mobileMenuAlertSettings: '通知高级设置',
+    mobileMenuAlertSettings: '通知设置',
     mobileMenuAlertSettingsDesc: '推送通知 · 提醒',
     mobileMenuDisplaySettings: '界面设置',
     mobileMenuDisplaySettingsDesc: '语言 · 主题',
@@ -485,6 +501,14 @@ const messages = {
     mobileMenuChipAuto: '自动',
     mobileMenuChipManual: '手动',
     mobileMenuChipHelp: '帮助',
+    mobileMenuStartReminder: '开始前提醒',
+    mobileMenuStartReminderDesc: '在日程开始前发送推送提醒。',
+    mobileMenuReminderTiming: '提醒时间',
+    mobileMenuReminderTimingValue: '提前30分钟',
+    mobileMenuRolloverTitle: '未完成日程自动顺延',
+    mobileMenuRolloverDesc: '超过一天仍未完成时，自动移动到次日。',
+    mobileMenuDefaultStatusDesc: '新建日程时默认应用该状态。',
+    mobileMenuAutoSaveHint: '修改后会自动保存。',
     newTodoDefaultStatus: '新日程默认状态',
     mobileMenuCustomerCenter: '客服中心',
     mobileMenuCustomerCenterDesc: '提交改进建议 · 查看改进建议',
@@ -599,7 +623,7 @@ const messages = {
     notificationStatusOff: '現在無効',
     notificationEnableAction: '有効化',
     notificationDisableAction: '無効化',
-    mobileMenuAlertSettings: '通知の詳細設定',
+    mobileMenuAlertSettings: '通知設定',
     mobileMenuAlertSettingsDesc: 'プッシュ通知・リマインダー',
     mobileMenuDisplaySettings: '画面設定',
     mobileMenuDisplaySettingsDesc: '言語・テーマ',
@@ -613,6 +637,14 @@ const messages = {
     mobileMenuChipAuto: '自動',
     mobileMenuChipManual: '手動',
     mobileMenuChipHelp: 'ヘルプ',
+    mobileMenuStartReminder: '開始前リマインダー',
+    mobileMenuStartReminderDesc: '予定開始前にプッシュ通知を送ります。',
+    mobileMenuReminderTiming: '通知タイミング',
+    mobileMenuReminderTimingValue: '30分前',
+    mobileMenuRolloverTitle: '未完了予定の自動繰り越し',
+    mobileMenuRolloverDesc: '当日中に終わらない予定を翌日に移動します。',
+    mobileMenuDefaultStatusDesc: '新しい予定作成時の初期状態に適用されます。',
+    mobileMenuAutoSaveHint: '変更は自動で保存されます。',
     newTodoDefaultStatus: '新しい予定のデフォルト状態',
     mobileMenuCustomerCenter: 'カスタマーセンター',
     mobileMenuCustomerCenterDesc: '改善要望送信・確認',
@@ -1115,6 +1147,21 @@ const mobileMenuHeaderDescription = computed(() => {
 const mobileMenuNotificationChip = computed(() => (notificationEnabled.value ? t('mobileMenuChipOn') : t('mobileMenuChipOff')))
 const mobileMenuDisplayChip = computed(() => (isDark.value ? t('darkMode') : t('lightMode')))
 const mobileMenuTodoChip = computed(() => (defaultRolloverEnabled.value ? t('mobileMenuChipAuto') : t('mobileMenuChipManual')))
+const notificationToggleDisabled = computed(
+  () =>
+    notificationBusy.value ||
+    !isAuthenticated.value ||
+    !notificationSupported.value ||
+    !isPushConfigured.value ||
+    notificationPermission.value === 'denied'
+)
+const notificationToggleBlockedReason = computed(() => {
+  if (!isAuthenticated.value) return t('authSigninHelp')
+  if (!notificationSupported.value) return t('notificationUnsupported')
+  if (!isPushConfigured.value) return t('notificationNotConfigured')
+  if (notificationPermission.value === 'denied') return t('notificationPermissionDenied')
+  return ''
+})
 
 function syncAuthScrollLock() {
   if (typeof document === 'undefined') return
@@ -3645,7 +3692,7 @@ function formatTodoItemDue(value) {
           </template>
 
           <template v-else-if="mobileMenuDetail === 'display'">
-            <div class="grid min-h-[300px] gap-3">
+            <div class="grid gap-3">
               <div class="space-y-1">
                 <p class="text-sm text-muted-foreground">{{ t('theme') }}</p>
                 <div class="inline-flex w-full rounded-lg border bg-background p-1">
@@ -3676,88 +3723,74 @@ function formatTodoItemDue(value) {
           </template>
 
           <template v-else-if="mobileMenuDetail === 'notifications'">
-            <div class="grid min-h-[300px] gap-3">
-              <p class="text-sm text-muted-foreground">{{ t('notificationReminder30m') }}</p>
-              <p class="text-xs text-muted-foreground">{{ notificationHelpText }}</p>
-              <div class="inline-flex w-full rounded-lg border bg-background p-1">
-                <Button
-                  class="flex-1 text-sm"
-                  :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !isPushConfigured || notificationPermission === 'denied'"
-                  @click="enableReminderNotifications"
+            <div class="settings-detail-shell">
+              <article class="settings-detail-card">
+                <div class="settings-detail-card-main">
+                  <p class="settings-detail-card-title">{{ t('mobileMenuStartReminder') }}</p>
+                  <p class="settings-detail-card-sub">{{ t('mobileMenuStartReminderDesc') }}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  class="settings-switch"
+                  :class="{ 'settings-switch--on': notificationEnabled }"
+                  :aria-checked="notificationEnabled ? 'true' : 'false'"
+                  :disabled="notificationToggleDisabled"
+                  @click="notificationEnabled ? disableReminderNotifications() : enableReminderNotifications()"
                 >
-                  {{ t('notificationEnableAction') }}
-                </Button>
-                <Button
-                  class="flex-1 text-sm"
-                  variant="ghost"
-                  :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !notificationEnabled"
-                  @click="disableReminderNotifications"
-                >
-                  {{ t('notificationDisableAction') }}
-                </Button>
-              </div>
+                  <span class="settings-switch-thumb"></span>
+                </button>
+              </article>
+              <button type="button" class="settings-detail-row" aria-label="notification timing" disabled>
+                <div class="settings-detail-row-main">
+                  <p class="settings-detail-row-label">{{ t('mobileMenuReminderTiming') }}</p>
+                  <p class="settings-detail-row-value">{{ t('mobileMenuReminderTimingValue') }}</p>
+                </div>
+                <ChevronRight class="h-4 w-4 settings-detail-row-icon" />
+              </button>
+              <p class="settings-detail-meta">{{ t('mobileMenuAutoSaveHint') }}</p>
+              <p v-if="notificationToggleBlockedReason" class="settings-detail-warning">{{ notificationToggleBlockedReason }}</p>
             </div>
           </template>
 
           <template v-else-if="mobileMenuDetail === 'todo'">
-            <div class="grid min-h-[300px] gap-3">
-              <div class="space-y-1">
-                <div class="flex items-center gap-1.5">
-                  <p class="text-sm text-muted-foreground">{{ rolloverSettingLabel }}</p>
-                  <div class="relative">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      class="h-7 w-7 rounded-full p-0 text-muted-foreground"
-                      :aria-label="rolloverTooltipText"
-                      @click.stop="toggleRolloverTooltip('settings')"
-                    >
-                      <CircleHelp class="h-4 w-4" />
-                    </Button>
-                    <div
-                      v-if="rolloverTooltipOpen && rolloverTooltipContext === 'settings'"
-                      ref="rolloverTooltipRef"
-                      :style="rolloverTooltipStyle"
-                      class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
-                    >
-                      {{ rolloverTooltipText }}
-                    </div>
-                  </div>
+            <div class="settings-detail-shell">
+              <article class="settings-detail-card">
+                <div class="settings-detail-card-main">
+                  <p class="settings-detail-card-title">{{ t('mobileMenuRolloverTitle') }}</p>
+                  <p class="settings-detail-card-sub">{{ t('mobileMenuRolloverDesc') }}</p>
                 </div>
-                <div class="inline-flex w-full rounded-lg border bg-background p-1">
-                  <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
-                    true
-                  </Button>
-                  <Button class="flex-1 text-sm" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
-                    false
-                  </Button>
+                <button
+                  type="button"
+                  role="switch"
+                  class="settings-switch"
+                  :class="{ 'settings-switch--on': defaultRolloverEnabled }"
+                  :aria-checked="defaultRolloverEnabled ? 'true' : 'false'"
+                  @click="setDefaultRollover(!defaultRolloverEnabled)"
+                >
+                  <span class="settings-switch-thumb"></span>
+                </button>
+              </article>
+              <article class="settings-detail-card settings-detail-card--stack">
+                <div class="settings-detail-card-main">
+                  <p class="settings-detail-card-title">{{ t('newTodoDefaultStatus') }}</p>
+                  <p class="settings-detail-card-sub">{{ t('mobileMenuDefaultStatusDesc') }}</p>
                 </div>
-              </div>
-              <div class="space-y-1">
-                <p class="text-sm text-muted-foreground">{{ t('newTodoDefaultStatus') }}</p>
-                <div class="inline-flex w-full rounded-lg border bg-background p-1">
-                  <Button
-                    class="flex-1 text-sm"
-                    :variant="defaultNewTodoStatus === TODO_STATUS_WAITING ? 'default' : 'ghost'"
-                    @click="setDefaultNewTodoStatus(TODO_STATUS_WAITING)"
-                  >
+                <div class="settings-segment">
+                  <Button class="flex-1 text-sm" :variant="defaultNewTodoStatus === TODO_STATUS_WAITING ? 'default' : 'ghost'" @click="setDefaultNewTodoStatus(TODO_STATUS_WAITING)">
                     {{ t('waiting') }}
                   </Button>
-                  <Button
-                    class="flex-1 text-sm"
-                    :variant="defaultNewTodoStatus === TODO_STATUS_ACTIVE ? 'default' : 'ghost'"
-                    @click="setDefaultNewTodoStatus(TODO_STATUS_ACTIVE)"
-                  >
+                  <Button class="flex-1 text-sm" :variant="defaultNewTodoStatus === TODO_STATUS_ACTIVE ? 'default' : 'ghost'" @click="setDefaultNewTodoStatus(TODO_STATUS_ACTIVE)">
                     {{ t('active') }}
                   </Button>
                 </div>
-              </div>
+              </article>
+              <p class="settings-detail-meta">{{ t('mobileMenuAutoSaveHint') }}</p>
             </div>
           </template>
 
           <template v-else-if="mobileMenuDetail === 'support'">
-            <div class="grid min-h-[300px] gap-3">
+            <div class="grid gap-3">
               <div class="mobile-menu-actions">
                 <Button
                   v-if="isAuthenticated"
