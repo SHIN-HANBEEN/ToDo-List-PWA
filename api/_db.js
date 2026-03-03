@@ -62,6 +62,8 @@ export async function ensureSchema() {
           location TEXT NOT NULL DEFAULT '',
           label_text TEXT NOT NULL DEFAULT '',
           label_color TEXT NOT NULL DEFAULT '#64748b',
+          label_texts JSONB NOT NULL DEFAULT '[]'::jsonb,
+          label_colors JSONB NOT NULL DEFAULT '[]'::jsonb,
           rollover_enabled BOOLEAN NOT NULL DEFAULT FALSE,
           position INTEGER NOT NULL DEFAULT 0,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -140,6 +142,8 @@ export async function ensureSchema() {
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS location TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_text TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_color TEXT NOT NULL DEFAULT '#64748b';")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_texts JSONB NOT NULL DEFAULT '[]'::jsonb;")
+      await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS label_colors JSONB NOT NULL DEFAULT '[]'::jsonb;")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';")
       await client.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';")
       await client.query(`
@@ -175,6 +179,26 @@ export async function ensureSchema() {
         UPDATE todos
         SET label_color = '#64748b'
         WHERE label_color IS NULL OR btrim(label_color) = '';
+      `)
+      await client.query(`
+        UPDATE todos
+        SET label_texts = CASE
+          WHEN btrim(label_text) = '' THEN '[]'::jsonb
+          ELSE jsonb_build_array(label_text)
+        END
+        WHERE label_texts IS NULL
+          OR jsonb_typeof(label_texts) <> 'array'
+          OR (jsonb_typeof(label_texts) = 'array' AND jsonb_array_length(label_texts) = 0);
+      `)
+      await client.query(`
+        UPDATE todos
+        SET label_colors = CASE
+          WHEN btrim(label_text) = '' THEN '[]'::jsonb
+          ELSE jsonb_build_array(COALESCE(NULLIF(btrim(label_color), ''), '#64748b'))
+        END
+        WHERE label_colors IS NULL
+          OR jsonb_typeof(label_colors) <> 'array'
+          OR (jsonb_typeof(label_colors) = 'array' AND jsonb_array_length(label_colors) = 0);
       `)
       await client.query('ALTER TABLE labels ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;')
       await client.query('ALTER TABLE labels ADD COLUMN IF NOT EXISTS name TEXT;')
@@ -271,6 +295,24 @@ export function normalizeTodoRow(row) {
         ? 'done'
         : 'active'
 
+  const normalizedLabelTexts = Array.isArray(row.label_texts)
+    ? row.label_texts.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+  const fallbackLabelText = String(row.label_text || '').trim()
+  const labelTexts = normalizedLabelTexts.length > 0
+    ? normalizedLabelTexts
+    : fallbackLabelText
+      ? [fallbackLabelText]
+      : []
+  const rawLabelColors = Array.isArray(row.label_colors)
+    ? row.label_colors.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+  const fallbackLabelColor = String(row.label_color || '').trim() || '#64748b'
+  const labelColors = labelTexts.map((_, index) => {
+    const nextColor = rawLabelColors[index] || fallbackLabelColor
+    return /^#[0-9a-fA-F]{6}$/.test(nextColor) ? nextColor.toLowerCase() : '#64748b'
+  })
+
   return {
     id: Number(row.id),
     title,
@@ -280,8 +322,10 @@ export function normalizeTodoRow(row) {
     done: status === 'done',
     dueAt: row.due_at,
     location: row.location || '',
-    labelText: row.label_text || '',
-    labelColor: row.label_color || '#64748b',
+    labelText: labelTexts[0] || '',
+    labelColor: labelColors[0] || '#64748b',
+    labelTexts,
+    labelColors,
     rolloverEnabled: row.rollover_enabled,
     position: row.position,
     createdAt: row.created_at,

@@ -20,6 +20,25 @@ function parseLabelColor(value) {
   return trimmed.toLowerCase()
 }
 
+function parseLabelTexts(value) {
+  if (!Array.isArray(value)) return []
+  const parsed = []
+  for (const item of value) {
+    const next = String(item || '').trim().slice(0, 32)
+    if (next) parsed.push(next)
+    if (parsed.length >= 50) break
+  }
+  return parsed
+}
+
+function parseLabelColors(value, labelCount, fallbackColor = '#64748b') {
+  if (labelCount <= 0) return []
+  const parsed = Array.isArray(value)
+    ? value.map((item) => parseLabelColor(item)).filter((item) => Boolean(item))
+    : []
+  return Array.from({ length: labelCount }, (_, index) => parsed[index] || fallbackColor)
+}
+
 function parseTodoTitle(value) {
   return String(value || '')
     .trim()
@@ -72,7 +91,7 @@ export default async function handler(req, res) {
       // todo/comment를 분리 조회 후 메모리에서 중첩 구조로 조합.
       const todosResult = await pool.query(
         `
-          SELECT id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at
+          SELECT id, title, content, text, status, done, due_at, location, label_text, label_color, label_texts, label_colors, rollover_enabled, position, created_at
           FROM todos
           WHERE user_id = $1
           ORDER BY position ASC, created_at DESC;
@@ -116,9 +135,15 @@ export default async function handler(req, res) {
       const content = parseTodoContent(body.content)
       const dueAt = parseDueAt(body.dueAt)
       const location = String(body.location || '').trim().slice(0, 160)
-      const labelText = String(body.labelText || '').trim().slice(0, 32)
+      let labelTexts = parseLabelTexts(body.labelTexts)
+      if (labelTexts.length === 0) {
+        const singleLabelText = String(body.labelText || '').trim().slice(0, 32)
+        labelTexts = singleLabelText ? [singleLabelText] : []
+      }
       const parsedLabelColor = parseLabelColor(body.labelColor || '#64748b')
-      const labelColor = labelText ? parsedLabelColor : '#64748b'
+      const labelColors = parseLabelColors(body.labelColors, labelTexts.length, parsedLabelColor || '#64748b')
+      const labelText = labelTexts[0] || ''
+      const labelColor = labelText ? labelColors[0] || parsedLabelColor : '#64748b'
       const rolloverEnabled = Boolean(body.rolloverEnabled)
       const hasStatus = Object.prototype.hasOwnProperty.call(body, 'status')
       const status = hasStatus ? parseTodoStatus(body.status) : 'waiting'
@@ -129,11 +154,25 @@ export default async function handler(req, res) {
 
       const insertResult = await pool.query(
         `
-          INSERT INTO todos (user_id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
-          RETURNING id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;
+          INSERT INTO todos (user_id, title, content, text, status, done, due_at, location, label_text, label_color, label_texts, label_colors, rollover_enabled, position)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, COALESCE((SELECT MIN(position) FROM todos WHERE user_id = $1), 1) - 1)
+          RETURNING id, title, content, text, status, done, due_at, location, label_text, label_color, label_texts, label_colors, rollover_enabled, position, created_at;
         `,
-        [user.id, title, content, title, status, statusToDone(status), dueAt, location, labelText, labelColor, rolloverEnabled]
+        [
+          user.id,
+          title,
+          content,
+          title,
+          status,
+          statusToDone(status),
+          dueAt,
+          location,
+          labelText,
+          labelColor,
+          JSON.stringify(labelTexts),
+          JSON.stringify(labelColors),
+          rolloverEnabled,
+        ]
       )
 
       return res.status(201).json({ todo: normalizeTodoRow(insertResult.rows[0]) })
@@ -235,9 +274,38 @@ export default async function handler(req, res) {
         valueIndex += 1
       }
 
-      if (typeof body.labelText === 'string') {
+      if (Array.isArray(body.labelTexts)) {
+        const labelTexts = parseLabelTexts(body.labelTexts)
+        const fallbackColor = parseLabelColor(body.labelColor || '#64748b') || '#64748b'
+        const labelColors = parseLabelColors(body.labelColors, labelTexts.length, fallbackColor)
         updates.push(`label_text = $${valueIndex}`)
-        values.push(body.labelText.trim().slice(0, 32))
+        values.push(labelTexts[0] || '')
+        valueIndex += 1
+        updates.push(`label_color = $${valueIndex}`)
+        values.push(labelTexts.length > 0 ? labelColors[0] : '#64748b')
+        valueIndex += 1
+        updates.push(`label_texts = $${valueIndex}::jsonb`)
+        values.push(JSON.stringify(labelTexts))
+        valueIndex += 1
+        updates.push(`label_colors = $${valueIndex}::jsonb`)
+        values.push(JSON.stringify(labelColors))
+        valueIndex += 1
+      }
+
+      if (!Array.isArray(body.labelTexts) && typeof body.labelText === 'string') {
+        const labelText = body.labelText.trim().slice(0, 32)
+        const labelColor = parseLabelColor(body.labelColor || '#64748b') || '#64748b'
+        updates.push(`label_text = $${valueIndex}`)
+        values.push(labelText)
+        valueIndex += 1
+        updates.push(`label_texts = $${valueIndex}::jsonb`)
+        values.push(JSON.stringify(labelText ? [labelText] : []))
+        valueIndex += 1
+        updates.push(`label_color = $${valueIndex}`)
+        values.push(labelText ? labelColor : '#64748b')
+        valueIndex += 1
+        updates.push(`label_colors = $${valueIndex}::jsonb`)
+        values.push(JSON.stringify(labelText ? [labelColor] : []))
         valueIndex += 1
       }
 
@@ -247,6 +315,11 @@ export default async function handler(req, res) {
         updates.push(`label_color = $${valueIndex}`)
         values.push(labelColor)
         valueIndex += 1
+        if (!Array.isArray(body.labelTexts) && typeof body.labelText !== 'string') {
+          updates.push(`label_colors = CASE WHEN btrim(label_text) = '' THEN '[]'::jsonb ELSE jsonb_build_array($${valueIndex}) END`)
+          values.push(labelColor)
+          valueIndex += 1
+        }
       }
 
       if (typeof body.rolloverEnabled === 'boolean') {
@@ -261,7 +334,7 @@ export default async function handler(req, res) {
       const result = await pool.query(
         `UPDATE todos SET ${updates.join(', ')} WHERE id = $${valueIndex} AND user_id = $${
           valueIndex + 1
-        } RETURNING id, title, content, text, status, done, due_at, location, label_text, label_color, rollover_enabled, position, created_at;`,
+        } RETURNING id, title, content, text, status, done, due_at, location, label_text, label_color, label_texts, label_colors, rollover_enabled, position, created_at;`,
         values
       )
 

@@ -93,9 +93,40 @@ export default async function handler(req, res) {
         await client.query(
           `
             UPDATE todos
-            SET label_text = $1, label_color = $2
+            SET
+              label_text = CASE WHEN label_text = $4 THEN $1 ELSE label_text END,
+              label_color = CASE WHEN label_text = $4 THEN $2 ELSE label_color END,
+              label_texts = (
+                SELECT COALESCE(
+                  jsonb_agg(CASE WHEN txt.value = $4 THEN $1 ELSE txt.value END ORDER BY txt.ord),
+                  '[]'::jsonb
+                )
+                FROM jsonb_array_elements_text(COALESCE(todos.label_texts, '[]'::jsonb)) WITH ORDINALITY txt(value, ord)
+              ),
+              label_colors = (
+                SELECT COALESCE(
+                  jsonb_agg(
+                    CASE
+                      WHEN txt.value = $4 THEN $2
+                      ELSE COALESCE(col.value, '#64748b')
+                    END
+                    ORDER BY txt.ord
+                  ),
+                  '[]'::jsonb
+                )
+                FROM jsonb_array_elements_text(COALESCE(todos.label_texts, '[]'::jsonb)) WITH ORDINALITY txt(value, ord)
+                LEFT JOIN jsonb_array_elements_text(COALESCE(todos.label_colors, '[]'::jsonb)) WITH ORDINALITY col(value, ord)
+                  ON col.ord = txt.ord
+              )
             WHERE user_id = $3
-              AND label_text = $4;
+              AND (
+                label_text = $4
+                OR EXISTS (
+                  SELECT 1
+                  FROM jsonb_array_elements_text(COALESCE(todos.label_texts, '[]'::jsonb)) AS lx(value)
+                  WHERE lx.value = $4
+                )
+              );
           `,
           [name, color, user.id, previous.name]
         )

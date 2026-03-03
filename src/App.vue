@@ -36,7 +36,10 @@ const newLocation = ref('')
 const LABEL_NONE_VALUE = '__none__'
 const LABEL_FILTER_ALL_VALUE = '__all__'
 const labels = ref([])
-const newTodoLabelId = ref(LABEL_NONE_VALUE)
+const newTodoLabelIds = ref([])
+const newTodoLabelMenuOpen = ref(false)
+const newTodoLabelSearchQuery = ref('')
+const newTodoLabelMenuRef = ref(null)
 const todoLabelFilterId = ref(LABEL_FILTER_ALL_VALUE)
 const addLabelOpen = ref(false)
 const newLabelName = ref('')
@@ -166,6 +169,10 @@ const messages = {
     labelColorRecommended: '추천 색상',
     labelColorReroll: '리롤',
     labelSelectPrompt: '라벨을 선택해주세요',
+    labelSelectedCount: '{count}개 선택됨',
+    labelSearchPlaceholder: '라벨 검색',
+    labelSelectionClear: '선택 지우기',
+    labelNoSearchResults: '검색 결과가 없습니다.',
     allLabels: '전체 라벨',
     labelSettings: '라벨 설정',
     labelAdd: '라벨 추가',
@@ -304,6 +311,10 @@ const messages = {
     labelColorRecommended: 'Recommended colors',
     labelColorReroll: 'Reroll',
     labelSelectPrompt: 'Please select a label',
+    labelSelectedCount: '{count} selected',
+    labelSearchPlaceholder: 'Search labels',
+    labelSelectionClear: 'Clear selection',
+    labelNoSearchResults: 'No labels found.',
     allLabels: 'All labels',
     labelSettings: 'Label settings',
     labelAdd: 'Add label',
@@ -442,6 +453,10 @@ const messages = {
     labelColorRecommended: '推荐颜色',
     labelColorReroll: '重选',
     labelSelectPrompt: '请选择标签',
+    labelSelectedCount: '已选择 {count} 个',
+    labelSearchPlaceholder: '搜索标签',
+    labelSelectionClear: '清除选择',
+    labelNoSearchResults: '未找到标签。',
     allLabels: '全部标签',
     labelSettings: '标签设置',
     labelAdd: '添加标签',
@@ -580,6 +595,10 @@ const messages = {
     labelColorRecommended: 'おすすめ色',
     labelColorReroll: 'リロール',
     labelSelectPrompt: 'ラベルを選択してください',
+    labelSelectedCount: '{count} 件を選択',
+    labelSearchPlaceholder: 'ラベルを検索',
+    labelSelectionClear: '選択をクリア',
+    labelNoSearchResults: '一致するラベルがありません。',
     allLabels: 'すべてのラベル',
     labelSettings: 'ラベル設定',
     labelAdd: 'ラベル追加',
@@ -950,7 +969,53 @@ function matchesTodoStatusFilter(todo) {
 function matchesTodoLabelFilter(todo) {
   const selectedLabel = selectedLabelForTodoFilter.value
   if (!selectedLabel) return true
-  return String(todo.labelText || '') === String(selectedLabel.name || '')
+  const selectedName = String(selectedLabel.name || '')
+  const labelsForTodo = getTodoLabelTexts(todo)
+  return labelsForTodo.includes(selectedName)
+}
+
+function getTodoLabelTexts(todo) {
+  const fromArray = Array.isArray(todo?.labelTexts)
+    ? todo.labelTexts.map((value) => String(value || '').trim()).filter(Boolean)
+    : []
+  if (fromArray.length > 0) return fromArray
+  const single = String(todo?.labelText || '').trim()
+  return single ? [single] : []
+}
+
+function getTodoLabelColors(todo) {
+  const fromArray = Array.isArray(todo?.labelColors)
+    ? todo.labelColors.map((value) => normalizeLabelColor(value)).filter(Boolean)
+    : []
+  const labelsForTodo = getTodoLabelTexts(todo)
+  if (labelsForTodo.length === 0) return []
+  if (fromArray.length >= labelsForTodo.length) return fromArray.slice(0, labelsForTodo.length)
+  const fallbackColor = normalizeLabelColor(todo?.labelColor)
+  const result = []
+  for (let index = 0; index < labelsForTodo.length; index += 1) {
+    result.push(normalizeLabelColor(fromArray[index] || fallbackColor))
+  }
+  return result
+}
+
+function getTodoPrimaryLabelText(todo) {
+  return getTodoLabelTexts(todo)[0] || ''
+}
+
+function getTodoPrimaryLabelColor(todo) {
+  return getTodoLabelColors(todo)[0] || normalizeLabelColor(todo?.labelColor)
+}
+
+function getTodoLabelSummary(todo) {
+  const labelsForTodo = getTodoLabelTexts(todo)
+  if (labelsForTodo.length === 0) return ''
+  const primary = labelsForTodo[0]
+  if (labelsForTodo.length === 1) return primary
+  return `${primary} +${labelsForTodo.length - 1}`
+}
+
+function getTodoLabelSearchText(todo) {
+  return getTodoLabelTexts(todo).join(' ')
 }
 
 function getTodoTitle(todo) {
@@ -974,6 +1039,8 @@ function applyTodoStatusShape(todo) {
   const status = getTodoStatus(todo)
   const title = getTodoTitle(todo)
   const content = getTodoContent(todo)
+  const labelTexts = getTodoLabelTexts(todo)
+  const labelColors = getTodoLabelColors(todo)
   return {
     ...todo,
     title,
@@ -981,6 +1048,10 @@ function applyTodoStatusShape(todo) {
     text: title,
     status,
     done: status === TODO_STATUS_DONE,
+    labelTexts,
+    labelColors,
+    labelText: labelTexts[0] || '',
+    labelColor: labelColors[0] || '#64748b',
   }
 }
 
@@ -997,7 +1068,7 @@ const filteredTodos = computed(() => {
     const title = String(getTodoTitle(todo) || '').toLowerCase()
     const content = String(getTodoContent(todo) || '').toLowerCase()
     const location = String(todo.location || '').toLowerCase()
-    const label = String(todo.labelText || '').toLowerCase()
+    const label = String(getTodoLabelSearchText(todo) || '').toLowerCase()
     return title.includes(query) || content.includes(query) || location.includes(query) || label.includes(query)
   })
 })
@@ -1106,11 +1177,26 @@ const labelOptions = computed(() =>
     String(a.name || '').localeCompare(String(b.name || ''), localeCodeByLanguage[locale.value] || 'en-US')
   )
 )
-const selectedLabelForNewTodo = computed(() => {
-  if (newTodoLabelId.value === LABEL_NONE_VALUE) return null
-  const id = Number(newTodoLabelId.value)
-  if (!Number.isFinite(id)) return null
-  return labels.value.find((label) => label.id === id) || null
+const selectedLabelsForNewTodo = computed(() => {
+  if (!Array.isArray(newTodoLabelIds.value) || newTodoLabelIds.value.length === 0) return []
+  const selectedIdSet = new Set(
+    newTodoLabelIds.value
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value))
+  )
+  return labelOptions.value.filter((label) => selectedIdSet.has(Number(label.id)))
+})
+const shouldShowNewTodoLabelSearch = computed(() => labelOptions.value.length > 10)
+const filteredLabelOptionsForNewTodo = computed(() => {
+  const query = newTodoLabelSearchQuery.value.trim().toLowerCase()
+  if (!query) return labelOptions.value
+  return labelOptions.value.filter((label) => String(label.name || '').toLowerCase().includes(query))
+})
+const newTodoLabelSummary = computed(() => {
+  const selected = selectedLabelsForNewTodo.value
+  if (selected.length === 0) return t('labelSelectPrompt')
+  if (selected.length === 1) return String(selected[0].name || '')
+  return t('labelSelectedCount', { count: selected.length })
 })
 const selectedLabelForTodoFilter = computed(() => {
   if (todoLabelFilterId.value === LABEL_FILTER_ALL_VALUE) return null
@@ -1648,11 +1734,42 @@ function getDetailStateDotStyle(todo, statusOverride = null) {
 }
 
 function getTodoItemLabelTextStyle(todo) {
-  return { color: normalizeLabelColor(todo?.labelColor, '#64748b') }
+  return { color: normalizeLabelColor(getTodoPrimaryLabelColor(todo), '#64748b') }
 }
 
-function onNewTodoLabelChange(value) {
-  newTodoLabelId.value = typeof value === 'string' ? value : LABEL_NONE_VALUE
+function isNewTodoLabelSelected(labelId) {
+  return newTodoLabelIds.value.includes(String(labelId))
+}
+
+function toggleNewTodoLabelMenu() {
+  newTodoLabelMenuOpen.value = !newTodoLabelMenuOpen.value
+}
+
+function closeNewTodoLabelMenu() {
+  newTodoLabelMenuOpen.value = false
+  newTodoLabelSearchQuery.value = ''
+}
+
+function clearNewTodoLabels() {
+  newTodoLabelIds.value = []
+}
+
+function toggleNewTodoLabel(labelId) {
+  const normalizedId = String(labelId)
+  if (!normalizedId) return
+  if (isNewTodoLabelSelected(normalizedId)) {
+    newTodoLabelIds.value = newTodoLabelIds.value.filter((id) => id !== normalizedId)
+    return
+  }
+  newTodoLabelIds.value = [...newTodoLabelIds.value, normalizedId]
+}
+
+function onRootPointerDown(event) {
+  if (!newTodoLabelMenuOpen.value) return
+  const root = newTodoLabelMenuRef.value
+  if (!(root instanceof HTMLElement)) return
+  if (root.contains(event.target)) return
+  closeNewTodoLabelMenu()
 }
 
 function onTodoLabelFilterChange(value) {
@@ -1664,8 +1781,9 @@ function onDetailTodoLabelChange(value) {
 }
 
 function findDetailLabelId(todo) {
-  if (!todo?.labelText) return LABEL_NONE_VALUE
-  const byName = labels.value.find((label) => String(label.name || '') === String(todo.labelText || ''))
+  const labelText = getTodoPrimaryLabelText(todo)
+  if (!labelText) return LABEL_NONE_VALUE
+  const byName = labels.value.find((label) => String(label.name || '') === labelText)
   if (!byName) return LABEL_NONE_VALUE
   return String(byName.id)
 }
@@ -1926,6 +2044,7 @@ onMounted(async () => {
   syncAuthScrollLock()
   window.addEventListener('resize', handleTooltipViewportChange)
   window.addEventListener('scroll', handleTooltipViewportChange, true)
+  document.addEventListener('pointerdown', onRootPointerDown)
 
   const savedTheme = localStorage.getItem(THEME_KEY)
   if (savedTheme === 'dark' || savedTheme === 'light') {
@@ -1989,6 +2108,7 @@ onBeforeUnmount(() => {
   modalLockScrollY.value = null
   window.removeEventListener('resize', handleTooltipViewportChange)
   window.removeEventListener('scroll', handleTooltipViewportChange, true)
+  document.removeEventListener('pointerdown', onRootPointerDown)
 })
 
 watch([rolloverTooltipOpen, rolloverTooltipContext], async ([isOpen]) => {
@@ -2041,13 +2161,23 @@ watch(
 watch(
   labelOptions,
   (nextOptions) => {
-    if (todoLabelFilterId.value === LABEL_FILTER_ALL_VALUE) return
-    const currentId = Number(todoLabelFilterId.value)
-    if (!Number.isFinite(currentId) || !nextOptions.some((label) => label.id === currentId)) {
-      todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
+    if (todoLabelFilterId.value !== LABEL_FILTER_ALL_VALUE) {
+      const currentId = Number(todoLabelFilterId.value)
+      if (!Number.isFinite(currentId) || !nextOptions.some((label) => label.id === currentId)) {
+        todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
+      }
     }
+    if (!Array.isArray(newTodoLabelIds.value) || newTodoLabelIds.value.length === 0) return
+    const idSet = new Set(nextOptions.map((label) => String(label.id)))
+    newTodoLabelIds.value = newTodoLabelIds.value.filter((id) => idSet.has(String(id)))
   }
 )
+
+watch(addTodoOpen, (isOpen) => {
+  if (!isOpen) {
+    closeNewTodoLabelMenu()
+  }
+})
 
 watch(
   [viewMode, filter, todoLabelFilterId, calendarMonthAnchor, isAuthenticated, () => user.value?.id, () => user.value?.email],
@@ -2225,7 +2355,9 @@ async function logout() {
     newTodoContent.value = ''
     newDueAt.value = ''
     newLocation.value = ''
-    newTodoLabelId.value = LABEL_NONE_VALUE
+    newTodoLabelIds.value = []
+    newTodoLabelSearchQuery.value = ''
+    newTodoLabelMenuOpen.value = false
     todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
     searchQuery.value = ''
     addLabelOpen.value = false
@@ -2326,7 +2458,11 @@ async function addTodo() {
     if (!title) errorMessage.value = translateError('title is required')
     return
   }
-  const selectedLabel = selectedLabelForNewTodo.value
+  const selectedLabels = selectedLabelsForNewTodo.value
+  const labelTexts = selectedLabels.map((label) => String(label.name || '').trim()).filter(Boolean)
+  const labelColors = selectedLabels.map((label) => normalizeLabelColor(label.color))
+  const primaryLabelText = labelTexts[0] || ''
+  const primaryLabelColor = normalizeLabelColor(labelColors[0], '#64748b')
   let dueAt = null
   if (newDueAt.value) {
     const parsedDueAt = new Date(newDueAt.value)
@@ -2346,8 +2482,10 @@ async function addTodo() {
         content,
         dueAt,
         location: newLocation.value.trim(),
-        labelText: selectedLabel?.name || '',
-        labelColor: normalizeLabelColor(selectedLabel?.color),
+        labelText: primaryLabelText,
+        labelColor: primaryLabelColor,
+        labelTexts,
+        labelColors,
         rolloverEnabled: newRolloverEnabled.value,
         status: defaultNewTodoStatus.value,
       }),
@@ -2358,7 +2496,9 @@ async function addTodo() {
     newTodoContent.value = ''
     newDueAt.value = ''
     newLocation.value = ''
-    newTodoLabelId.value = LABEL_NONE_VALUE
+    newTodoLabelIds.value = []
+    newTodoLabelSearchQuery.value = ''
+    newTodoLabelMenuOpen.value = false
     newRolloverEnabled.value = defaultRolloverEnabled.value
     addTodoOpen.value = false
   } catch (error) {
@@ -2551,6 +2691,8 @@ async function saveDetailEdit() {
     location: target.location || '',
     labelText: target.labelText || '',
     labelColor: normalizeLabelColor(target.labelColor),
+    labelTexts: getTodoLabelTexts(target),
+    labelColors: getTodoLabelColors(target),
     rolloverEnabled: Boolean(target.rolloverEnabled),
   }
 
@@ -2561,6 +2703,8 @@ async function saveDetailEdit() {
   target.location = detailLocationDraft.value.trim()
   target.labelText = nextLabelText
   target.labelColor = nextLabelColor
+  target.labelTexts = nextLabelText ? [nextLabelText] : []
+  target.labelColors = nextLabelText ? [nextLabelColor] : []
   target.rolloverEnabled = detailRolloverDraft.value
 
   try {
@@ -2586,6 +2730,8 @@ async function saveDetailEdit() {
     target.location = previous.location
     target.labelText = previous.labelText
     target.labelColor = previous.labelColor
+    target.labelTexts = previous.labelTexts
+    target.labelColors = previous.labelColors
     target.rolloverEnabled = previous.rolloverEnabled
     errorMessage.value = translateError(error.message)
   } finally {
@@ -2864,7 +3010,9 @@ async function createLabel() {
     })
     const next = payload.label
     labels.value = [next, ...labels.value.filter((item) => item.id !== next.id)]
-    newTodoLabelId.value = String(next.id)
+    if (!newTodoLabelIds.value.includes(String(next.id))) {
+      newTodoLabelIds.value = [...newTodoLabelIds.value, String(next.id)]
+    }
     if (detailEditMode.value) detailTodoLabelId.value = String(next.id)
     newLabelName.value = ''
     rerollRecommendedLabelColors()
@@ -2916,15 +3064,20 @@ async function saveLabelEdit(labelId) {
     const updated = payload.label
     const previousName = payload.previousName || target.name
     labels.value = labels.value.map((item) => (item.id === updated.id ? updated : item))
-    todos.value = todos.value.map((todo) =>
-      todo.labelText === previousName
-        ? {
-            ...todo,
-            labelText: updated.name,
-            labelColor: updated.color,
-          }
-        : todo
-    )
+    todos.value = todos.value.map((todo) => {
+      const labelTexts = getTodoLabelTexts(todo)
+      if (!labelTexts.includes(previousName)) return todo
+      const labelColors = getTodoLabelColors(todo)
+      const renamedTexts = labelTexts.map((nameItem) => (nameItem === previousName ? updated.name : nameItem))
+      const renamedColors = labelTexts.map((nameItem, index) => (nameItem === previousName ? updated.color : labelColors[index]))
+      return applyTodoStatusShape({
+        ...todo,
+        labelTexts: renamedTexts,
+        labelColors: renamedColors,
+        labelText: renamedTexts[0] || '',
+        labelColor: normalizeLabelColor(renamedColors[0]),
+      })
+    })
     cancelLabelEdit()
   } catch (error) {
     errorMessage.value = translateError(error.message)
@@ -2937,6 +3090,7 @@ function openAddTodo() {
   if (!isAuthenticated.value) return
   errorMessage.value = ''
   newRolloverEnabled.value = defaultRolloverEnabled.value
+  closeNewTodoLabelMenu()
   if (labels.value.length === 0) {
     void loadLabels()
   }
@@ -2945,6 +3099,7 @@ function openAddTodo() {
 
 function closeAddTodo() {
   addTodoOpen.value = false
+  closeNewTodoLabelMenu()
   addLabelOpen.value = false
 }
 
@@ -3261,11 +3416,11 @@ function formatTodoItemDue(value) {
                         <div class="todo-item-meta">
                           <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTodoItemDue(todo.dueAt) }}</span>
                           <span
-                            v-if="todo.labelText"
+                            v-if="getTodoPrimaryLabelText(todo)"
                             class="todo-item-meta-text todo-item-meta-label"
                             :style="getTodoItemLabelTextStyle(todo)"
                           >
-                            {{ todo.labelText }}
+                            {{ getTodoLabelSummary(todo) }}
                           </span>
                           <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
                           <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
@@ -3404,11 +3559,11 @@ function formatTodoItemDue(value) {
                 <div class="todo-item-meta">
                   <span v-if="todo.dueAt" class="todo-item-meta-due">{{ formatTodoItemDue(todo.dueAt) }}</span>
                   <span
-                    v-if="todo.labelText"
+                    v-if="getTodoPrimaryLabelText(todo)"
                     class="todo-item-meta-text todo-item-meta-label"
                     :style="getTodoItemLabelTextStyle(todo)"
                   >
-                    {{ todo.labelText }}
+                    {{ getTodoLabelSummary(todo) }}
                   </span>
                   <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
                   <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
@@ -3479,11 +3634,11 @@ function formatTodoItemDue(value) {
                 </p>
                 <div class="todo-item-meta">
                   <span
-                    v-if="todo.labelText"
+                    v-if="getTodoPrimaryLabelText(todo)"
                     class="todo-item-meta-text todo-item-meta-label"
                     :style="getTodoItemLabelTextStyle(todo)"
                   >
-                    {{ todo.labelText }}
+                    {{ getTodoLabelSummary(todo) }}
                   </span>
                   <span class="todo-item-meta-text">{{ t(getTodoStatus(todo)) }}</span>
                   <span class="todo-item-meta-text">{{ t('comment') }} {{ todo.comments.length }}</span>
@@ -4118,20 +4273,53 @@ function formatTodoItemDue(value) {
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
             <div v-if="labelOptions.length > 0" class="label-select-row">
-              <Select :model-value="newTodoLabelId" @update:model-value="onNewTodoLabelChange">
-                <SelectTrigger class="w-full">
-                  <SelectValue :placeholder="t('labelSelectPrompt')" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="LABEL_NONE_VALUE">{{ t('labelSelectPrompt') }}</SelectItem>
-                  <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
-                    <span class="label-option-item">
-                      <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
-                      {{ label.name }}
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div ref="newTodoLabelMenuRef" class="label-multi-select">
+                <button
+                  type="button"
+                  class="label-multi-select-trigger"
+                  :class="{ 'label-multi-select-trigger--open': newTodoLabelMenuOpen }"
+                  :aria-expanded="newTodoLabelMenuOpen ? 'true' : 'false'"
+                  @click="toggleNewTodoLabelMenu"
+                >
+                  <span class="label-multi-select-value">{{ newTodoLabelSummary }}</span>
+                  <ChevronRight class="h-4 w-4 label-multi-select-chevron" />
+                </button>
+                <div v-if="newTodoLabelMenuOpen" class="label-multi-select-dropdown">
+                  <Input
+                    v-if="shouldShowNewTodoLabelSearch"
+                    v-model="newTodoLabelSearchQuery"
+                    type="text"
+                    class="label-multi-select-search"
+                    :placeholder="t('labelSearchPlaceholder')"
+                    autocomplete="off"
+                  />
+                  <button
+                    v-if="newTodoLabelIds.length > 0"
+                    type="button"
+                    class="label-multi-select-clear"
+                    @click="clearNewTodoLabels"
+                  >
+                    {{ t('labelSelectionClear') }}
+                  </button>
+                  <ul v-if="filteredLabelOptionsForNewTodo.length > 0" class="label-multi-select-options">
+                    <li v-for="label in filteredLabelOptionsForNewTodo" :key="label.id">
+                      <button
+                        type="button"
+                        class="label-multi-select-option"
+                        :class="{ 'label-multi-select-option--selected': isNewTodoLabelSelected(label.id) }"
+                        @click="toggleNewTodoLabel(label.id)"
+                      >
+                        <span class="label-option-item">
+                          <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
+                          {{ label.name }}
+                        </span>
+                        <Check v-if="isNewTodoLabelSelected(label.id)" class="h-4 w-4" />
+                      </button>
+                    </li>
+                  </ul>
+                  <p v-else class="label-multi-select-empty">{{ t('labelNoSearchResults') }}</p>
+                </div>
+              </div>
               <Button type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
             </div>
             <Button v-else class="w-full" type="button" variant="outline" @click="openAddLabel">{{ t('labelSettings') }}</Button>
@@ -4419,14 +4607,14 @@ function formatTodoItemDue(value) {
                   <p class="detail-meta-value">{{ formatDateTime(detailTodo.dueAt) }}</p>
                 </div>
               </li>
-              <li v-if="detailTodo.labelText" class="detail-meta-item">
+              <li v-if="getTodoPrimaryLabelText(detailTodo)" class="detail-meta-item">
                 <Tag class="detail-meta-icon" />
                 <div class="detail-meta-content">
                   <p class="detail-meta-label">{{ t('label') }}</p>
                   <div class="detail-meta-value">
                     <span class="todo-label-badge" :style="getLabelBadgeStyle(detailTodo)">
                       <span class="todo-label-dot" :style="getLabelDotStyle(detailTodo)" />
-                      {{ detailTodo.labelText }}
+                      {{ getTodoLabelSummary(detailTodo) }}
                     </span>
                   </div>
                 </div>
