@@ -41,6 +41,7 @@ const todoLabelFilterId = ref(LABEL_FILTER_ALL_VALUE)
 const addLabelOpen = ref(false)
 const newLabelName = ref('')
 const newLabelDraftColor = ref('#64748b')
+const recommendedLabelColors = ref([])
 const editingLabelId = ref(null)
 const editLabelName = ref('')
 const editLabelColor = ref('#64748b')
@@ -162,6 +163,8 @@ const messages = {
     label: '라벨',
     labelPlaceholder: '라벨 텍스트',
     labelColor: '라벨 색상',
+    labelColorRecommended: '추천 색상',
+    labelColorReroll: '리롤',
     labelSelectPrompt: '라벨을 선택해주세요',
     allLabels: '전체 라벨',
     labelSettings: '라벨 설정',
@@ -298,6 +301,8 @@ const messages = {
     label: 'Label',
     labelPlaceholder: 'Label text',
     labelColor: 'Label color',
+    labelColorRecommended: 'Recommended colors',
+    labelColorReroll: 'Reroll',
     labelSelectPrompt: 'Please select a label',
     allLabels: 'All labels',
     labelSettings: 'Label settings',
@@ -434,6 +439,8 @@ const messages = {
     label: '标签',
     labelPlaceholder: '标签文本',
     labelColor: '标签颜色',
+    labelColorRecommended: '推荐颜色',
+    labelColorReroll: '重选',
     labelSelectPrompt: '请选择标签',
     allLabels: '全部标签',
     labelSettings: '标签设置',
@@ -570,6 +577,8 @@ const messages = {
     label: 'ラベル',
     labelPlaceholder: 'ラベルテキスト',
     labelColor: 'ラベル色',
+    labelColorRecommended: 'おすすめ色',
+    labelColorReroll: 'リロール',
     labelSelectPrompt: 'ラベルを選択してください',
     allLabels: 'すべてのラベル',
     labelSettings: 'ラベル設定',
@@ -882,6 +891,13 @@ const rolloverTooltipMessages = {
 const TODO_STATUS_WAITING = 'waiting'
 const TODO_STATUS_ACTIVE = 'active'
 const TODO_STATUS_DONE = 'done'
+const LABEL_COLOR_RECOMMENDATION_COUNT = 10
+const LABEL_COLOR_POOL = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+  '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+  '#f43f5e', '#fb7185', '#e11d48', '#be123c', '#2563eb', '#1d4ed8', '#16a34a', '#15803d',
+  '#0f766e', '#0369a1', '#7c3aed', '#9333ea', '#c026d3', '#db2777', '#64748b', '#334155',
+]
 const KOREAN_FIXED_HOLIDAYS = new Set([
   '01-01',
   '03-01',
@@ -1558,6 +1574,25 @@ function isValidLabelColor(value) {
 function normalizeLabelColor(value, fallback = '#64748b') {
   if (!isValidLabelColor(value)) return fallback
   return value.trim().toLowerCase()
+}
+
+function generateRecommendedLabelColors() {
+  const pool = [...LABEL_COLOR_POOL]
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1))
+    const temp = pool[index]
+    pool[index] = pool[randomIndex]
+    pool[randomIndex] = temp
+  }
+  return pool.slice(0, LABEL_COLOR_RECOMMENDATION_COUNT)
+}
+
+function rerollRecommendedLabelColors() {
+  const next = generateRecommendedLabelColors()
+  recommendedLabelColors.value = next
+  if (!next.includes(normalizeLabelColor(newLabelDraftColor.value))) {
+    newLabelDraftColor.value = next[0] || '#64748b'
+  }
 }
 
 function hexToRgba(hex, alpha) {
@@ -2793,7 +2828,7 @@ function openAddLabel() {
   if (!isAuthenticated.value) return
   errorMessage.value = ''
   newLabelName.value = ''
-  newLabelDraftColor.value = '#64748b'
+  rerollRecommendedLabelColors()
   editingLabelId.value = null
   editLabelName.value = ''
   editLabelColor.value = '#64748b'
@@ -2832,7 +2867,7 @@ async function createLabel() {
     newTodoLabelId.value = String(next.id)
     if (detailEditMode.value) detailTodoLabelId.value = String(next.id)
     newLabelName.value = ''
-    newLabelDraftColor.value = '#64748b'
+    rerollRecommendedLabelColors()
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -4145,6 +4180,25 @@ function formatTodoItemDue(value) {
             <div class="label-color-field">
               <input v-model="newLabelDraftColor" class="label-color-input" type="color" />
               <Input v-model="newLabelDraftColor" class="label-color-code" type="text" inputmode="text" />
+            </div>
+            <div class="label-color-recommend-head">
+              <p class="text-xs text-muted-foreground">{{ t('labelColorRecommended') }}</p>
+              <Button type="button" variant="ghost" size="sm" class="label-color-reroll-btn" @click="rerollRecommendedLabelColors">
+                <RotateCcw class="h-3.5 w-3.5" />
+                {{ t('labelColorReroll') }}
+              </Button>
+            </div>
+            <div class="label-color-recommend-list">
+              <button
+                v-for="color in recommendedLabelColors"
+                :key="color"
+                type="button"
+                class="label-color-swatch-btn"
+                :class="{ 'label-color-swatch-btn--active': normalizeLabelColor(newLabelDraftColor) === color }"
+                :style="{ backgroundColor: color }"
+                :aria-label="`label color ${color}`"
+                @click="newLabelDraftColor = color"
+              ></button>
             </div>
           </div>
           <div class="flex justify-end gap-2">
