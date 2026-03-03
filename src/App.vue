@@ -3634,7 +3634,7 @@ function formatTodoItemDue(value) {
                     </div>
                     <div class="mobile-menu-card-side">
                       <span class="mobile-menu-card-chip">{{ mobileMenuNotificationChip }}</span>
-                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                      <ChevronRight class="h-4 w-4 mobile-menu-card-arrow" />
                     </div>
                   </button>
                   <button type="button" class="mobile-menu-card-item" @click="openMobileMenuDetail('display')">
@@ -3644,7 +3644,7 @@ function formatTodoItemDue(value) {
                     </div>
                     <div class="mobile-menu-card-side">
                       <span class="mobile-menu-card-chip">{{ mobileMenuDisplayChip }}</span>
-                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                      <ChevronRight class="h-4 w-4 mobile-menu-card-arrow" />
                     </div>
                   </button>
                   <button type="button" class="mobile-menu-card-item" @click="openMobileMenuDetail('todo')">
@@ -3654,7 +3654,7 @@ function formatTodoItemDue(value) {
                     </div>
                     <div class="mobile-menu-card-side">
                       <span class="mobile-menu-card-chip">{{ mobileMenuTodoChip }}</span>
-                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                      <ChevronRight class="h-4 w-4 mobile-menu-card-arrow" />
                     </div>
                   </button>
                 </div>
@@ -3670,7 +3670,7 @@ function formatTodoItemDue(value) {
                     </div>
                     <div class="mobile-menu-card-side">
                       <span class="mobile-menu-card-chip">{{ t('mobileMenuChipHelp') }}</span>
-                      <ChevronRight class="h-4 w-4 text-[#9ca3af]" />
+                      <ChevronRight class="h-4 w-4 mobile-menu-card-arrow" />
                     </div>
                   </button>
                 </div>
