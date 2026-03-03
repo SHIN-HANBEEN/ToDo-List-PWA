@@ -40,6 +40,8 @@ const newTodoLabelIds = ref([])
 const newTodoLabelMenuOpen = ref(false)
 const newTodoLabelSearchQuery = ref('')
 const newTodoLabelMenuRef = ref(null)
+const newTodoLabelTriggerRef = ref(null)
+const newTodoLabelDropdownStyle = ref({})
 const todoLabelFilterId = ref(LABEL_FILTER_ALL_VALUE)
 const addLabelOpen = ref(false)
 const newLabelName = ref('')
@@ -1594,8 +1596,12 @@ async function toggleRolloverTooltip(context) {
 }
 
 function handleTooltipViewportChange() {
-  if (!rolloverTooltipOpen.value) return
-  positionRolloverTooltip()
+  if (rolloverTooltipOpen.value) {
+    positionRolloverTooltip()
+  }
+  if (newTodoLabelMenuOpen.value) {
+    positionNewTodoLabelDropdown()
+  }
 }
 
 function startOfMonth(value) {
@@ -1743,11 +1749,17 @@ function isNewTodoLabelSelected(labelId) {
 
 function toggleNewTodoLabelMenu() {
   newTodoLabelMenuOpen.value = !newTodoLabelMenuOpen.value
+  if (newTodoLabelMenuOpen.value) {
+    void nextTick().then(() => {
+      positionNewTodoLabelDropdown()
+    })
+  }
 }
 
 function closeNewTodoLabelMenu() {
   newTodoLabelMenuOpen.value = false
   newTodoLabelSearchQuery.value = ''
+  newTodoLabelDropdownStyle.value = {}
 }
 
 function clearNewTodoLabels() {
@@ -1762,6 +1774,43 @@ function toggleNewTodoLabel(labelId) {
     return
   }
   newTodoLabelIds.value = [...newTodoLabelIds.value, normalizedId]
+}
+
+function positionNewTodoLabelDropdown() {
+  if (!newTodoLabelMenuOpen.value) return
+  const trigger = newTodoLabelTriggerRef.value
+  if (!(trigger instanceof HTMLElement)) return
+
+  const viewportPadding = 12
+  const gap = 6
+  const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
+  const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+  const rect = trigger.getBoundingClientRect()
+  const width = Math.round(
+    Math.max(220, Math.min(rect.width, Math.max(220, viewportWidth - viewportPadding * 2)))
+  )
+  const maxLeft = viewportWidth - width - viewportPadding
+  const left = Math.round(Math.max(viewportPadding, Math.min(rect.left, maxLeft)))
+
+  const hasSearch = shouldShowNewTodoLabelSearch.value
+  const chromeHeight = hasSearch ? 108 : 76
+  const minPanelHeight = chromeHeight + 110
+  const spaceBelow = viewportHeight - rect.bottom - viewportPadding - gap
+  const spaceAbove = rect.top - viewportPadding - gap
+  const useTopPlacement = spaceBelow < minPanelHeight && spaceAbove > spaceBelow
+  const maxPanelHeight = Math.max(170, Math.min(320, useTopPlacement ? spaceAbove : spaceBelow))
+  const top = useTopPlacement
+    ? Math.round(Math.max(viewportPadding, rect.top - gap - maxPanelHeight))
+    : Math.round(rect.bottom + gap)
+  const optionsMaxHeight = Math.max(96, maxPanelHeight - chromeHeight)
+
+  newTodoLabelDropdownStyle.value = {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`,
+    maxHeight: `${Math.round(maxPanelHeight)}px`,
+    '--label-options-max-height': `${Math.round(optionsMaxHeight)}px`,
+  }
 }
 
 function onRootPointerDown(event) {
@@ -2177,6 +2226,12 @@ watch(addTodoOpen, (isOpen) => {
   if (!isOpen) {
     closeNewTodoLabelMenu()
   }
+})
+
+watch(newTodoLabelMenuOpen, async (isOpen) => {
+  if (!isOpen) return
+  await nextTick()
+  positionNewTodoLabelDropdown()
 })
 
 watch(
@@ -4275,6 +4330,7 @@ function formatTodoItemDue(value) {
             <div v-if="labelOptions.length > 0" class="label-select-row">
               <div ref="newTodoLabelMenuRef" class="label-multi-select">
                 <button
+                  ref="newTodoLabelTriggerRef"
                   type="button"
                   class="label-multi-select-trigger"
                   :class="{ 'label-multi-select-trigger--open': newTodoLabelMenuOpen }"
@@ -4284,7 +4340,7 @@ function formatTodoItemDue(value) {
                   <span class="label-multi-select-value">{{ newTodoLabelSummary }}</span>
                   <ChevronRight class="h-4 w-4 label-multi-select-chevron" />
                 </button>
-                <div v-if="newTodoLabelMenuOpen" class="label-multi-select-dropdown">
+                <div v-if="newTodoLabelMenuOpen" class="label-multi-select-dropdown" :style="newTodoLabelDropdownStyle">
                   <Input
                     v-if="shouldShowNewTodoLabelSearch"
                     v-model="newTodoLabelSearchQuery"

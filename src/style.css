@@ -912,11 +912,8 @@ body.modal-open-lock {
 }
 
 .label-multi-select-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 60;
+  position: fixed;
+  z-index: 95;
   border: 1px solid hsl(var(--border));
   border-radius: 12px;
   background: hsl(var(--popover));
@@ -925,6 +922,7 @@ body.modal-open-lock {
   padding: 10px;
   display: grid;
   gap: 8px;
+  overflow: hidden;
 }
 
 .label-multi-select-search {
@@ -947,7 +945,7 @@ body.modal-open-lock {
   list-style: none;
   display: grid;
   gap: 4px;
-  max-height: 220px;
+  max-height: var(--label-options-max-height, 220px);
   overflow-y: auto;
 }
 
