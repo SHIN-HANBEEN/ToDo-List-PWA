@@ -53,16 +53,19 @@ watch(open, async (isOpen) => {
     updatePopoverPosition()
     window.addEventListener('resize', updatePopoverPosition)
     window.addEventListener('scroll', updatePopoverPosition, true)
+    window.addEventListener('pointerdown', handlePointerDownOutside, true)
     return
   }
 
   window.removeEventListener('resize', updatePopoverPosition)
   window.removeEventListener('scroll', updatePopoverPosition, true)
+  window.removeEventListener('pointerdown', handlePointerDownOutside, true)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updatePopoverPosition)
   window.removeEventListener('scroll', updatePopoverPosition, true)
+  window.removeEventListener('pointerdown', handlePointerDownOutside, true)
 })
 
 watch(
@@ -163,6 +166,17 @@ function moveMonth(offset) {
 
 function toggleOpen() {
   open.value = !open.value
+}
+
+function handlePointerDownOutside(event) {
+  if (!open.value) return
+  const target = event?.target
+  if (!(target instanceof Node)) return
+
+  const root = rootEl.value
+  const popover = popoverEl.value
+  if (root?.contains(target) || popover?.contains(target)) return
+  open.value = false
 }
 
 function updatePopoverPosition() {
