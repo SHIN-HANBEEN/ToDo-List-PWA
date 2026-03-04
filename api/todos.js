@@ -309,7 +309,7 @@ export default async function handler(req, res) {
         valueIndex += 1
       }
 
-      if (typeof body.labelColor === 'string') {
+      if (typeof body.labelColor === 'string' && !Array.isArray(body.labelTexts) && typeof body.labelText !== 'string') {
         const labelColor = parseLabelColor(body.labelColor)
         if (!labelColor) return res.status(400).json({ error: 'labelColor must be a valid hex color' })
         updates.push(`label_color = $${valueIndex}`)
