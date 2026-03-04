@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { reactiveOmit } from "@vueuse/core";
 import { ChevronDown } from "lucide-vue-next";
 import { SelectIcon, SelectTrigger, useForwardProps } from "reka-ui";
@@ -22,7 +22,7 @@ const forwardedProps = useForwardProps(delegatedProps);
     v-bind="forwardedProps"
     :class="
       cn(
-        'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:truncate text-start',
+        'flex h-[52px] w-full items-center justify-between whitespace-nowrap rounded-[16px] border border-input bg-background px-4 py-2 text-[0.95rem] shadow-none ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-0 focus:border-[#8FBBFF] focus:shadow-[0_0_0_4px_rgba(49,130,246,0.18)] disabled:cursor-not-allowed disabled:opacity-50 [&>span]:truncate text-start',
         props.class,
       )
     "

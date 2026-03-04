@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { reactiveOmit } from "@vueuse/core";
 import { Check } from "lucide-vue-next";
 import {
@@ -28,12 +28,12 @@ const forwardedProps = useForwardProps(delegatedProps);
     v-bind="forwardedProps"
     :class="
       cn(
-        'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'relative flex w-full cursor-default select-none items-center rounded-[12px] py-2 pl-3 pr-9 text-[0.92rem] text-[#333D4B] outline-none focus:bg-[#EEF6FF] focus:text-[#191F28] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         props.class,
       )
     "
   >
-    <span class="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span class="absolute right-2 flex h-4 w-4 items-center justify-center text-[#1B64DA]">
       <SelectItemIndicator>
         <Check class="h-4 w-4" />
       </SelectItemIndicator>

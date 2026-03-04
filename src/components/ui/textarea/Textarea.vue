@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { useVModel } from "@vueuse/core";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ const modelValue = useVModel(props, "modelValue", emits, {
     v-model="modelValue"
     :class="
       cn(
-        'flex min-h-[96px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+        'flex min-h-[132px] w-full rounded-[18px] border border-input bg-background px-4 py-3 text-[0.95rem] text-foreground shadow-none transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-[#8FBBFF] focus-visible:ring-0 focus-visible:shadow-[0_0_0_4px_rgba(49,130,246,0.18)] disabled:cursor-not-allowed disabled:opacity-50',
         props.class,
       )
     "

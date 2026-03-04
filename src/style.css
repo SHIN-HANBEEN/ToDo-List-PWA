@@ -2633,3 +2633,384 @@ body.modal-open-lock {
     padding: 24px;
   }
 }
+
+/* ===== Toss Style System Overrides ===== */
+:root {
+  --background: 210 20% 99%;
+  --foreground: 222 28% 13%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 28% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 28% 13%;
+  --primary: 214 92% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 96%;
+  --secondary-foreground: 216 18% 32%;
+  --muted: 210 24% 96%;
+  --muted-foreground: 215 14% 53%;
+  --accent: 211 100% 97%;
+  --accent-foreground: 222 28% 13%;
+  --destructive: 355 85% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 16% 91%;
+  --input: 214 16% 87%;
+  --ring: 214 92% 58%;
+  --radius: 1rem;
+  --app-surface: #f9fafb;
+  --overlay: rgba(25, 31, 40, 0.42);
+}
+
+.dark {
+  --background: 221 39% 10%;
+  --foreground: 210 40% 98%;
+  --card: 219 33% 12%;
+  --card-foreground: 210 40% 98%;
+  --popover: 219 33% 12%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 214 92% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 216 21% 19%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 216 21% 19%;
+  --muted-foreground: 215 20% 73%;
+  --accent: 216 21% 19%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 355 80% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 216 21% 26%;
+  --input: 216 21% 26%;
+  --ring: 214 92% 58%;
+  --app-surface: #0f172a;
+  --overlay: rgba(2, 6, 23, 0.68);
+}
+
+body {
+  font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Inter', sans-serif;
+  background: radial-gradient(circle at 10% 0%, #f5f9ff 0%, #f9fafb 38%, #f9fafb 100%);
+  color: #191f28;
+}
+
+.dark body {
+  background: radial-gradient(circle at 12% 0%, #13213a 0%, #0f172a 38%, #0f172a 100%);
+  color: #f8fafc;
+}
+
+.page {
+  padding: clamp(16px, 2.6vw, 28px);
+}
+
+.todo-layout {
+  width: min(1240px, 100%);
+  gap: 18px;
+}
+
+.todo-topbar,
+.todo-heading-row {
+  padding-inline: 2px;
+}
+
+.todo-brand-name {
+  font-size: 1.22rem;
+  letter-spacing: -0.02em;
+}
+
+.todo-heading-title {
+  color: #191f28;
+  font-size: clamp(2.1rem, 3.8vw, 3.25rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.dark .todo-heading-title {
+  color: #f8fafc;
+}
+
+.todo-heading-sub {
+  margin-top: 8px;
+  font-size: 0.94rem;
+  color: #6b7684;
+}
+
+.todo-add-task-btn {
+  height: 52px;
+  min-width: 148px;
+  border-radius: 999px;
+  background: #3182f6;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(27, 100, 218, 0.25);
+}
+
+.todo-add-task-btn:hover {
+  background: #1b64da;
+  filter: none;
+}
+
+.todo-searchbar,
+.todo-summary-panel,
+.todo-list--panel,
+.todo-calendar-shell,
+.detail-description-panel,
+.detail-meta-list,
+.detail-edit-panel,
+.comment-scroll-area,
+.profile-value,
+.comment-list li,
+.settings-detail-card,
+.settings-detail-row,
+.improvement-review-item,
+.label-manage-list li {
+  border-color: #e5e8eb;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+.dark .todo-searchbar,
+.dark .todo-summary-panel,
+.dark .todo-list--panel,
+.dark .todo-calendar-shell,
+.dark .detail-description-panel,
+.dark .detail-meta-list,
+.dark .detail-edit-panel,
+.dark .comment-scroll-area,
+.dark .profile-value,
+.dark .comment-list li,
+.dark .settings-detail-card,
+.dark .settings-detail-row,
+.dark .improvement-review-item,
+.dark .label-manage-list li {
+  border-color: #334155;
+  background: #111827;
+  box-shadow: none;
+}
+
+.todo-searchbar {
+  min-height: 56px;
+  border-radius: 20px;
+  padding-inline: 16px;
+}
+
+.todo-summary-panel,
+.todo-calendar-shell {
+  border-radius: 24px;
+  padding: 16px 18px;
+}
+
+.todo-list--panel {
+  border-radius: 24px;
+}
+
+.todo-item-row,
+.calendar-day-list-item {
+  border-bottom-color: #eef1f4;
+  padding: 14px 16px;
+}
+
+.todo-item-title-btn {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.todo-item-content {
+  font-size: 0.86rem;
+}
+
+.todo-item-meta-text,
+.todo-item-meta-due {
+  font-size: 0.74rem;
+}
+
+.todo-item-state-trigger,
+.todo-item-state-dot,
+.detail-state-dot {
+  width: 20px;
+  height: 20px;
+}
+
+.todo-bottom-tabs {
+  border-radius: 999px;
+  background: #fff;
+  padding: 7px;
+}
+
+.dark .todo-bottom-tabs {
+  background: #111827;
+}
+
+.todo-tab-btn {
+  height: 40px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.todo-summary-filter-trigger {
+  height: 36px;
+  border-radius: 999px;
+  background: #f2f4f6;
+}
+
+.calendar-grid {
+  gap: 8px;
+}
+
+.calendar-cell {
+  border-radius: 14px;
+  border-color: #e5e8eb;
+  background: #fff;
+}
+
+.dark .calendar-cell {
+  border-color: #334155;
+  background: #111827;
+}
+
+.calendar-item {
+  border-radius: 10px;
+  background: #f2f4f6;
+}
+
+.dark .calendar-item {
+  background: #1f2937;
+}
+
+.modal-wrap {
+  background: rgba(25, 31, 40, 0.42);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  border-radius: 28px;
+  border-color: #e5e8eb;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+}
+
+.modal-header h2,
+.detail-title-copy h2,
+.mobile-menu-header-copy h2,
+.profile-shell h2 {
+  letter-spacing: -0.02em;
+}
+
+.modal-close,
+.mobile-menu-close-btn,
+.add-todo-close-btn {
+  border-color: #e5e8eb;
+  background: #fff;
+}
+
+.dark .modal,
+.dark .mobile-menu-modal {
+  border-color: #334155;
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.55);
+}
+
+.dark .modal-close,
+.dark .mobile-menu-close-btn,
+.dark .add-todo-close-btn {
+  border-color: #334155;
+  background: #111827;
+}
+
+.mobile-menu-modal {
+  border-radius: 28px;
+  border-color: #e5e8eb;
+  background: #fff;
+}
+
+.mobile-menu-card-item {
+  min-height: 76px;
+  border-radius: 20px;
+  border-color: #e5e8eb;
+  background: #f9fafb;
+}
+
+.mobile-menu-card-chip {
+  border-color: #b9d4ff;
+  color: #1b64da;
+  background: #eef6ff;
+}
+
+.label-multi-select-trigger,
+.todo-item-state-trigger,
+.settings-segment,
+.settings-switch {
+  transition: all 0.18s ease-out;
+}
+
+.settings-switch {
+  border-color: #d1d6db;
+  background: #e5e8eb;
+}
+
+.settings-switch--on {
+  background: #3182f6;
+  border-color: #3182f6;
+}
+
+.settings-switch-thumb {
+  background: #fff;
+}
+
+.label-multi-select-dropdown,
+.settings-tooltip,
+.picker-popover {
+  border-color: #d1d6db;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+}
+
+.dark .label-multi-select-dropdown,
+.dark .settings-tooltip,
+.dark .picker-popover {
+  border-color: #334155;
+  background: #111827;
+  color: #e2e8f0;
+}
+
+.picker-day-btn--selected {
+  background: #3182f6;
+  color: #fff;
+}
+
+.confirm-modal {
+  border-radius: 24px;
+  border-color: #e5e8eb;
+}
+
+.confirm-modal-confirm {
+  background: #f04452;
+}
+
+.confirm-modal-confirm:hover {
+  background: #d92d39;
+}
+
+@media (max-width: 640px) {
+  .todo-layout {
+    gap: 12px;
+  }
+
+  .todo-heading-title {
+    font-size: 1.9rem;
+  }
+
+  .todo-searchbar {
+    min-height: 50px;
+    border-radius: 16px;
+  }
+
+  .todo-list--panel,
+  .todo-summary-panel,
+  .todo-calendar-shell,
+  .modal,
+  .detail-modal,
+  .mobile-menu-modal,
+  .add-todo-modal {
+    border-radius: 18px;
+  }
+
+  .mobile-menu-card-item {
+    min-height: 72px;
+    border-radius: 16px;
+  }
+}
