@@ -3353,8 +3353,8 @@ function formatTodoItemDue(value) {
           <div class="todo-layout">
             <header class="todo-topbar">
               <div class="todo-brand">
-                <img src="/todogram-icon-20260214-glyph-192.png" alt="Todogram icon" class="todo-brand-icon" />
-                <p class="todo-brand-name">To-Do List</p>
+                <img src="/todogram-logo-toss.svg" alt="Todogram icon" class="todo-brand-icon" />
+                <p class="todo-brand-name">Todogram</p>
               </div>
               <div class="todo-top-actions">
                 <Button
