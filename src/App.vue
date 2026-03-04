@@ -3312,36 +3312,38 @@ function formatTodoItemDue(value) {
           v-if="!isAuthenticated"
           class="auth-centered mx-auto max-w-md space-y-4 rounded-none border-0 bg-transparent p-0"
         >
-          <div class="space-y-1 text-center">
+          <div class="auth-head space-y-1 text-center">
             <p class="auth-script">Todogram</p>
             <p class="text-sm text-muted-foreground">
               {{ authMode === 'signup' ? t('authSignupHelp') : t('authSigninHelp') }}
             </p>
           </div>
-          <div class="inline-flex w-full rounded-lg border bg-background p-1">
-            <Button class="flex-1" :variant="authMode === 'login' ? 'default' : 'ghost'" @click="authMode = 'login'">
+          <div class="auth-mode-switch inline-flex w-full rounded-lg border bg-background p-1">
+            <Button class="auth-mode-btn flex-1" :variant="authMode === 'login' ? 'default' : 'ghost'" @click="authMode = 'login'">
               {{ t('login') }}
             </Button>
-            <Button class="flex-1" :variant="authMode === 'signup' ? 'default' : 'ghost'" @click="authMode = 'signup'">
+            <Button class="auth-mode-btn flex-1" :variant="authMode === 'signup' ? 'default' : 'ghost'" @click="authMode = 'signup'">
               {{ t('signup') }}
             </Button>
           </div>
-          <form class="space-y-3" @submit.prevent="submitAuth">
-            <Input v-model="authEmail" type="email" :placeholder="t('emailPlaceholder')" autocomplete="email" />
+          <form class="auth-form space-y-3" @submit.prevent="submitAuth">
+            <Input v-model="authEmail" class="auth-input" type="email" :placeholder="t('emailPlaceholder')" autocomplete="email" />
             <Input
               v-if="authMode === 'signup'"
               v-model="authUsername"
+              class="auth-input"
               type="text"
               :placeholder="t('usernamePlaceholder')"
               autocomplete="nickname"
             />
             <Input
               v-model="authPassword"
+              class="auth-input"
               type="password"
               :placeholder="t('passwordPlaceholder')"
               autocomplete="current-password"
             />
-            <Button class="w-full" :disabled="authBusy">
+            <Button class="auth-submit-btn w-full" :disabled="authBusy">
               {{ authMode === 'signup' ? t('createAccount') : t('login') }}
             </Button>
           </form>
@@ -4558,7 +4560,7 @@ function formatTodoItemDue(value) {
     </section>
 
     <section v-if="addLabelOpen && isAuthenticated" class="modal-wrap" @click.self="closeAddLabel">
-      <article class="modal settings-modal">
+      <article class="modal settings-modal label-settings-modal">
         <Button
           variant="ghost"
           size="sm"
@@ -4572,7 +4574,7 @@ function formatTodoItemDue(value) {
           <h2>{{ t('labelSettings') }}</h2>
         </header>
 
-        <form class="space-y-2" @submit.prevent="createLabel">
+        <form class="label-settings-form space-y-2" @submit.prevent="createLabel">
           <p class="text-sm font-medium">{{ t('labelAdd') }}</p>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('label') }}</p>
@@ -4616,7 +4618,7 @@ function formatTodoItemDue(value) {
           </div>
         </form>
 
-        <div class="space-y-2">
+        <div class="label-settings-saved space-y-2">
           <p class="text-sm font-medium">{{ t('labelSavedList') }}</p>
           <ul v-if="labelOptions.length > 0" class="label-manage-list">
             <li v-for="label in labelOptions" :key="label.id">
@@ -4639,7 +4641,7 @@ function formatTodoItemDue(value) {
                     <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)" />
                     {{ label.name }}
                   </span>
-                  <Button variant="outline" size="sm" @click="startLabelEdit(label)">{{ t('edit') }}</Button>
+                  <Button variant="outline" size="sm" class="label-manage-edit-btn" @click="startLabelEdit(label)">{{ t('edit') }}</Button>
                 </div>
               </template>
             </li>
