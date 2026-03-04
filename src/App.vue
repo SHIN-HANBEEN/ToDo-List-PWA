@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
@@ -3443,8 +3443,19 @@ function formatTodoItemDue(value) {
                 <div class="todo-summary-right">
                   <div class="todo-progress-row">
                     <span>{{ doneCount }} / {{ summaryTodos.length }} {{ t('done') }}</span>
-                    <div class="todo-progress-track">
+                    <div class="todo-progress-track todo-progress-track--mascot">
                       <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
+                      <div class="todo-progress-goal" aria-hidden="true">
+                        <span class="todo-progress-goal-toy">🧸</span>
+                      </div>
+                      <div
+                        class="todo-progress-mascot"
+                        aria-hidden="true"
+                        :style="{ '--mascot-progress': `${completionPercent}%` }"
+                      >
+                        <span class="todo-progress-mascot-dog">🐕</span>
+                        <span class="todo-progress-mascot-dust"></span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4962,9 +4973,3 @@ function formatTodoItemDue(value) {
     </section>
   </main>
 </template>
-
-
-
-
-
-
