@@ -3502,8 +3502,6 @@ function formatTodoItemDue(value) {
                 :delay-on-touch-only="true"
                 :touch-start-threshold="4"
                 :fallback-tolerance="8"
-                :force-fallback="true"
-                :fallback-on-body="true"
                 :disabled="busy || searchQuery.trim().length > 0"
                 ghost-class="drag-ghost"
                 chosen-class="drag-chosen"

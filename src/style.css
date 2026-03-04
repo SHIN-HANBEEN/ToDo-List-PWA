@@ -3438,10 +3438,10 @@ html.dark body.modal-open-lock {
 .drag-ghost,
 .sortable-ghost,
 .sortable-fallback {
-  opacity: 1 !important;
+  opacity: 0.42 !important;
   border: 1px solid #8fbbff !important;
-  background: #eef6ff !important;
-  box-shadow: 0 12px 28px rgba(27, 100, 218, 0.18) !important;
+  background: color-mix(in srgb, #eef6ff 55%, transparent) !important;
+  box-shadow: 0 8px 18px rgba(27, 100, 218, 0.12) !important;
 }
 
 .drag-ghost .todo-item-title-btn,
@@ -3462,8 +3462,9 @@ html.dark body.modal-open-lock {
 
 .drag-chosen,
 .sortable-chosen {
-  box-shadow: 0 0 0 2px rgba(49, 130, 246, 0.38) inset, 0 10px 22px rgba(15, 23, 42, 0.1);
-  transform: translateY(-1px);
+  opacity: 0.72;
+  box-shadow: 0 0 0 2px rgba(49, 130, 246, 0.28) inset;
+  transform: none;
 }
 
 .detail-modal {
@@ -3703,7 +3704,7 @@ html.dark body.modal-open-lock {
 .dark .sortable-fallback {
   border-color: #3b82f6 !important;
   background: #13213a !important;
-  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.6) !important;
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.42) !important;
 }
 
 .dark .drag-ghost .todo-item-title-btn,
