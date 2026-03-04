@@ -3443,19 +3443,8 @@ function formatTodoItemDue(value) {
                 <div class="todo-summary-right">
                   <div class="todo-progress-row">
                     <span>{{ doneCount }} / {{ summaryTodos.length }} {{ t('done') }}</span>
-                    <div class="todo-progress-track todo-progress-track--mascot">
+                    <div class="todo-progress-track">
                       <div class="todo-progress-fill" :style="{ width: `${completionPercent}%` }"></div>
-                      <div class="todo-progress-goal" aria-hidden="true">
-                        <span class="todo-progress-goal-toy">🧸</span>
-                      </div>
-                      <div
-                        class="todo-progress-mascot"
-                        aria-hidden="true"
-                        :style="{ '--mascot-progress': `${completionPercent}%` }"
-                      >
-                        <span class="todo-progress-mascot-dog">🐕</span>
-                        <span class="todo-progress-mascot-dust"></span>
-                      </div>
                     </div>
                   </div>
                 </div>
