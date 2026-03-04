@@ -108,6 +108,7 @@ const editingCommentId = ref(null)
 const commentEditDraft = ref('')
 const commentEditTextareaRef = ref(null)
 const loading = ref(false)
+const appBootLoading = ref(false)
 const busy = ref(false)
 const errorMessage = ref('')
 const suppressTodoTitleClick = ref(false)
@@ -2209,10 +2210,15 @@ onMounted(async () => {
 
   await loadSessionUser()
   if (user.value) {
-    await Promise.all([loadTodos(), loadLabels()])
-    restoreViewStateForCurrentUser()
-    await syncPushStatus()
-    await syncPushSubscriptionToServer()
+    appBootLoading.value = true
+    try {
+      await Promise.all([loadTodos(), loadLabels()])
+      restoreViewStateForCurrentUser()
+      await syncPushStatus()
+      await syncPushSubscriptionToServer()
+    } finally {
+      appBootLoading.value = false
+    }
   } else {
     await syncPushStatus()
   }
@@ -2454,10 +2460,15 @@ async function submitAuth() {
     user.value = payload.user
     authUsername.value = ''
     authPassword.value = ''
-    await Promise.all([loadTodos(), loadLabels()])
-    restoreViewStateForCurrentUser()
-    await syncPushStatus()
-    await syncPushSubscriptionToServer()
+    appBootLoading.value = true
+    try {
+      await Promise.all([loadTodos(), loadLabels()])
+      restoreViewStateForCurrentUser()
+      await syncPushStatus()
+      await syncPushSubscriptionToServer()
+    } finally {
+      appBootLoading.value = false
+    }
   } catch (error) {
     errorMessage.value = translateError(error.message)
   } finally {
@@ -3350,7 +3361,27 @@ function formatTodoItemDue(value) {
         </section>
 
         <template v-else>
-          <div class="todo-layout">
+          <section v-if="appBootLoading" class="todo-boot-loading" aria-live="polite">
+            <div class="todo-boot-chip">{{ t('loading') }}</div>
+            <div class="todo-boot-head">
+              <p class="todo-boot-title">Syncing your Todo workspace</p>
+              <p class="todo-boot-sub">Loading tasks, labels, and progress status for a smooth start.</p>
+            </div>
+            <div class="todo-boot-surface">
+              <div class="todo-boot-bar"></div>
+              <ul class="todo-boot-list">
+                <li v-for="index in 4" :key="'boot-' + index" class="todo-boot-item">
+                  <span class="todo-boot-dot"></span>
+                  <div class="todo-boot-lines">
+                    <span class="todo-boot-line todo-boot-line--title"></span>
+                    <span class="todo-boot-line"></span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <div v-else class="todo-layout">
             <header class="todo-topbar">
               <div class="todo-brand">
                 <img src="/todogram-icon-20260214-glyph-192.png" alt="Todogram icon" class="todo-brand-icon" />
