@@ -2620,6 +2620,17 @@ body.modal-open-lock {
     padding: 12px 12px 10px;
   }
 
+  .todo-list-empty {
+    min-height: 220px;
+    border-radius: 18px;
+    padding: 20px 14px;
+  }
+
+  .todo-list-empty-visual {
+    width: 140px;
+    height: 108px;
+  }
+
   .detail-modal {
     padding: 10px;
     border-radius: 14px;
@@ -3537,6 +3548,46 @@ html.dark body.modal-open-lock {
   background: #eef4ff;
 }
 
+.todo-list-empty {
+  border-radius: 24px;
+  border: 1px dashed #d4dbe5;
+  background: linear-gradient(180deg, #f8fafc 0%, #f3f7fb 100%);
+  min-height: 260px;
+  padding: 26px 18px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+}
+
+.todo-list-empty-visual {
+  width: 160px;
+  height: 120px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 35%, rgba(96, 165, 250, 0.24) 0%, rgba(96, 165, 250, 0) 68%);
+  display: grid;
+  place-items: center;
+}
+
+.todo-list-empty-illustration {
+  width: 132px;
+  height: 98px;
+}
+
+.todo-list-empty-title {
+  margin: 2px 0 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.todo-list-empty-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8b95a1;
+}
+
 .drag-ghost,
 .sortable-ghost,
 .sortable-fallback {
@@ -3837,6 +3888,23 @@ html.dark body.modal-open-lock {
 .dark .todo-list--draggable .todo-item-meta-label {
   border-color: #29456f;
   background: #132844;
+}
+
+.dark .todo-list-empty {
+  border-color: #334155;
+  background: linear-gradient(180deg, #0f172a 0%, #0b1426 100%);
+}
+
+.dark .todo-list-empty-visual {
+  background: radial-gradient(circle at 50% 35%, rgba(59, 130, 246, 0.26) 0%, rgba(59, 130, 246, 0) 68%);
+}
+
+.dark .todo-list-empty-title {
+  color: #dbe4f2;
+}
+
+.dark .todo-list-empty-sub {
+  color: #8da0bb;
 }
 
 .dark .drag-ghost,

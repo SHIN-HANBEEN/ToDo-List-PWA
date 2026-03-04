@@ -3492,6 +3492,7 @@ function formatTodoItemDue(value) {
 
             <template v-if="viewMode === 'list'">
               <draggable
+                v-if="filteredTodos.length > 0"
                 v-model="draggableTodos"
                 tag="ul"
                 class="todo-list todo-list--panel todo-list--draggable"
@@ -3579,10 +3580,25 @@ function formatTodoItemDue(value) {
                   </li>
                 </template>
               </draggable>
-
-              <p v-if="!loading && filteredTodos.length === 0" class="text-sm text-muted-foreground">
-                {{ t('noItems') }}
-              </p>
+              <section v-else-if="!loading" class="todo-list-empty" aria-live="polite">
+                <div class="todo-list-empty-visual" aria-hidden="true">
+                  <svg viewBox="0 0 160 120" class="todo-list-empty-illustration" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="todoEmptyBg" x1="24" y1="20" x2="130" y2="102" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#60A5FA" stop-opacity="0.24"/>
+                        <stop offset="1" stop-color="#22D3EE" stop-opacity="0.14"/>
+                      </linearGradient>
+                    </defs>
+                    <rect x="22" y="12" width="116" height="96" rx="26" fill="url(#todoEmptyBg)"/>
+                    <rect x="46" y="36" width="68" height="12" rx="6" fill="#FFFFFF" fill-opacity="0.84"/>
+                    <rect x="46" y="56" width="50" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.7"/>
+                    <circle cx="113" cy="62" r="9" fill="#1B64DA" fill-opacity="0.16"/>
+                    <path d="M108 62L112 66L119 58" stroke="#1B64DA" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <p class="todo-list-empty-title">{{ t('noItems') }}</p>
+                <p class="todo-list-empty-sub">{{ t('addSchedule') }} / {{ t('all') }}</p>
+              </section>
             </template>
 
             <section v-else class="todo-calendar-shell">
