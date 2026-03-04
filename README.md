@@ -1,4 +1,4 @@
-# Todogram (Vue 3 + Vercel + Postgres)
+﻿# Todogram (Vue 3 + Vercel + Postgres)
 
 Features:
 
@@ -44,10 +44,10 @@ npx vercel env pull .env.local
 - `POST /api/improvements`
 - `GET /api/improvements` (admin only)
 - `DELETE /api/improvements?id=...` (admin only)
-- `GET /api/notifications/subscriptions`
-- `POST /api/notifications/subscriptions`
-- `DELETE /api/notifications/subscriptions`
-- `GET /api/notifications/reminders` (cron only)
+- `GET /api/notifications` (subscription config)
+- `POST /api/notifications` (register/update subscription)
+- `DELETE /api/notifications` (remove subscription)
+- `GET /api/notifications?mode=reminders` (cron only)
 
 ## Push reminder setup (30 minutes before due time)
 
@@ -62,14 +62,14 @@ npx web-push generate-vapid-keys
 - `VITE_WEB_PUSH_PUBLIC_KEY`
 - `WEB_PUSH_PRIVATE_KEY`
 - `WEB_PUSH_SUBJECT` (example: `mailto:you@example.com`)
-- `CRON_SECRET` (used by `/api/notifications/reminders`)
+- `CRON_SECRET` (used by `/api/notifications?mode=reminders`)
 
 3. Add GitHub repository secret:
 - `CRON_SECRET`
 
 4. Reminder scheduler runs via GitHub Actions:
 - `.github/workflows/reminder-cron.yml` (every 5 minutes)
-- calls `https://todo-list-pwa-xi.vercel.app/api/notifications/reminders`
+- calls `https://todo-list-pwa-xi.vercel.app/api/notifications?mode=reminders`
 
 5. On device/browser, allow notifications in app settings and keep the PWA installed for best iOS behavior.
 
@@ -78,3 +78,4 @@ npx web-push generate-vapid-keys
 ```sh
 npx vercel --prod
 ```
+

@@ -1526,7 +1526,7 @@ async function syncPushStatus() {
 }
 
 async function attachSubscriptionToServer(subscription) {
-  await apiRequest('/api/notifications/subscriptions', {
+  await apiRequest('/api/notifications', {
     method: 'POST',
     body: JSON.stringify({
       subscription,
@@ -1538,7 +1538,7 @@ async function attachSubscriptionToServer(subscription) {
 }
 
 async function detachSubscriptionFromServer(endpoint = '') {
-  await apiRequest('/api/notifications/subscriptions', {
+  await apiRequest('/api/notifications', {
     method: 'DELETE',
     body: JSON.stringify({ endpoint }),
   })
@@ -4962,6 +4962,7 @@ function formatTodoItemDue(value) {
     </section>
   </main>
 </template>
+
 
 
 

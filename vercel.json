@@ -1,0 +1,12 @@
+﻿{
+  "rewrites": [
+    {
+      "source": "/api/notifications/subscriptions",
+      "destination": "/api/notifications?mode=subscriptions"
+    },
+    {
+      "source": "/api/notifications/reminders",
+      "destination": "/api/notifications?mode=reminders"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-name: Todo Reminder Cron
+﻿name: Todo Reminder Cron
 
 on:
   schedule:
@@ -20,4 +20,5 @@ jobs:
 
           curl -sS -X GET \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "https://todo-list-pwa-xi.vercel.app/api/notifications/reminders"
+            "https://todo-list-pwa-xi.vercel.app/api/notifications?mode=reminders"
+
