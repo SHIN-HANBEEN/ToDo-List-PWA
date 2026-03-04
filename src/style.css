@@ -3440,6 +3440,8 @@ html.dark body.modal-open-lock {
 .sortable-fallback {
   opacity: 0.42 !important;
   border: 1px solid #8fbbff !important;
+  border-radius: 14px;
+  overflow: hidden;
   background: color-mix(in srgb, #eef6ff 55%, transparent) !important;
   box-shadow: 0 8px 18px rgba(27, 100, 218, 0.12) !important;
 }
@@ -3463,6 +3465,8 @@ html.dark body.modal-open-lock {
 .drag-chosen,
 .sortable-chosen {
   opacity: 0.72;
+  border-radius: 14px;
+  overflow: hidden;
   box-shadow: 0 0 0 2px rgba(49, 130, 246, 0.28) inset;
   transform: none;
 }
