@@ -1,5 +1,5 @@
-import { ensureSchema, getPool } from '../_db.js'
-import { hasPushConfig, sendPushMessage } from '../_push.js'
+import { ensureSchema, getPool } from '../../lib/server/db.js'
+import { hasPushConfig, sendPushMessage } from '../../lib/server/push.js'
 
 const REMINDER_TYPE = 'due_30m'
 

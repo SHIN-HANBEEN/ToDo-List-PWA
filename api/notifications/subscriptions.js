@@ -1,6 +1,6 @@
-import { ensureSchema, getPool } from '../_db.js'
-import { parseBody, requireUser } from '../_auth.js'
-import { hasPushConfig } from '../_push.js'
+import { ensureSchema, getPool } from '../../lib/server/db.js'
+import { parseBody, requireUser } from '../../lib/server/auth.js'
+import { hasPushConfig } from '../../lib/server/push.js'
 
 function normalizeText(value, fallback = '') {
   if (typeof value !== 'string') return fallback

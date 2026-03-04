@@ -1,5 +1,5 @@
-import { ensureSchema, getPool, normalizeLabelRow } from './_db.js'
-import { parseBody, requireUser } from './_auth.js'
+import { ensureSchema, getPool, normalizeLabelRow } from '../lib/server/db.js'
+import { parseBody, requireUser } from '../lib/server/auth.js'
 
 function parseLabelColor(value) {
   if (typeof value !== 'string') return null

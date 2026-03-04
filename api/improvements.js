@@ -1,5 +1,5 @@
-import { ensureSchema, getPool, normalizeImprovementRequestRow } from './_db.js'
-import { parseBody, requireUser } from './_auth.js'
+import { ensureSchema, getPool, normalizeImprovementRequestRow } from '../lib/server/db.js'
+import { parseBody, requireUser } from '../lib/server/auth.js'
 
 const ADMIN_EMAIL = 'shb080101@gmail.com'
 

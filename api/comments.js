@@ -1,5 +1,5 @@
-import { ensureSchema, getPool, normalizeCommentRow } from './_db.js'
-import { parseBody, requireUser } from './_auth.js'
+import { ensureSchema, getPool, normalizeCommentRow } from '../lib/server/db.js'
+import { parseBody, requireUser } from '../lib/server/auth.js'
 
 function getSingleQueryValue(value) {
   return Array.isArray(value) ? value[0] : value

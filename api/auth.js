@@ -1,4 +1,4 @@
-import { ensureSchema, getPool } from './_db.js'
+import { ensureSchema, getPool } from '../lib/server/db.js'
 import {
   clearSessionCookie,
   createSession,
@@ -8,7 +8,7 @@ import {
   parseBody,
   requireUser,
   verifyPassword,
-} from './_auth.js'
+} from '../lib/server/auth.js'
 
 function normalizeUsername(value) {
   return String(value || '').trim()

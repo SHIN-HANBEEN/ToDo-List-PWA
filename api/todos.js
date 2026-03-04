@@ -1,5 +1,5 @@
-import { ensureSchema, getPool, normalizeTodoRow, normalizeCommentRow } from './_db.js'
-import { parseBody, requireUser } from './_auth.js'
+import { ensureSchema, getPool, normalizeTodoRow, normalizeCommentRow } from '../lib/server/db.js'
+import { parseBody, requireUser } from '../lib/server/auth.js'
 
 function getSingleQueryValue(value) {
   // Vercel에서 쿼리 값이 string 또는 string[]로 올 수 있어 단일 값으로 정규화.
