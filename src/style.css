@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -2695,6 +2695,23 @@ body {
   color: #f8fafc;
 }
 
+html,
+body {
+  background-color: var(--app-surface);
+}
+
+html.modal-open-lock,
+body.modal-open-lock {
+  background-color: var(--app-surface) !important;
+}
+
+html.dark,
+html.dark body,
+html.dark.modal-open-lock,
+html.dark body.modal-open-lock {
+  background-color: #0f172a !important;
+}
+
 .page {
   padding: clamp(16px, 2.6vw, 28px);
 }
@@ -2849,6 +2866,12 @@ body {
   background: #f2f4f6;
 }
 
+.dark .todo-summary-filter-trigger {
+  border-color: #334155;
+  background: #1f2937;
+  color: #e2e8f0;
+}
+
 .calendar-grid {
   gap: 8px;
 }
@@ -2874,8 +2897,12 @@ body {
 }
 
 .modal-wrap {
-  background: rgba(25, 31, 40, 0.42);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
+}
+
+.dark .modal-wrap {
+  background: rgba(2, 6, 23, 0.74);
 }
 
 .modal {
@@ -3014,3 +3041,6 @@ body {
     border-radius: 16px;
   }
 }
+
+
+
