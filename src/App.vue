@@ -4681,7 +4681,7 @@ function formatTodoItemDue(value) {
           <div class="detail-breadcrumb">
             <List class="h-3.5 w-3.5" />
             <span>{{ t('listView') }}</span>
-            <span class="detail-breadcrumb-sep">›</span>
+            <span class="detail-breadcrumb-sep">/</span>
             <span class="detail-breadcrumb-current">{{ t('detail') }}</span>
           </div>
 
@@ -4771,6 +4771,7 @@ function formatTodoItemDue(value) {
             </div>
           </header>
 
+          <div class="detail-content-grid" :class="{ 'detail-content-grid--edit': detailEditMode }">
           <section v-if="!detailEditMode" class="detail-description-panel">
             <p class="detail-description-label">{{ t('todoContent') }}</p>
             <p class="detail-description-body">{{ getTodoContent(detailTodo) || '-' }}</p>
@@ -4971,6 +4972,7 @@ function formatTodoItemDue(value) {
             </component>
             <p v-else class="empty">{{ t('noComments') }}</p>
           </section>
+          </div>
         </div>
       </article>
     </section>
