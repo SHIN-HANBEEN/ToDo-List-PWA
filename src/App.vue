@@ -3361,10 +3361,20 @@ function formatTodoItemDue(value) {
 
         <template v-else>
           <section v-if="appBootLoading" class="todo-boot-loading" aria-live="polite">
-            <div class="todo-boot-loader" role="status" :aria-label="t('loading')">
-              <span class="todo-boot-loader-orb"></span>
-              <span class="todo-boot-loader-arc"></span>
-              <span class="todo-boot-loader-dot"></span>
+            <div class="loader-container" role="status" :aria-label="t('loading')">
+              <div class="core-circle"></div>
+              <svg class="spinner-svg" viewBox="0 0 100 100" aria-hidden="true">
+                <g class="spinner-group">
+                  <path
+                    d="M 25.5 25 A 35 35 0 0 1 74.5 25"
+                    fill="none"
+                    stroke="#8cb4f8"
+                    stroke-width="6"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="74.5" cy="25" r="4.5" fill="#1a73e8" />
+                </g>
+              </svg>
             </div>
           </section>
 
