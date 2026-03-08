@@ -1403,6 +1403,9 @@ function restoreViewStateForCurrentUser() {
   const storageKey = getViewStateStorageKey()
   if (!storageKey) return
 
+  // Always start calendar at current month on fresh app entry.
+  calendarMonthAnchor.value = startOfMonth(new Date())
+
   let parsed = null
   try {
     const raw = localStorage.getItem(storageKey)
@@ -1427,10 +1430,6 @@ function restoreViewStateForCurrentUser() {
     const numericLabelId = Number(nextLabelFilterId)
     const exists = Number.isFinite(numericLabelId) && labels.value.some((label) => label.id === numericLabelId)
     todoLabelFilterId.value = exists ? nextLabelFilterId : LABEL_FILTER_ALL_VALUE
-  }
-  const savedMonth = dateFromKey(parsed?.calendarMonthKey)
-  if (savedMonth) {
-    calendarMonthAnchor.value = startOfMonth(savedMonth)
   }
   viewStateReady.value = true
   viewStateHydrating.value = false
