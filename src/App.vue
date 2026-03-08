@@ -3362,22 +3362,10 @@ function formatTodoItemDue(value) {
 
         <template v-else>
           <section v-if="appBootLoading" class="todo-boot-loading" aria-live="polite">
-            <div class="todo-boot-chip">{{ t('loading') }}</div>
-            <div class="todo-boot-head">
-              <p class="todo-boot-title">Syncing your Todo workspace</p>
-              <p class="todo-boot-sub">Loading tasks, labels, and progress status for a smooth start.</p>
-            </div>
-            <div class="todo-boot-surface">
-              <div class="todo-boot-bar"></div>
-              <ul class="todo-boot-list">
-                <li v-for="index in 4" :key="'boot-' + index" class="todo-boot-item">
-                  <span class="todo-boot-dot"></span>
-                  <div class="todo-boot-lines">
-                    <span class="todo-boot-line todo-boot-line--title"></span>
-                    <span class="todo-boot-line"></span>
-                  </div>
-                </li>
-              </ul>
+            <div class="todo-boot-loader" role="status" :aria-label="t('loading')">
+              <span class="todo-boot-loader-orb"></span>
+              <span class="todo-boot-loader-arc"></span>
+              <span class="todo-boot-loader-dot"></span>
             </div>
           </section>
 

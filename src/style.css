@@ -4514,180 +4514,100 @@ html.dark body.modal-open-lock {
 
 /* ===== Toss Auth Boot Loading ===== */
 .todo-boot-loading {
-  width: min(980px, 100%);
-  margin: 0 auto;
-  border: 1px solid #e5e8eb;
-  border-radius: 30px;
-  background:
-    radial-gradient(980px 340px at 0% -10%, rgba(49, 130, 246, 0.15), rgba(49, 130, 246, 0) 58%),
-    #f8fafc;
-  padding: 26px;
+  position: fixed;
+  inset: 0;
+  z-index: 16;
   display: grid;
-  gap: 14px;
+  place-items: center;
+  background: #ececec;
 }
 
-.todo-boot-chip {
-  width: fit-content;
-  border: 1px solid #dbe3ec;
+.todo-boot-loader {
+  position: relative;
+  width: 132px;
+  height: 126px;
+}
+
+.todo-boot-loader-orb {
+  position: absolute;
+  left: 50%;
+  top: 42px;
+  width: 92px;
+  height: 92px;
   border-radius: 999px;
-  padding: 6px 12px;
-  background: #ffffff;
-  color: #4e5968;
-  font-size: 0.78rem;
-  font-weight: 700;
+  transform: translateX(-50%);
+  background: #0f67ec;
+  box-shadow: 0 10px 24px rgba(15, 103, 236, 0.3);
+  animation: todo-boot-orb-breathe 1.8s ease-in-out infinite;
 }
 
-.todo-boot-head {
-  display: grid;
-  gap: 6px;
-}
-
-.todo-boot-title {
-  margin: 0;
-  color: #111827;
-  font-size: clamp(1.15rem, 2.3vw, 1.55rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.todo-boot-sub {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.todo-boot-surface {
-  border: 1px solid #e5e8eb;
-  border-radius: 22px;
-  background: #ffffff;
-  padding: 14px;
-  display: grid;
-  gap: 12px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-}
-
-.todo-boot-bar {
-  height: 10px;
+.todo-boot-loader-arc {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 82px;
+  height: 20px;
+  border-top: 10px solid #6aa8ff;
   border-radius: 999px;
-  background: linear-gradient(120deg, #e5efff 0%, #d8e9ff 33%, #c6f6ea 66%, #e5efff 100%);
-  background-size: 220% 100%;
-  animation: todo-boot-gradient 1.9s linear infinite;
+  transform: translateX(-50%);
 }
 
-.todo-boot-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.todo-boot-item {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #eef2f7;
-  border-radius: 14px;
-  background: #f8fafc;
-}
-
-.todo-boot-dot {
-  width: 18px;
-  height: 18px;
+.todo-boot-loader-dot {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
-  border: 1px solid #d1d6db;
-  background: linear-gradient(140deg, #ffffff, #eef2f7);
+  background: #0f67ec;
+  transform-origin: -35px 37px;
+  animation: todo-boot-dot-orbit 1.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
-.todo-boot-lines {
-  display: grid;
-  gap: 7px;
+@keyframes todo-boot-orb-breathe {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 10px 24px rgba(15, 103, 236, 0.3);
+  }
+  50% {
+    transform: translateX(-50%) scale(0.96);
+    box-shadow: 0 7px 18px rgba(15, 103, 236, 0.26);
+  }
 }
 
-.todo-boot-line {
-  height: 8px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #edf2f8 0%, #dbe8f9 50%, #edf2f8 100%);
-  background-size: 220% 100%;
-  animation: todo-boot-gradient 1.7s ease-in-out infinite;
-}
-
-.todo-boot-line--title {
-  width: 56%;
-  height: 10px;
-}
-
-@keyframes todo-boot-gradient {
+@keyframes todo-boot-dot-orbit {
   0% {
-    background-position: 0% 50%;
+    transform: rotate(-14deg);
+  }
+  50% {
+    transform: rotate(14deg);
   }
   100% {
-    background-position: 100% 50%;
+    transform: rotate(-14deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .todo-boot-bar,
-  .todo-boot-line {
+  .todo-boot-loader-orb,
+  .todo-boot-loader-dot {
     animation: none;
   }
 }
 
-@media (max-width: 640px) {
-  .todo-boot-loading {
-    border-radius: 22px;
-    padding: 16px;
-  }
-
-  .todo-boot-surface {
-    border-radius: 16px;
-    padding: 12px;
-  }
-}
-
 .dark .todo-boot-loading {
-  border-color: #334155;
-  background:
-    radial-gradient(980px 340px at 0% -10%, rgba(59, 130, 246, 0.24), rgba(59, 130, 246, 0) 58%),
-    #0f172a;
-}
-
-.dark .todo-boot-chip {
-  border-color: #334155;
-  background: #111827;
-  color: #cbd5e1;
-}
-
-.dark .todo-boot-title {
-  color: #f8fafc;
-}
-
-.dark .todo-boot-sub {
-  color: #94a3b8;
-}
-
-.dark .todo-boot-surface {
-  border-color: #334155;
-  background: #111827;
-  box-shadow: none;
-}
-
-.dark .todo-boot-bar {
-  background: linear-gradient(120deg, #1e3a8a 0%, #1d4ed8 34%, #0f766e 66%, #1e3a8a 100%);
-}
-
-.dark .todo-boot-item {
-  border-color: #334155;
   background: #0f172a;
 }
 
-.dark .todo-boot-dot {
-  border-color: #475569;
-  background: linear-gradient(140deg, #1e293b, #0f172a);
+.dark .todo-boot-loader-orb {
+  background: #3b82f6;
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.34);
 }
 
-.dark .todo-boot-line {
-  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+.dark .todo-boot-loader-arc {
+  border-top-color: #93c5fd;
+}
+
+.dark .todo-boot-loader-dot {
+  background: #3b82f6;
 }
