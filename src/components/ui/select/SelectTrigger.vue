@@ -4,6 +4,8 @@ import { ChevronDown } from "lucide-vue-next";
 import { SelectIcon, SelectTrigger, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
 
+// Primitive rule: adjust shared trigger height, radius, focus, or icon rhythm here.
+// Use `props.class` for screen-local sizing or layout alignment only.
 const props = defineProps({
   disabled: { type: Boolean, required: false },
   reference: { type: null, required: false },

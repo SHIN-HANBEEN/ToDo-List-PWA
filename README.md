@@ -9,6 +9,25 @@ Features:
 - PWA install support
 - 30-minute reminder push notifications (Web Push + PWA)
 
+## UI styling workflow
+
+For UI work in this repository, use the `toss-ui` skill and read references in this order:
+
+1. `C:/Users/user/.codex/skills/toss-ui/references/source-map.md`
+2. `C:/Users/user/.codex/skills/toss-ui/references/mobile-tablet-patterns.md`
+   - Required when the task affects responsive behavior, phone/tablet UI, bottom sheets, sticky CTA, touch density, or safe-area handling.
+3. `C:/C-Projects/toss_style_folder/toss_style_system.md`
+4. `C:/C-Projects/toss_style_folder/TAILWIND_THEME_GUIDE.md`
+
+Open implementation files only when exact token names or project wiring are needed:
+
+- `theme/tailwind.todo.toss.preset.cjs`
+- `tailwind.config.js`
+- `src/style.css`
+- `src/App.vue`
+
+Responsive work should stay mobile-first and treat tablet as an expanded mobile experience before adding extra regions or desktop-style navigation.
+
 ## Run locally
 
 ```sh

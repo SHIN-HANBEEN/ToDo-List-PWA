@@ -2,6 +2,8 @@
 import { useVModel } from "@vueuse/core";
 import { cn } from "@/lib/utils";
 
+// Primitive rule: edit shared field styles here only when all text inputs should change.
+// Use `props.class` for local width, spacing, or page-level exceptions.
 const props = defineProps({
   defaultValue: { type: [String, Number], required: false },
   modelValue: { type: [String, Number], required: false },

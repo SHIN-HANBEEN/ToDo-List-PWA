@@ -2,6 +2,8 @@
 import { useVModel } from "@vueuse/core";
 import { cn } from "@/lib/utils";
 
+// Primitive rule: keep base textarea shape, focus, and density aligned here.
+// Reach for `props.class` only when the adjustment belongs to one flow or screen.
 const props = defineProps({
   defaultValue: { type: String, required: false },
   modelValue: { type: String, required: false },

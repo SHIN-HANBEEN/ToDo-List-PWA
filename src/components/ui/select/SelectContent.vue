@@ -9,6 +9,8 @@ import {
 import { cn } from "@/lib/utils";
 import { SelectScrollDownButton, SelectScrollUpButton } from ".";
 
+// Primitive rule: change shared menu surface, border, and motion here when every select should follow.
+// Keep `props.class` for one-off width, positioning, or screen-specific composition changes.
 defineOptions({
   inheritAttrs: false,
 });

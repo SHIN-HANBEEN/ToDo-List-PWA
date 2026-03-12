@@ -1,4 +1,8 @@
 ﻿import tossPreset from './theme/tailwind.todo.toss.preset.cjs'
+// Project-local theme wiring for this app.
+// Start with the toss-ui source map and responsive guide before editing tokens here:
+// - C:/Users/user/.codex/skills/toss-ui/references/source-map.md
+// - C:/Users/user/.codex/skills/toss-ui/references/mobile-tablet-patterns.md
 
 /** @type {import('tailwindcss').Config} */
 export default {

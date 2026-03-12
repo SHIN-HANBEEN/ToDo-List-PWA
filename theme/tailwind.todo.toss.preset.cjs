@@ -3,7 +3,14 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 /**
  * Toss-inspired Tailwind preset for a Todo / Calendar application.
  *
+ * Reference order for design intent and responsive behavior:
+ * 1. C:/Users/user/.codex/skills/toss-ui/references/source-map.md
+ * 2. C:/Users/user/.codex/skills/toss-ui/references/mobile-tablet-patterns.md
+ * 3. C:/C-Projects/toss_style_folder/toss_style_system.md
+ * 4. C:/C-Projects/toss_style_folder/TAILWIND_THEME_GUIDE.md
+ *
  * Notes:
+ * - This preset is the project implementation layer, not the first reference.
  * - This is a practical theme inspired by the public Toss web style.
  * - It focuses on spacious layout, soft neutrals, calm blue emphasis,
  *   large radii, and restrained shadows.

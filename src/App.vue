@@ -1,4 +1,13 @@
 <script setup>
+/*
+ * App-level layout and interaction flow should follow the toss-ui reference order:
+ * 1. C:/Users/user/.codex/skills/toss-ui/references/source-map.md
+ * 2. C:/Users/user/.codex/skills/toss-ui/references/mobile-tablet-patterns.md
+ * 3. C:/C-Projects/toss_style_folder/toss_style_system.md
+ * 4. C:/C-Projects/toss_style_folder/TAILWIND_THEME_GUIDE.md
+ *
+ * Preserve a mobile-first shell and treat tablet as expanded mobile before adding extra regions.
+ */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, List, LogOut, MapPin, Menu, Moon, Pause, Pencil, Play, Plus, RotateCcw, Search, SendHorizontal, Sun, Tag, Trash2, UserRound, X } from 'lucide-vue-next'
@@ -43,7 +52,12 @@ const newTodoLabelSearchQuery = ref('')
 const newTodoLabelMenuRef = ref(null)
 const newTodoLabelTriggerRef = ref(null)
 const newTodoLabelDropdownStyle = ref({})
-const todoLabelFilterId = ref(LABEL_FILTER_ALL_VALUE)
+const todoLabelFilterIds = ref([])
+const todoLabelFilterMenuOpen = ref(false)
+const todoLabelFilterSearchQuery = ref('')
+const todoLabelFilterMenuRef = ref(null)
+const todoLabelFilterTriggerRef = ref(null)
+const todoLabelFilterDropdownStyle = ref({})
 const addLabelOpen = ref(false)
 const newLabelName = ref('')
 const newLabelDraftColor = ref('#64748b')
@@ -1044,11 +1058,12 @@ function matchesTodoStatusFilter(todo) {
 }
 
 function matchesTodoLabelFilter(todo) {
-  const selectedLabel = selectedLabelForTodoFilter.value
-  if (!selectedLabel) return true
-  const selectedName = String(selectedLabel.name || '')
+  const selected = selectedLabelsForTodoFilter.value
+  if (selected.length === 0) return true
   const labelsForTodo = getTodoLabelTexts(todo)
-  return labelsForTodo.includes(selectedName)
+  if (labelsForTodo.length === 0) return false
+  const selectedNames = new Set(selected.map((label) => String(label.name || '')).filter(Boolean))
+  return labelsForTodo.some((labelName) => selectedNames.has(labelName))
 }
 
 function getTodoLabelTexts(todo) {
@@ -1154,7 +1169,7 @@ const draggableTodos = computed({
     return filteredTodos.value
   },
   set(reorderedSubset) {
-    if (filter.value === 'all' && !selectedLabelForTodoFilter.value) {
+    if (filter.value === 'all' && selectedLabelsForTodoFilter.value.length === 0) {
       todos.value = [...reorderedSubset]
       return
     }
@@ -1281,11 +1296,22 @@ const newTodoLabelSummary = computed(() => {
   if (selected.length === 1) return String(selected[0].name || '')
   return t('labelSelectedCount', { count: selected.length })
 })
-const selectedLabelForTodoFilter = computed(() => {
-  if (todoLabelFilterId.value === LABEL_FILTER_ALL_VALUE) return null
-  const id = Number(todoLabelFilterId.value)
-  if (!Number.isFinite(id)) return null
-  return labels.value.find((label) => label.id === id) || null
+const shouldShowTodoLabelFilterSearch = computed(() => labelOptions.value.length > 8)
+const filteredLabelOptionsForTodoFilter = computed(() => {
+  const query = todoLabelFilterSearchQuery.value.trim().toLowerCase()
+  if (!query) return labelOptions.value
+  return labelOptions.value.filter((label) => String(label.name || '').toLowerCase().includes(query))
+})
+const selectedLabelsForTodoFilter = computed(() => {
+  if (!Array.isArray(todoLabelFilterIds.value) || todoLabelFilterIds.value.length === 0) return []
+  const idSet = new Set(todoLabelFilterIds.value.map((id) => String(id)))
+  return labelOptions.value.filter((label) => idSet.has(String(label.id)))
+})
+const todoLabelFilterSummary = computed(() => {
+  const selected = selectedLabelsForTodoFilter.value
+  if (selected.length === 0) return t('allLabels')
+  if (selected.length === 1) return String(selected[0].name || '')
+  return t('labelSelectedCount', { count: selected.length })
 })
 const selectedLabelForDetailTodo = computed(() => {
   if (detailTodoLabelId.value === LABEL_NONE_VALUE) return null
@@ -1422,15 +1448,15 @@ function restoreViewStateForCurrentUser() {
   viewStateHydrating.value = true
   viewMode.value = normalizeViewMode(parsed?.viewMode)
   filter.value = normalizeTodoFilter(parsed?.filter)
-  const nextLabelFilterId =
-    typeof parsed?.todoLabelFilterId === 'string' ? parsed.todoLabelFilterId : LABEL_FILTER_ALL_VALUE
-  if (nextLabelFilterId === LABEL_FILTER_ALL_VALUE) {
-    todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
-  } else {
-    const numericLabelId = Number(nextLabelFilterId)
-    const exists = Number.isFinite(numericLabelId) && labels.value.some((label) => label.id === numericLabelId)
-    todoLabelFilterId.value = exists ? nextLabelFilterId : LABEL_FILTER_ALL_VALUE
-  }
+  const nextLabelFilterIds = Array.isArray(parsed?.todoLabelFilterIds)
+    ? parsed.todoLabelFilterIds
+    : typeof parsed?.todoLabelFilterId === 'string' && parsed.todoLabelFilterId !== LABEL_FILTER_ALL_VALUE
+      ? [parsed.todoLabelFilterId]
+      : []
+  const validIdSet = new Set(labelOptions.value.map((label) => String(label.id)))
+  todoLabelFilterIds.value = nextLabelFilterIds
+    .map((value) => String(value || ''))
+    .filter((value, index, array) => value && array.indexOf(value) === index && validIdSet.has(value))
   viewStateReady.value = true
   viewStateHydrating.value = false
 }
@@ -1448,7 +1474,7 @@ function persistViewStateForCurrentUser() {
       JSON.stringify({
         viewMode: normalizeViewMode(viewMode.value),
         filter: normalizeTodoFilter(filter.value),
-        todoLabelFilterId: typeof todoLabelFilterId.value === 'string' ? todoLabelFilterId.value : LABEL_FILTER_ALL_VALUE,
+        todoLabelFilterIds: Array.isArray(todoLabelFilterIds.value) ? todoLabelFilterIds.value : [],
         calendarMonthKey: toDateKey(calendarMonthAnchor.value),
       })
     )
@@ -1682,6 +1708,9 @@ function handleTooltipViewportChange() {
   if (newTodoLabelMenuOpen.value) {
     positionNewTodoLabelDropdown()
   }
+  if (todoLabelFilterMenuOpen.value) {
+    positionTodoLabelFilterDropdown()
+  }
 }
 
 function startOfMonth(value) {
@@ -1846,6 +1875,10 @@ function clearNewTodoLabels() {
   newTodoLabelIds.value = []
 }
 
+function isTodoLabelFilterSelected(labelId) {
+  return todoLabelFilterIds.value.includes(String(labelId))
+}
+
 function toggleNewTodoLabel(labelId) {
   const normalizedId = String(labelId)
   if (!normalizedId) return
@@ -1856,11 +1889,8 @@ function toggleNewTodoLabel(labelId) {
   newTodoLabelIds.value = [...newTodoLabelIds.value, normalizedId]
 }
 
-function positionNewTodoLabelDropdown() {
-  if (!newTodoLabelMenuOpen.value) return
-  const trigger = newTodoLabelTriggerRef.value
+function buildFloatingMultiSelectStyle(trigger, hasSearch) {
   if (!(trigger instanceof HTMLElement)) return
-
   const viewportPadding = 12
   const gap = 6
   const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
@@ -1872,7 +1902,6 @@ function positionNewTodoLabelDropdown() {
   const maxLeft = viewportWidth - width - viewportPadding
   const left = Math.round(Math.max(viewportPadding, Math.min(rect.left, maxLeft)))
 
-  const hasSearch = shouldShowNewTodoLabelSearch.value
   const chromeHeight = hasSearch ? 108 : 76
   const minPanelHeight = chromeHeight + 110
   const spaceBelow = viewportHeight - rect.bottom - viewportPadding - gap
@@ -1884,7 +1913,7 @@ function positionNewTodoLabelDropdown() {
     : Math.round(rect.bottom + gap)
   const optionsMaxHeight = Math.max(96, maxPanelHeight - chromeHeight)
 
-  newTodoLabelDropdownStyle.value = {
+  return {
     left: `${left}px`,
     top: `${top}px`,
     width: `${width}px`,
@@ -1893,16 +1922,64 @@ function positionNewTodoLabelDropdown() {
   }
 }
 
-function onRootPointerDown(event) {
+function positionNewTodoLabelDropdown() {
   if (!newTodoLabelMenuOpen.value) return
-  const root = newTodoLabelMenuRef.value
-  if (!(root instanceof HTMLElement)) return
-  if (root.contains(event.target)) return
-  closeNewTodoLabelMenu()
+  newTodoLabelDropdownStyle.value = buildFloatingMultiSelectStyle(
+    newTodoLabelTriggerRef.value,
+    shouldShowNewTodoLabelSearch.value
+  ) || {}
 }
 
-function onTodoLabelFilterChange(value) {
-  todoLabelFilterId.value = typeof value === 'string' ? value : LABEL_FILTER_ALL_VALUE
+function toggleTodoLabelFilterMenu() {
+  todoLabelFilterMenuOpen.value = !todoLabelFilterMenuOpen.value
+  if (todoLabelFilterMenuOpen.value) {
+    void nextTick().then(() => {
+      positionTodoLabelFilterDropdown()
+    })
+  }
+}
+
+function closeTodoLabelFilterMenu() {
+  todoLabelFilterMenuOpen.value = false
+  todoLabelFilterSearchQuery.value = ''
+  todoLabelFilterDropdownStyle.value = {}
+}
+
+function clearTodoLabelFilters() {
+  todoLabelFilterIds.value = []
+}
+
+function toggleTodoLabelFilter(labelId) {
+  const normalizedId = String(labelId)
+  if (!normalizedId) return
+  if (isTodoLabelFilterSelected(normalizedId)) {
+    todoLabelFilterIds.value = todoLabelFilterIds.value.filter((id) => id !== normalizedId)
+    return
+  }
+  todoLabelFilterIds.value = [...todoLabelFilterIds.value, normalizedId]
+}
+
+function positionTodoLabelFilterDropdown() {
+  if (!todoLabelFilterMenuOpen.value) return
+  todoLabelFilterDropdownStyle.value = buildFloatingMultiSelectStyle(
+    todoLabelFilterTriggerRef.value,
+    shouldShowTodoLabelFilterSearch.value
+  ) || {}
+}
+
+function onRootPointerDown(event) {
+  if (newTodoLabelMenuOpen.value) {
+    const root = newTodoLabelMenuRef.value
+    if (root instanceof HTMLElement && !root.contains(event.target)) {
+      closeNewTodoLabelMenu()
+    }
+  }
+  if (todoLabelFilterMenuOpen.value) {
+    const root = todoLabelFilterMenuRef.value
+    if (root instanceof HTMLElement && !root.contains(event.target)) {
+      closeTodoLabelFilterMenu()
+    }
+  }
 }
 
 function onDetailTodoLabelChange(value) {
@@ -2299,14 +2376,9 @@ watch(
 watch(
   labelOptions,
   (nextOptions) => {
-    if (todoLabelFilterId.value !== LABEL_FILTER_ALL_VALUE) {
-      const currentId = Number(todoLabelFilterId.value)
-      if (!Number.isFinite(currentId) || !nextOptions.some((label) => label.id === currentId)) {
-        todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
-      }
-    }
-    if (!Array.isArray(newTodoLabelIds.value) || newTodoLabelIds.value.length === 0) return
     const idSet = new Set(nextOptions.map((label) => String(label.id)))
+    todoLabelFilterIds.value = todoLabelFilterIds.value.filter((id) => idSet.has(String(id)))
+    if (!Array.isArray(newTodoLabelIds.value) || newTodoLabelIds.value.length === 0) return
     newTodoLabelIds.value = newTodoLabelIds.value.filter((id) => idSet.has(String(id)))
   }
 )
@@ -2323,8 +2395,14 @@ watch(newTodoLabelMenuOpen, async (isOpen) => {
   positionNewTodoLabelDropdown()
 })
 
+watch(todoLabelFilterMenuOpen, async (isOpen) => {
+  if (!isOpen) return
+  await nextTick()
+  positionTodoLabelFilterDropdown()
+})
+
 watch(
-  [viewMode, filter, todoLabelFilterId, calendarMonthAnchor, isAuthenticated, () => user.value?.id, () => user.value?.email],
+  [viewMode, filter, todoLabelFilterIds, calendarMonthAnchor, isAuthenticated, () => user.value?.id, () => user.value?.email],
   () => {
     persistViewStateForCurrentUser()
   }
@@ -2513,7 +2591,9 @@ async function logout() {
     newTodoLabelIds.value = []
     newTodoLabelSearchQuery.value = ''
     newTodoLabelMenuOpen.value = false
-    todoLabelFilterId.value = LABEL_FILTER_ALL_VALUE
+    todoLabelFilterIds.value = []
+    todoLabelFilterSearchQuery.value = ''
+    todoLabelFilterMenuOpen.value = false
     searchQuery.value = ''
     addLabelOpen.value = false
     newLabelName.value = ''
@@ -2586,6 +2666,7 @@ async function persistOrder() {
 }
 
 async function onDragEnd(event) {
+  setTodoDragging(false)
   if (!event) return
   suppressTodoTitleClickTemporarily()
   if (event.oldIndex === event.newIndex) return
@@ -2594,7 +2675,13 @@ async function onDragEnd(event) {
 }
 
 function onDragStart() {
+  setTodoDragging(true)
   suppressTodoTitleClickTemporarily(260)
+}
+
+function setTodoDragging(isDragging) {
+  if (typeof document === 'undefined') return
+  document.body.classList.toggle('todo-dragging', isDragging)
 }
 
 function suppressTodoTitleClickTemporarily(duration = 180) {
@@ -3453,20 +3540,71 @@ function formatTodoItemDue(value) {
             <section class="todo-summary-panel">
               <div class="todo-summary-head">
                 <div class="todo-summary-filter">
-                  <Select :model-value="todoLabelFilterId" @update:model-value="onTodoLabelFilterChange">
-                    <SelectTrigger class="todo-summary-filter-trigger">
-                      <SelectValue :placeholder="t('allLabels')" />
-                    </SelectTrigger>
-                    <SelectContent align="start">
-                      <SelectItem :value="LABEL_FILTER_ALL_VALUE">{{ t('allLabels') }}</SelectItem>
-                      <SelectItem v-for="label in labelOptions" :key="label.id" :value="String(label.id)">
-                        <span class="label-option-item">
-                          <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)"></span>
-                          {{ label.name }}
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div ref="todoLabelFilterMenuRef" class="label-multi-select todo-summary-filter-shell">
+                    <button
+                      ref="todoLabelFilterTriggerRef"
+                      type="button"
+                      class="label-multi-select-trigger todo-summary-filter-trigger"
+                      :class="{ 'label-multi-select-trigger--open': todoLabelFilterMenuOpen }"
+                      :aria-expanded="todoLabelFilterMenuOpen ? 'true' : 'false'"
+                      @click="toggleTodoLabelFilterMenu"
+                    >
+                      <span class="todo-summary-filter-copy">
+                        <Tag class="h-3.5 w-3.5" />
+                        <span class="label-multi-select-value">{{ todoLabelFilterSummary }}</span>
+                      </span>
+                      <ChevronRight class="h-4 w-4 label-multi-select-chevron" />
+                    </button>
+                    <div
+                      v-if="todoLabelFilterMenuOpen"
+                      class="label-multi-select-dropdown todo-summary-filter-dropdown"
+                      :style="todoLabelFilterDropdownStyle"
+                    >
+                      <Input
+                        v-if="shouldShowTodoLabelFilterSearch"
+                        v-model="todoLabelFilterSearchQuery"
+                        type="text"
+                        class="label-multi-select-search"
+                        :placeholder="t('labelSearchPlaceholder')"
+                        autocomplete="off"
+                      />
+                      <div class="todo-summary-filter-actions">
+                        <button
+                          type="button"
+                          class="label-multi-select-clear"
+                          :class="{ 'todo-summary-filter-all-btn--active': todoLabelFilterIds.length === 0 }"
+                          @click="clearTodoLabelFilters"
+                        >
+                          {{ t('allLabels') }}
+                        </button>
+                        <button
+                          v-if="todoLabelFilterIds.length > 0"
+                          type="button"
+                          class="label-multi-select-clear"
+                          @click="clearTodoLabelFilters"
+                        >
+                          {{ t('labelSelectionClear') }}
+                        </button>
+                      </div>
+                      <ul v-if="filteredLabelOptionsForTodoFilter.length > 0" class="label-multi-select-options">
+                        <li v-for="label in filteredLabelOptionsForTodoFilter" :key="label.id">
+                          <button
+                            type="button"
+                            class="label-multi-select-option"
+                            :class="{ 'label-multi-select-option--selected': isTodoLabelFilterSelected(label.id) }"
+                            @click="toggleTodoLabelFilter(label.id)"
+                          >
+                            <span class="label-option-item">
+                              <span class="todo-label-dot" :style="getLabelDotStyleByColor(label.color)"></span>
+                              {{ label.name }}
+                            </span>
+                            <Check v-if="isTodoLabelFilterSelected(label.id)" class="h-4 w-4" />
+                          </button>
+                        </li>
+                      </ul>
+                      <p v-else class="label-multi-select-empty">{{ t('labelNoSearchResults') }}</p>
+                    </div>
+                  </div>
                 </div>
                 <div class="todo-summary-right">
                   <div class="todo-progress-row">
@@ -3483,7 +3621,8 @@ function formatTodoItemDue(value) {
               <Button
                 size="sm"
                 class="todo-tab-btn"
-                :variant="filter === 'all' ? 'default' : 'ghost'"
+                variant="ghost"
+                :class="{ 'todo-tab-btn--active': filter === 'all' }"
                 @click="filter = 'all'"
                 :disabled="busy"
               >
@@ -3492,7 +3631,8 @@ function formatTodoItemDue(value) {
               <Button
                 size="sm"
                 class="todo-tab-btn"
-                :variant="filter === 'waiting' ? 'default' : 'ghost'"
+                variant="ghost"
+                :class="{ 'todo-tab-btn--active': filter === 'waiting' }"
                 @click="filter = 'waiting'"
                 :disabled="busy"
               >
@@ -3501,7 +3641,8 @@ function formatTodoItemDue(value) {
               <Button
                 size="sm"
                 class="todo-tab-btn"
-                :variant="filter === 'active' ? 'default' : 'ghost'"
+                variant="ghost"
+                :class="{ 'todo-tab-btn--active': filter === 'active' }"
                 @click="filter = 'active'"
                 :disabled="busy"
               >
@@ -3510,7 +3651,8 @@ function formatTodoItemDue(value) {
               <Button
                 size="sm"
                 class="todo-tab-btn"
-                :variant="filter === 'done' ? 'default' : 'ghost'"
+                variant="ghost"
+                :class="{ 'todo-tab-btn--active': filter === 'done' }"
                 @click="filter = 'done'"
                 :disabled="busy"
               >
@@ -3531,9 +3673,13 @@ function formatTodoItemDue(value) {
                 :delay-on-touch-only="true"
                 :touch-start-threshold="4"
                 :fallback-tolerance="8"
+                :force-fallback="true"
+                :fallback-on-body="true"
                 :disabled="busy || searchQuery.trim().length > 0"
                 ghost-class="drag-ghost"
                 chosen-class="drag-chosen"
+                fallback-class="sortable-fallback"
+                drag-class="sortable-drag"
                 @start="onDragStart"
                 @end="onDragEnd"
               >
@@ -4316,124 +4462,171 @@ function formatTodoItemDue(value) {
         >
           <X class="h-4 w-4" />
         </Button>
-        <header class="modal-header">
-          <h2>{{ t('settingsTitle') }}</h2>
+        <header class="modal-header settings-modal-header">
+          <div class="settings-hero">
+            <span class="settings-hero-badge">{{ t('settings') }}</span>
+            <h2>{{ t('settingsTitle') }}</h2>
+            <p>{{ t('mobileMenuHeaderIntro') }}</p>
+          </div>
         </header>
 
-        <div class="grid gap-3">
-          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
-            <p class="text-sm text-muted-foreground sm:text-base">{{ t('theme') }}</p>
-            <div class="inline-flex w-full rounded-lg border bg-background p-1">
-              <Button class="flex-1 text-sm sm:text-base" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
-                <Sun class="mr-1 h-4 w-4" />
-                {{ t('lightMode') }}
-              </Button>
-              <Button class="flex-1 text-sm sm:text-base" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
-                <Moon class="mr-1 h-4 w-4" />
-                {{ t('darkMode') }}
-              </Button>
+        <div class="settings-sheet">
+          <section class="settings-panel-card">
+            <div class="settings-panel-head">
+              <p class="settings-panel-kicker">{{ t('mobileMenuDisplaySettings') }}</p>
+              <p class="settings-panel-sub">{{ t('mobileMenuDisplaySettingsDesc') }}</p>
             </div>
-          </div>
-
-          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
-            <p class="text-sm text-muted-foreground sm:text-base">{{ t('language') }}</p>
-            <Select :model-value="locale" @update:model-value="setLocale">
-              <SelectTrigger class="w-full text-sm sm:text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
-                  {{ option.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
-            <div class="grid gap-1">
-              <p class="text-sm text-muted-foreground sm:text-base">{{ t('newTodoDueDefault') }}</p>
-              <p class="text-xs text-muted-foreground">{{ t('newTodoDueDefaultHint') }}</p>
-            </div>
-            <Select :model-value="String(defaultNewTodoDueOffsetMinutes)" @update:model-value="setDefaultNewTodoDueOffsetMinutes">
-              <SelectTrigger class="w-full text-sm sm:text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="option in newTodoDueOffsetOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
-            <div class="flex items-center gap-1.5">
-              <p class="text-sm text-muted-foreground sm:text-base">{{ rolloverSettingLabel }}</p>
-              <div class="relative">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  ref="settingsRolloverTooltipTriggerRef"
-                  class="h-7 w-7 rounded-full p-0 text-muted-foreground"
-                  :aria-label="rolloverTooltipText"
-                  @click.stop="toggleRolloverTooltip('settings')"
-                >
-                  <CircleHelp class="h-4 w-4" />
+            <div class="settings-option-block">
+              <div class="settings-option-copy">
+                <p class="settings-option-title">{{ t('theme') }}</p>
+                <p class="settings-option-desc">{{ isDark ? t('darkMode') : t('lightMode') }}</p>
+              </div>
+              <div class="settings-segment settings-segment--pill">
+                <Button class="flex-1 text-sm sm:text-base" :variant="isDark ? 'ghost' : 'default'" @click="setTheme('light')">
+                  <Sun class="h-4 w-4" />
+                  {{ t('lightMode') }}
                 </Button>
-                <div
-                  v-if="rolloverTooltipOpen && rolloverTooltipContext === 'settings'"
-                  ref="rolloverTooltipRef"
-                  :style="rolloverTooltipStyle"
-                  class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
-                >
-                  {{ rolloverTooltipText }}
-                </div>
+                <Button class="flex-1 text-sm sm:text-base" :variant="isDark ? 'default' : 'ghost'" @click="setTheme('dark')">
+                  <Moon class="h-4 w-4" />
+                  {{ t('darkMode') }}
+                </Button>
               </div>
             </div>
-            <div class="inline-flex w-full rounded-lg border bg-background p-1">
-              <Button
-                class="flex-1 text-sm sm:text-base"
-                :variant="defaultRolloverEnabled ? 'default' : 'ghost'"
-                @click="setDefaultRollover(true)"
-              >
-                true
-              </Button>
-              <Button
-                class="flex-1 text-sm sm:text-base"
-                :variant="defaultRolloverEnabled ? 'ghost' : 'default'"
-                @click="setDefaultRollover(false)"
-              >
-                false
-              </Button>
+            <div class="settings-option-block settings-option-block--row">
+              <div class="settings-option-copy">
+                <p class="settings-option-title">{{ t('language') }}</p>
+                <p class="settings-option-desc">{{ t('mobileMenuDisplaySettingsDesc') }}</p>
+              </div>
+              <Select :model-value="locale" @update:model-value="setLocale">
+                <SelectTrigger class="settings-inline-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in languageOptions" :key="option.code" :value="option.code">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          </section>
 
-          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center sm:gap-3">
-            <div class="grid gap-1">
-              <p class="text-sm text-muted-foreground sm:text-base">{{ t('notificationReminder30m') }}</p>
-              <p class="text-xs text-muted-foreground">{{ notificationHelpText }}</p>
+          <section class="settings-panel-card">
+            <div class="settings-panel-head">
+              <p class="settings-panel-kicker">{{ t('mobileMenuTodoSettings') }}</p>
+              <p class="settings-panel-sub">{{ t('mobileMenuTodoSettingsDesc') }}</p>
             </div>
-            <div class="inline-flex w-full rounded-lg border bg-background p-1">
-              <Button
-                class="flex-1 text-sm sm:text-base"
-                :variant="notificationEnabled ? 'default' : 'ghost'"
-                :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !isPushConfigured || notificationPermission === 'denied'"
-                @click="enableReminderNotifications"
-              >
-                {{ t('notificationEnableAction') }}
-              </Button>
-              <Button
-                class="flex-1 text-sm sm:text-base"
-                :variant="notificationEnabled ? 'ghost' : 'default'"
-                :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !notificationEnabled"
-                @click="disableReminderNotifications"
-              >
-                {{ t('notificationDisableAction') }}
-              </Button>
+            <div class="settings-toggle-card">
+              <div class="settings-option-copy">
+                <div class="settings-option-title-row">
+                  <p class="settings-option-title">{{ rolloverSettingLabel }}</p>
+                  <div class="relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      ref="settingsRolloverTooltipTriggerRef"
+                      class="settings-inline-help"
+                      :aria-label="rolloverTooltipText"
+                      @click.stop="toggleRolloverTooltip('settings')"
+                    >
+                      <CircleHelp class="h-4 w-4" />
+                    </Button>
+                    <div
+                      v-if="rolloverTooltipOpen && rolloverTooltipContext === 'settings'"
+                      ref="rolloverTooltipRef"
+                      :style="rolloverTooltipStyle"
+                      class="settings-tooltip rounded-md border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg"
+                    >
+                      {{ rolloverTooltipText }}
+                    </div>
+                  </div>
+                </div>
+                <p class="settings-option-desc">{{ t('mobileMenuRolloverDesc') }}</p>
+              </div>
+              <div class="settings-segment settings-segment--pill">
+                <Button class="flex-1 text-sm sm:text-base" :variant="defaultRolloverEnabled ? 'default' : 'ghost'" @click="setDefaultRollover(true)">
+                  {{ t('mobileMenuChipOn') }}
+                </Button>
+                <Button class="flex-1 text-sm sm:text-base" :variant="defaultRolloverEnabled ? 'ghost' : 'default'" @click="setDefaultRollover(false)">
+                  {{ t('mobileMenuChipOff') }}
+                </Button>
+              </div>
             </div>
-          </div>
+            <div class="settings-option-block">
+              <div class="settings-option-copy">
+                <p class="settings-option-title">{{ t('newTodoDefaultStatus') }}</p>
+                <p class="settings-option-desc">{{ t('mobileMenuDefaultStatusDesc') }}</p>
+              </div>
+              <div class="settings-segment settings-segment--pill">
+                <Button class="flex-1 text-sm sm:text-base" :variant="defaultNewTodoStatus === TODO_STATUS_WAITING ? 'default' : 'ghost'" @click="setDefaultNewTodoStatus(TODO_STATUS_WAITING)">
+                  {{ t('waiting') }}
+                </Button>
+                <Button class="flex-1 text-sm sm:text-base" :variant="defaultNewTodoStatus === TODO_STATUS_ACTIVE ? 'default' : 'ghost'" @click="setDefaultNewTodoStatus(TODO_STATUS_ACTIVE)">
+                  {{ t('active') }}
+                </Button>
+              </div>
+            </div>
+            <div class="settings-option-block settings-option-block--row">
+              <div class="settings-option-copy">
+                <p class="settings-option-title">{{ t('newTodoDueDefault') }}</p>
+                <p class="settings-option-desc">{{ t('newTodoDueDefaultHint') }}</p>
+              </div>
+              <Select :model-value="String(defaultNewTodoDueOffsetMinutes)" @update:model-value="setDefaultNewTodoDueOffsetMinutes">
+                <SelectTrigger class="settings-inline-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in newTodoDueOffsetOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </section>
+
+          <section class="settings-panel-card">
+            <div class="settings-panel-head">
+              <p class="settings-panel-kicker">{{ t('mobileMenuAlertSettings') }}</p>
+              <p class="settings-panel-sub">{{ t('mobileMenuAlertSettingsDesc') }}</p>
+            </div>
+            <div class="settings-toggle-card">
+              <div class="settings-option-copy">
+                <p class="settings-option-title">{{ t('notificationReminder30m') }}</p>
+                <p class="settings-option-desc">{{ notificationHelpText }}</p>
+              </div>
+              <div class="settings-segment settings-segment--pill">
+                <Button
+                  class="flex-1 text-sm sm:text-base"
+                  :variant="notificationEnabled ? 'default' : 'ghost'"
+                  :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !isPushConfigured || notificationPermission === 'denied'"
+                  @click="enableReminderNotifications"
+                >
+                  {{ t('notificationEnableAction') }}
+                </Button>
+                <Button
+                  class="flex-1 text-sm sm:text-base"
+                  :variant="notificationEnabled ? 'ghost' : 'default'"
+                  :disabled="notificationBusy || !isAuthenticated || !notificationSupported || !notificationEnabled"
+                  @click="disableReminderNotifications"
+                >
+                  {{ t('notificationDisableAction') }}
+                </Button>
+              </div>
+            </div>
+            <div class="settings-static-card">
+              <div class="settings-static-icon">
+                <Clock3 class="h-4 w-4" />
+              </div>
+              <div class="settings-option-copy">
+                <p class="settings-option-title">{{ t('mobileMenuReminderTiming') }}</p>
+                <p class="settings-option-desc">{{ t('mobileMenuReminderTimingValue') }}</p>
+              </div>
+            </div>
+            <p v-if="notificationToggleBlockedReason" class="settings-detail-warning">{{ notificationToggleBlockedReason }}</p>
+          </section>
         </div>
+
+        <footer class="settings-modal-footer-note">{{ t('mobileMenuAutoSaveHint') }}</footer>
       </article>
     </section>
 

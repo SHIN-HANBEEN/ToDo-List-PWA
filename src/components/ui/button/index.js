@@ -2,6 +2,9 @@
 
 export { default as Button } from "./Button.vue";
 
+// Primitive rule:
+// - Update shared tokens/variants here when the change should apply across screens.
+// - Use per-call `class` overrides only for local layout or one-off context adjustments.
 export const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[14px] text-[0.9375rem] font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-[0_0_0_4px_rgba(49,130,246,0.18)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
